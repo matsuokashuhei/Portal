@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupStatusItem()
         checkAccessibilityPermission()
         setupHotkeyManager()
+        updatePermissionMenuItemIfNeeded()
     }
 
     private func checkAccessibilityPermission() {
@@ -105,6 +106,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let isGranted = AccessibilityService.isGranted
         permissionMenuItem?.isHidden = isGranted
         permissionSeparator?.isHidden = isGranted
+
+        // Reset cooldown when permission is granted
+        if isGranted {
+            lastPermissionRequestTime = nil
+        }
 
         if let button = statusItem?.button {
             let symbolName = isGranted ? "command" : "exclamationmark.triangle"
