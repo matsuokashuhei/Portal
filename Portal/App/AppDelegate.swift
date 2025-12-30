@@ -54,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if shouldPrompt {
                 AccessibilityService.requestPermission()
                 lastPermissionRequestTime = Date()
+            } else {
+                // Provide feedback that the hotkey was received but waiting for permission
+                NSSound.beep()
             }
             updatePermissionMenuItemIfNeeded()
         }
