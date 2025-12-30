@@ -36,44 +36,61 @@ xcodebuild -project Portal.xcodeproj -scheme Portal clean build
 
 ## アーキテクチャ
 
+### 現在の実装
+
 ```
 Portal/
+├── PortalApp.swift            # エントリポイント (NSApplicationDelegateAdaptor)
+├── Info.plist                 # LSUIElement = YES
+├── Assets.xcassets/
 ├── App/
-│   ├── PortalApp.swift        # エントリポイント (NSApplicationDelegateAdaptor)
 │   └── AppDelegate.swift      # ステータスバー、ホットキー、パネル管理
-├── UI/
-│   ├── PanelController.swift  # NSPanelフローティングウィンドウ
-│   ├── CommandPaletteView.swift
-│   ├── SearchFieldView.swift
-│   └── ResultsListView.swift
 ├── Services/
-│   ├── HotkeyManager.swift    # NSEvent.addGlobalMonitorForEvents
-│   ├── AccessibilityService.swift  # AXIsProcessTrusted
-│   ├── MenuCrawler.swift      # AXUIElementメニューバー走査
-│   └── FuzzySearch.swift
-├── Models/
-│   ├── Command.swift          # Protocol
-│   └── MenuCommand.swift
-└── Settings/
-    └── SettingsView.swift
+│   └── HotkeyManager.swift    # Option+Space検出
+└── UI/
+    └── PanelController.swift  # NSPanel + 埋め込みUI
+        # 内蔵: CommandPaletteView, SearchFieldView,
+        #       ResultsListView, VisualEffectBlur
 ```
+
+### 未実装コンポーネント
+
+| ファイル | 目的 | Issue |
+|---------|------|-------|
+| UI/CommandPaletteViewModel.swift | 状態管理 | #46 |
+| Services/AccessibilityService.swift | 権限チェック | #47 |
+| Services/MenuCrawler.swift | メニュー走査 | #48 |
+| Services/FuzzySearch.swift | 検索アルゴリズム | #49 |
+| Models/Command.swift | コマンドProtocol | #50 |
+| Models/MenuCommand.swift | メニューコマンド | #50 |
+| Settings/SettingsView.swift | 設定画面 | #51 |
 
 ## 実装の要点
 
 ### Accessibility API
-- App Sandboxを`project.pbxproj`で無効化が必要
-- `AXUIElementCreateApplication()` でアプリ要素取得
-- `kAXMenuBarAttribute` でメニュー走査
-- `AXUIElementPerformAction(kAXPressAction)` で実行
+- [x] App Sandboxを無効化（#43）
+- [ ] `AXIsProcessTrusted()` 権限チェック（#47）
+- [ ] `AXUIElementCreateApplication()` アプリ要素取得（#48）
+- [ ] `kAXMenuBarAttribute` メニュー走査（#48）
+- [ ] `AXUIElementPerformAction()` 実行（#50）
 
 ### メニューバーアプリ
-- Info.plistに `LSUIElement = YES`（Dockアイコン非表示）
-- `NSStatusItem` でメニューバー表示
-- `NSPanel` の `.nonactivatingPanel` スタイルでフローティングUI
+- [x] `LSUIElement = YES`（#43）
+- [x] `NSStatusItem` メニューバー表示（#44）
+- [x] `NSPanel` フローティングUI（#45）
+- [x] `NSVisualEffectView` ブラー背景（#45）
 
 ### ホットキー登録
-- `NSEvent.addGlobalMonitorForEvents(matching: .keyDown)`
-- Option+Space (keyCode 49 + .option修飾キー)
+- [x] `addGlobalMonitorForEvents`（#45）
+- [x] `addLocalMonitorForEvents`（#45）
+- [x] Option+Space検出（#45）
+- [x] Escapeキーでパネル非表示（#45）
+
+### 検索・実行
+- [ ] FuzzySearch実装（#49）
+- [ ] 50msデバウンス（#49）
+- [ ] キーボードナビゲーション（#50）
+- [ ] メニュー実行（#50）
 
 ## パフォーマンス目標
 
