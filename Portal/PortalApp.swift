@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct PortalApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        Settings {
+            Text("Settings")
+                .frame(width: 300, height: 200)
         }
     }
 }
