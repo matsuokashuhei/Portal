@@ -132,6 +132,7 @@ struct CommandPaletteView: View {
         .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .accessibilityIdentifier("CommandPaletteView")
         .onAppear {
             isSearchFieldFocused = true
         }
@@ -153,10 +154,12 @@ struct SearchFieldView: View {
                 .font(.title2)
                 .focused(isFocused)
                 .accessibilityLabel("Search commands")
+                .accessibilityIdentifier("SearchTextField")
         }
         .padding(12)
         .background(Color.primary.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityIdentifier("SearchFieldView")
     }
 }
 
@@ -170,6 +173,7 @@ struct ResultsListView: View {
                     .padding()
             }
         }
+        .accessibilityIdentifier("ResultsListView")
     }
 }
 
