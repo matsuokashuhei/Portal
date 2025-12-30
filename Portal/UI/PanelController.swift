@@ -168,7 +168,7 @@ struct ResultsListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Press Option+Space to activate")
+                Text("Type to search commands...")
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
