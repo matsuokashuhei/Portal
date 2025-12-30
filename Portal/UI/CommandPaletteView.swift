@@ -26,7 +26,9 @@ struct CommandPaletteView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityIdentifier("CommandPaletteView")
         .onAppear {
-            isSearchFieldFocused = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isSearchFieldFocused = true
+            }
         }
     }
 }
