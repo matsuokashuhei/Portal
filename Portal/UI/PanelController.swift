@@ -41,12 +41,15 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        stopEscapeMonitor()
         startEscapeMonitor()
     }
 
     func hide() {
         stopEscapeMonitor()
         panel?.orderOut(nil)
+        panel = nil
+        hasBeenPositioned = false
     }
 
     private func createPanel() {
@@ -149,6 +152,7 @@ struct SearchFieldView: View {
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .focused(isFocused)
+                .accessibilityLabel("Search commands")
         }
         .padding(12)
         .background(Color.primary.opacity(0.05))
