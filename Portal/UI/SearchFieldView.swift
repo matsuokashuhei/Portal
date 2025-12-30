@@ -19,7 +19,7 @@ struct SearchFieldView: View {
 
             TextField("Search commands...", text: $text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 18))
+                .font(.title2)
                 .focused(isFocused)
                 .accessibilityLabel("Search commands")
                 .accessibilityIdentifier("SearchTextField")

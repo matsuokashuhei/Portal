@@ -19,6 +19,18 @@ struct ResultsListView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
+                } else {
+                    ForEach(results.indices, id: \.self) { index in
+                        Text(results[index])
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                index == selectedIndex
+                                    ? Color.accentColor.opacity(0.1)
+                                    : Color.clear
+                            )
+                    }
                 }
             }
         }
