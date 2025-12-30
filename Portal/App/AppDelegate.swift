@@ -10,19 +10,9 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
-    private var hotkeyManager: HotkeyManager?
-    private let panelController = PanelController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
-        setupHotkeyManager()
-    }
-
-    private func setupHotkeyManager() {
-        hotkeyManager = HotkeyManager { [weak self] in
-            self?.panelController.toggle()
-        }
-        hotkeyManager?.start()
     }
 
     private func setupStatusItem() {
