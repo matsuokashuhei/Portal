@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyManager: HotkeyManager?
     private let panelController = PanelController()
@@ -16,33 +16,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
 
+    private var lastPermissionRequestTime: Date?
+    private let permissionRequestCooldown: TimeInterval = 5.0
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         checkAccessibilityPermission()
         setupHotkeyManager()
-        setupPermissionObserver()
-    }
-
-    private func setupPermissionObserver() {
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(handleAppActivation),
-            name: NSWorkspace.didActivateApplicationNotification,
-            object: nil
-        )
-    }
-
-    @objc private func handleAppActivation(_ notification: Notification) {
-        guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-              app.bundleIdentifier == Bundle.main.bundleIdentifier else {
-            return
-        }
-        updatePermissionMenuItemIfNeeded()
     }
 
     private func checkAccessibilityPermission() {
         if !AccessibilityService.isGranted {
             AccessibilityService.requestPermission()
+            lastPermissionRequestTime = Date()
         }
         updatePermissionMenuItemIfNeeded()
     }
@@ -58,7 +44,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if AccessibilityService.isGranted {
             panelController.toggle()
         } else {
-            AccessibilityService.requestPermission()
+            let shouldPrompt: Bool
+            if let lastRequest = lastPermissionRequestTime {
+                shouldPrompt = Date().timeIntervalSince(lastRequest) >= permissionRequestCooldown
+            } else {
+                shouldPrompt = true
+            }
+
+            if shouldPrompt {
+                AccessibilityService.requestPermission()
+                lastPermissionRequestTime = Date()
+            }
             updatePermissionMenuItemIfNeeded()
         }
     }
@@ -71,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
+        menu.delegate = self
 
         let permissionItem = NSMenuItem(
             title: "Grant Accessibility Permission...",
@@ -96,6 +93,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
+    }
+
+    // MARK: - NSMenuDelegate
+
+    func menuWillOpen(_ menu: NSMenu) {
+        updatePermissionMenuItemIfNeeded()
     }
 
     private func updatePermissionMenuItemIfNeeded() {
