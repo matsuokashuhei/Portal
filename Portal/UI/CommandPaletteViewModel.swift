@@ -13,6 +13,7 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var selectedIndex: Int = 0
 
+    // TODO: Implement command search/filtering based on `searchText` (Issue #49)
     var results: [String] {
         []
     }

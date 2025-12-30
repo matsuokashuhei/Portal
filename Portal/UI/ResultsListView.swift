@@ -21,19 +21,20 @@ struct ResultsListView: View {
                         .padding()
                 } else {
                     ForEach(results.indices, id: \.self) { index in
+                        let isSelected = results.indices.contains(selectedIndex) && index == selectedIndex
                         Text(results[index])
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 4)
                             .padding(.horizontal, 8)
                             .background(
-                                index == selectedIndex
+                                isSelected
                                     ? Color.accentColor.opacity(0.1)
                                     : Color.clear
                             )
                             .accessibilityLabel(
-                                "\(results[index]), Result \(index + 1) of \(results.count)\(index == selectedIndex ? ", selected" : "")"
+                                "\(results[index]), Result \(index + 1) of \(results.count)\(isSelected ? ", selected" : "")"
                             )
-                            .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
                 }
             }
