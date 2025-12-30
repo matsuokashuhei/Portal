@@ -30,6 +30,10 @@ struct ResultsListView: View {
                                     ? Color.accentColor.opacity(0.1)
                                     : Color.clear
                             )
+                            .accessibilityLabel(
+                                "\(results[index]), Result \(index + 1) of \(results.count)\(index == selectedIndex ? ", selected" : "")"
+                            )
+                            .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
                     }
                 }
             }
