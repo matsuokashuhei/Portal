@@ -11,6 +11,9 @@ struct CommandPaletteView: View {
     @StateObject private var viewModel = CommandPaletteViewModel()
     @FocusState private var isSearchFieldFocused: Bool
 
+    private let panelDidBecomeKey = NotificationCenter.default
+        .publisher(for: .panelDidBecomeKey)
+
     var body: some View {
         VStack(spacing: 0) {
             SearchFieldView(text: $viewModel.searchText, isFocused: $isSearchFieldFocused)
@@ -25,10 +28,8 @@ struct CommandPaletteView: View {
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityIdentifier("CommandPaletteView")
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isSearchFieldFocused = true
-            }
+        .onReceive(panelDidBecomeKey) { _ in
+            isSearchFieldFocused = true
         }
     }
 }

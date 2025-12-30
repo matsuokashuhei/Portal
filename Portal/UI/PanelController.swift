@@ -8,6 +8,10 @@
 import AppKit
 import SwiftUI
 
+extension Notification.Name {
+    static let panelDidBecomeKey = Notification.Name("PanelDidBecomeKey")
+}
+
 final class PanelController: NSObject, NSWindowDelegate {
     private static let escapeKeyCode: UInt16 = 53
     static let panelSize = NSSize(width: 600, height: 400)
@@ -105,6 +109,10 @@ final class PanelController: NSObject, NSWindowDelegate {
             NSEvent.removeMonitor(monitor)
             escapeMonitor = nil
         }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        NotificationCenter.default.post(name: .panelDidBecomeKey, object: nil)
     }
 
     func windowDidResignKey(_ notification: Notification) {
