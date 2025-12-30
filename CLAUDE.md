@@ -46,7 +46,8 @@ Portal/
 ├── App/
 │   └── AppDelegate.swift      # ステータスバー、ホットキー、パネル管理
 ├── Services/
-│   └── HotkeyManager.swift    # Option+Space検出
+│   ├── HotkeyManager.swift    # Option+Space検出
+│   └── AccessibilityService.swift  # 権限チェック・リクエスト
 └── UI/
     └── PanelController.swift  # NSPanel + 埋め込みUI
         # 内蔵: CommandPaletteView, SearchFieldView,
@@ -58,7 +59,6 @@ Portal/
 | ファイル | 目的 | Issue |
 |---------|------|-------|
 | UI/CommandPaletteViewModel.swift | 状態管理 | #46 |
-| Services/AccessibilityService.swift | 権限チェック | #47 |
 | Services/MenuCrawler.swift | メニュー走査 | #48 |
 | Services/FuzzySearch.swift | 検索アルゴリズム | #49 |
 | Models/Command.swift | コマンドProtocol | #50 |
@@ -69,7 +69,7 @@ Portal/
 
 ### Accessibility API
 - [x] App Sandboxを無効化（#43）
-- [ ] `AXIsProcessTrusted()` 権限チェック（#47）
+- [x] `AXIsProcessTrusted()` 権限チェック（#47）
 - [ ] `AXUIElementCreateApplication()` アプリ要素取得（#48）
 - [ ] `kAXMenuBarAttribute` メニュー走査（#48）
 - [ ] `AXUIElementPerformAction()` 実行（#50）
