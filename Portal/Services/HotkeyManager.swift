@@ -24,7 +24,11 @@ final class HotkeyManager {
         }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyEvent(event)
+            guard let self = self else { return event }
+            if self.isHotkeyEvent(event) {
+                self.onHotkeyPressed()
+                return nil
+            }
             return event
         }
     }
@@ -41,12 +45,14 @@ final class HotkeyManager {
     }
 
     private func handleKeyEvent(_ event: NSEvent) {
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if modifiers == .option && event.keyCode == Self.spaceKeyCode {
-            DispatchQueue.main.async { [weak self] in
-                self?.onHotkeyPressed()
-            }
+        if isHotkeyEvent(event) {
+            onHotkeyPressed()
         }
+    }
+
+    private func isHotkeyEvent(_ event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        return modifiers == .option && event.keyCode == Self.spaceKeyCode
     }
 
     deinit {

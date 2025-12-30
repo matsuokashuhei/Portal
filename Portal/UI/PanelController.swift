@@ -8,12 +8,13 @@
 import AppKit
 import SwiftUI
 
-final class PanelController {
+final class PanelController: NSObject, NSWindowDelegate {
     private static let escapeKeyCode: UInt16 = 53
     static let panelSize = NSSize(width: 600, height: 400)
 
     private var panel: NSPanel?
     private var escapeMonitor: Any?
+    private var hasBeenPositioned = false
 
     var isVisible: Bool {
         panel?.isVisible ?? false
@@ -34,7 +35,10 @@ final class PanelController {
 
         guard let panel = panel else { return }
 
-        centerPanelOnScreen(panel)
+        if !hasBeenPositioned {
+            centerPanelOnScreen(panel)
+            hasBeenPositioned = true
+        }
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         startEscapeMonitor()
@@ -56,12 +60,13 @@ final class PanelController {
         panel.level = .floating
         panel.titlebarAppearsTransparent = true
         panel.titleVisibility = .hidden
+        panel.title = "Portal Command Palette"
         panel.isMovableByWindowBackground = true
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.isOpaque = false
-        panel.hidesOnDeactivate = true
         panel.becomesKeyOnlyIfNeeded = false
+        panel.delegate = self
 
         let hostingView = NSHostingView(rootView: CommandPaletteView())
         panel.contentView = hostingView
@@ -76,7 +81,7 @@ final class PanelController {
         let panelFrame = panel.frame
 
         let x = screenFrame.midX - panelFrame.width / 2
-        let y = screenFrame.midY + screenFrame.height / 4 - panelFrame.height / 2
+        let y = screenFrame.maxY - screenFrame.height / 4 - panelFrame.height / 2
 
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
@@ -98,6 +103,10 @@ final class PanelController {
         }
     }
 
+    func windowDidResignKey(_ notification: Notification) {
+        hide()
+    }
+
     deinit {
         stopEscapeMonitor()
     }
@@ -105,10 +114,11 @@ final class PanelController {
 
 struct CommandPaletteView: View {
     @State private var searchText = ""
+    @FocusState private var isSearchFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            SearchFieldView(text: $searchText)
+            SearchFieldView(text: $searchText, isFocused: $isSearchFieldFocused)
                 .padding()
 
             Divider()
@@ -119,20 +129,26 @@ struct CommandPaletteView: View {
         .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .onAppear {
+            isSearchFieldFocused = true
+        }
     }
 }
 
 struct SearchFieldView: View {
     @Binding var text: String
+    var isFocused: FocusState<Bool>.Binding
 
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
 
             TextField("Search commands...", text: $text)
                 .textFieldStyle(.plain)
                 .font(.title2)
+                .focused(isFocused)
         }
         .padding(12)
         .background(Color.primary.opacity(0.05))
