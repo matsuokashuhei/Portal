@@ -21,7 +21,7 @@ struct ResultsListView: View {
                         .padding()
                 } else {
                     ForEach(results.indices, id: \.self) { index in
-                        let isSelected = results.indices.contains(selectedIndex) && index == selectedIndex
+                        let isSelected = index == selectedIndex
                         Text(results[index])
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 4)
