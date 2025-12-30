@@ -91,7 +91,8 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func startEscapeMonitor() {
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == Self.escapeKeyCode {
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if event.keyCode == Self.escapeKeyCode && modifiers.isEmpty {
                 self?.hide()
                 return nil
             }
