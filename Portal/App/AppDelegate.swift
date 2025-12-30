@@ -63,8 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
+        // Initialize icon based on current permission state to avoid flicker
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "command", accessibilityDescription: "Portal Menu")
+            let isGranted = AccessibilityService.isGranted
+            let symbolName = isGranted ? "command" : "exclamationmark.triangle"
+            let description = isGranted ? "Portal Menu" : "Portal - Permission Required"
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
         }
 
         let menu = NSMenu()

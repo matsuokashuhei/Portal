@@ -22,7 +22,8 @@ struct AccessibilityService {
     /// Shows the system dialog prompting user to grant permission.
     static func requestPermission() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
+        // Intentionally discard return value; the dialog side effect is the primary purpose
+        _ = AXIsProcessTrustedWithOptions(options)
     }
 
     /// Opens System Settings directly to the Accessibility privacy pane.
