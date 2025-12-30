@@ -107,85 +107,35 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
+    func windowDidBecomeKey(_ notification: Notification) {
+        focusSearchField()
+    }
+
     func windowDidResignKey(_ notification: Notification) {
         hide()
+    }
+
+    private func focusSearchField() {
+        guard let panel = panel,
+              let contentView = panel.contentView else { return }
+        if let textField = findTextField(in: contentView) {
+            panel.makeFirstResponder(textField)
+        }
+    }
+
+    private func findTextField(in view: NSView) -> NSTextField? {
+        if let textField = view as? NSTextField, textField.isEditable {
+            return textField
+        }
+        for subview in view.subviews {
+            if let found = findTextField(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 
     deinit {
         stopEscapeMonitor()
     }
-}
-
-struct CommandPaletteView: View {
-    @State private var searchText = ""
-    @FocusState private var isSearchFieldFocused: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            SearchFieldView(text: $searchText, isFocused: $isSearchFieldFocused)
-                .padding()
-
-            Divider()
-
-            ResultsListView()
-                .frame(maxHeight: .infinity)
-        }
-        .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
-        .background(VisualEffectBlur())
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .accessibilityIdentifier("CommandPaletteView")
-        .onAppear {
-            isSearchFieldFocused = true
-        }
-    }
-}
-
-struct SearchFieldView: View {
-    @Binding var text: String
-    var isFocused: FocusState<Bool>.Binding
-
-    var body: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
-
-            TextField("Search commands...", text: $text)
-                .textFieldStyle(.plain)
-                .font(.title2)
-                .focused(isFocused)
-                .accessibilityLabel("Search commands")
-                .accessibilityIdentifier("SearchTextField")
-        }
-        .padding(12)
-        .background(Color.primary.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .accessibilityIdentifier("SearchFieldView")
-    }
-}
-
-struct ResultsListView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Type to search commands...")
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            }
-        }
-        .accessibilityIdentifier("ResultsListView")
-    }
-}
-
-struct VisualEffectBlur: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .hudWindow
-        view.blendingMode = .behindWindow
-        view.state = .active
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
