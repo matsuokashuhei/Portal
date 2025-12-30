@@ -23,7 +23,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupStatusItem()
         checkAccessibilityPermission()
         setupHotkeyManager()
-        updatePermissionMenuItemIfNeeded()
     }
 
     private func checkAccessibilityPermission() {
@@ -64,12 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         // Initialize icon based on current permission state to avoid flicker
-        if let button = statusItem?.button {
-            let isGranted = AccessibilityService.isGranted
-            let symbolName = isGranted ? "command" : "exclamationmark.triangle"
-            let description = isGranted ? "Portal Menu" : "Portal - Permission Required"
-            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
-        }
+        updateStatusBarIcon(isGranted: AccessibilityService.isGranted)
 
         let menu = NSMenu()
         menu.delegate = self
@@ -116,11 +110,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             lastPermissionRequestTime = nil
         }
 
-        if let button = statusItem?.button {
-            let symbolName = isGranted ? "command" : "exclamationmark.triangle"
-            let description = isGranted ? "Portal Menu" : "Portal - Permission Required"
-            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
-        }
+        updateStatusBarIcon(isGranted: isGranted)
+    }
+
+    private func updateStatusBarIcon(isGranted: Bool) {
+        guard let button = statusItem?.button else { return }
+        let symbolName = isGranted ? "command" : "exclamationmark.triangle"
+        let description = isGranted ? "Portal Menu" : "Portal - Permission Required"
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
     }
 
     @objc private func openAccessibilityPermissions() {
