@@ -9,6 +9,9 @@ import AppKit
 import SwiftUI
 
 final class PanelController {
+    private static let escapeKeyCode: UInt16 = 53
+    static let panelSize = NSSize(width: 600, height: 400)
+
     private var panel: NSPanel?
     private var escapeMonitor: Any?
 
@@ -33,6 +36,7 @@ final class PanelController {
 
         centerPanelOnScreen(panel)
         panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         startEscapeMonitor()
     }
 
@@ -43,8 +47,8 @@ final class PanelController {
 
     private func createPanel() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            contentRect: NSRect(origin: .zero, size: Self.panelSize),
+            styleMask: [.titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -56,6 +60,8 @@ final class PanelController {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.isOpaque = false
+        panel.hidesOnDeactivate = true
+        panel.becomesKeyOnlyIfNeeded = false
 
         let hostingView = NSHostingView(rootView: CommandPaletteView())
         panel.contentView = hostingView
@@ -77,7 +83,7 @@ final class PanelController {
 
     private func startEscapeMonitor() {
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 { // Escape key
+            if event.keyCode == Self.escapeKeyCode {
                 self?.hide()
                 return nil
             }
@@ -90,6 +96,10 @@ final class PanelController {
             NSEvent.removeMonitor(monitor)
             escapeMonitor = nil
         }
+    }
+
+    deinit {
+        stopEscapeMonitor()
     }
 }
 
@@ -106,7 +116,7 @@ struct CommandPaletteView: View {
             ResultsListView()
                 .frame(maxHeight: .infinity)
         }
-        .frame(width: 600, height: 400)
+        .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }

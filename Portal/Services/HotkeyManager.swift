@@ -8,6 +8,8 @@
 import AppKit
 
 final class HotkeyManager {
+    private static let spaceKeyCode: UInt16 = 49
+
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private let onHotkeyPressed: () -> Void
@@ -39,9 +41,11 @@ final class HotkeyManager {
     }
 
     private func handleKeyEvent(_ event: NSEvent) {
-        // Option+Space: keyCode 49 is Space
-        if event.modifierFlags.contains(.option) && event.keyCode == 49 {
-            onHotkeyPressed()
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if modifiers == .option && event.keyCode == Self.spaceKeyCode {
+            DispatchQueue.main.async { [weak self] in
+                self?.onHotkeyPressed()
+            }
         }
     }
 
