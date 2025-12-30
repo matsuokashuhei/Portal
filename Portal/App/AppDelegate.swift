@@ -20,6 +20,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         checkAccessibilityPermission()
         setupHotkeyManager()
+        setupPermissionObserver()
+    }
+
+    private func setupPermissionObserver() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleAppActivation),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAppActivation(_ notification: Notification) {
+        guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              app.bundleIdentifier == Bundle.main.bundleIdentifier else {
+            return
+        }
+        updatePermissionMenuItemIfNeeded()
     }
 
     private func checkAccessibilityPermission() {
