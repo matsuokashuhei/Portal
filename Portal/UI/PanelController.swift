@@ -8,10 +8,6 @@
 import AppKit
 import SwiftUI
 
-extension Notification.Name {
-    static let panelDidBecomeKey = Notification.Name("PanelDidBecomeKey")
-}
-
 final class PanelController: NSObject, NSWindowDelegate {
     private static let escapeKeyCode: UInt16 = 53
     static let panelSize = NSSize(width: 600, height: 400)
@@ -112,11 +108,31 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
-        NotificationCenter.default.post(name: .panelDidBecomeKey, object: nil)
+        focusSearchField()
     }
 
     func windowDidResignKey(_ notification: Notification) {
         hide()
+    }
+
+    private func focusSearchField() {
+        guard let panel = panel,
+              let contentView = panel.contentView else { return }
+        if let textField = findTextField(in: contentView) {
+            panel.makeFirstResponder(textField)
+        }
+    }
+
+    private func findTextField(in view: NSView) -> NSTextField? {
+        if let textField = view as? NSTextField, textField.isEditable {
+            return textField
+        }
+        for subview in view.subviews {
+            if let found = findTextField(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 
     deinit {

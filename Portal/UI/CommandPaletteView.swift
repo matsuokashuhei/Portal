@@ -9,14 +9,10 @@ import SwiftUI
 
 struct CommandPaletteView: View {
     @StateObject private var viewModel = CommandPaletteViewModel()
-    @FocusState private var isSearchFieldFocused: Bool
-
-    private let panelDidBecomeKey = NotificationCenter.default
-        .publisher(for: .panelDidBecomeKey)
 
     var body: some View {
         VStack(spacing: 0) {
-            SearchFieldView(text: $viewModel.searchText, isFocused: $isSearchFieldFocused)
+            SearchFieldView(text: $viewModel.searchText)
                 .padding()
 
             Divider()
@@ -28,8 +24,5 @@ struct CommandPaletteView: View {
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityIdentifier("CommandPaletteView")
-        .onReceive(panelDidBecomeKey) { _ in
-            isSearchFieldFocused = true
-        }
     }
 }
