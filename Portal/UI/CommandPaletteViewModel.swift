@@ -19,6 +19,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
     private let menuCrawler = MenuCrawler()
     private var cancellables = Set<AnyCancellable>()
+    private var loadMenuItemsTask: Task<Void, Never>?
 
     init() {
         setupNotificationObserver()
@@ -37,7 +38,10 @@ final class CommandPaletteViewModel: ObservableObject {
     /// Loads menu items from the specified application.
     /// - Parameter app: The application to crawl menus from. If nil, crawls the active application.
     func loadMenuItems(for app: NSRunningApplication?) {
-        Task {
+        // Cancel any in-flight request to prevent race conditions
+        loadMenuItemsTask?.cancel()
+
+        loadMenuItemsTask = Task {
             isLoading = true
             errorMessage = nil
 
@@ -48,9 +52,16 @@ final class CommandPaletteViewModel: ObservableObject {
                 } else {
                     items = try await menuCrawler.crawlActiveApplication()
                 }
+
+                // Check for cancellation before updating state
+                guard !Task.isCancelled else { return }
+
                 menuItems = items
                 selectedIndex = 0
             } catch {
+                // Check for cancellation before updating state
+                guard !Task.isCancelled else { return }
+
                 errorMessage = error.localizedDescription
                 menuItems = []
                 selectedIndex = 0

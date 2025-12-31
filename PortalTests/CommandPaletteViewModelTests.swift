@@ -43,4 +43,22 @@ struct CommandPaletteViewModelTests {
         viewModel.clearSearch()
         #expect(viewModel.selectedIndex == 0)
     }
+
+    @Test @MainActor
+    func testInitialMenuItemsIsEmpty() {
+        let viewModel = CommandPaletteViewModel()
+        #expect(viewModel.menuItems.isEmpty)
+    }
+
+    @Test @MainActor
+    func testInitialIsLoadingIsFalse() {
+        let viewModel = CommandPaletteViewModel()
+        #expect(viewModel.isLoading == false)
+    }
+
+    @Test @MainActor
+    func testInitialErrorMessageIsNil() {
+        let viewModel = CommandPaletteViewModel()
+        #expect(viewModel.errorMessage == nil)
+    }
 }

@@ -69,6 +69,13 @@ final class MenuCrawler {
     }
 
     /// Crawls the menu bar of the currently active application.
+    ///
+    /// - Important: This method may fail to find a non-Portal application if Portal itself
+    ///   is the only regular application running, or if Portal becomes frontmost before
+    ///   this method is called. Callers should capture the target application reference
+    ///   BEFORE showing the panel (as done in `AppDelegate.handleHotkeyPressed()`) and
+    ///   use `crawlApplication(_:)` instead when possible.
+    ///
     /// - Returns: Array of menu items found in the active application.
     /// - Throws: MenuCrawlerError if crawling fails.
     func crawlActiveApplication() async throws -> [MenuItem] {
@@ -274,7 +281,13 @@ final class MenuCrawler {
         if modifiers & 1 != 0 { result += "⇧" }  // Shift
         if modifiers & 8 == 0 { result += "⌘" }  // Command (present unless explicitly suppressed)
 
-        result += char.uppercased()
+        // Only uppercase single alphabetic characters; special keys (arrows, function keys)
+        // may use multi-character strings that shouldn't be uppercased
+        if char.count == 1, char.first?.isLetter == true {
+            result += char.uppercased()
+        } else {
+            result += char
+        }
 
         return result
     }

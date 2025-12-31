@@ -41,16 +41,30 @@ Closes #<Issue番号>
 
 これにより、Copilotが将来の実装予定に対して指摘することを防ぎ、レビューの効率を上げる。
 
-## GitHub Copilotレビュー対応
+## レビュー対応
 
-PRを作成すると自動的にGitHub Copilotがレビューを行う。
+PRを作成すると自動的にGitHub Copilotがレビューを行う。また、人間のレビュアーからもコメントが付くことがある。
+
+**対応手順（Copilot・人間レビュアー共通）:**
 
 1. 指摘事項がなくなるまで修正を続ける
 2. 各指摘に対して、同じスレッド内で対応内容を返信する
-   - 最初にCopilotのレビューコメントを日本語に翻訳して記載する（日本人がレビュー内容を深く理解するため）
+   - 最初にレビューコメントを日本語に翻訳して記載する（日本人がレビュー内容を深く理解するため）
    - 修正コミットのURL（例: `https://github.com/{owner}/{repo}/commit/{sha}`）
    - 対応した箇所へのURL（例: `https://github.com/{owner}/{repo}/blob/{sha}/{file}#L{line}`）
 3. 返信後、レビューコメントをResolvedにする
+
+**レビューコメントの取得:**
+
+```bash
+# 特定のレビューIDに紐づくコメントを取得
+gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews/{レビューID}/comments \
+  --jq '.[] | {id: .id, path: .path, body: .body}'
+
+# すべてのレビューを一覧表示
+gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
+  --jq '.[] | {id: .id, user: .user.login, state: .state, submitted_at: .submitted_at}'
+```
 
 ### 再レビューリクエスト
 

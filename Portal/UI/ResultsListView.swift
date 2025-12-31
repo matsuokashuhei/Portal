@@ -63,12 +63,24 @@ struct ResultsListView: View {
     /// Converts keyboard shortcut symbols to VoiceOver-friendly spoken text.
     /// For example: "⌃⌥⇧⌘N" → "Control Option Shift Command N"
     private func convertShortcutToSpokenText(_ shortcut: String) -> String {
-        var result = shortcut
-        result = result.replacingOccurrences(of: "⌃", with: "Control ")
-        result = result.replacingOccurrences(of: "⌥", with: "Option ")
-        result = result.replacingOccurrences(of: "⇧", with: "Shift ")
-        result = result.replacingOccurrences(of: "⌘", with: "Command ")
-        return result.trimmingCharacters(in: .whitespaces)
+        let symbolMap: [Character: String] = [
+            "⌃": "Control",
+            "⌥": "Option",
+            "⇧": "Shift",
+            "⌘": "Command"
+        ]
+
+        var components: [String] = []
+
+        for character in shortcut {
+            if let mapped = symbolMap[character] {
+                components.append(mapped)
+            } else if character != " " {
+                components.append(String(character))
+            }
+        }
+
+        return components.joined(separator: " ")
     }
 }
 

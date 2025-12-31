@@ -45,7 +45,8 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         axElement: AXUIElement,
         isEnabled: Bool
     ) {
-        self.id = path.joined(separator: "/")
+        // Use null character as separator to avoid collisions with menu titles containing "/"
+        self.id = path.joined(separator: "\0")
         self.title = title
         self.path = path
         self.keyboardShortcut = keyboardShortcut
