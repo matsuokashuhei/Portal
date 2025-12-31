@@ -25,6 +25,10 @@ final class CommandPaletteViewModel: ObservableObject {
         setupNotificationObserver()
     }
 
+    deinit {
+        loadMenuItemsTask?.cancel()
+    }
+
     // TODO: Implement command search/filtering based on `searchText` (Issue #49)
     var results: [MenuItem] {
         menuItems

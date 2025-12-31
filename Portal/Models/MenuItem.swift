@@ -53,6 +53,13 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         path.joined(separator: " → ")
     }
 
+    /// Parent path string excluding the title (e.g., "File → New" for path ["File", "New", "Document"]).
+    /// Returns nil if the path has only one element (no parent).
+    var parentPathString: String? {
+        guard path.count > 1 else { return nil }
+        return path.dropLast().joined(separator: " → ")
+    }
+
     init(
         title: String,
         path: [String],

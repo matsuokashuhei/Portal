@@ -95,9 +95,11 @@ private struct MenuItemRow: View {
                     .font(.body)
                     .foregroundColor(item.isEnabled ? .primary : .secondary)
 
-                Text(item.pathString)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let parentPath = item.parentPathString {
+                    Text(parentPath)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()
