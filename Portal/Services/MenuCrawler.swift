@@ -27,7 +27,9 @@ enum MenuCrawlerError: Error, LocalizedError {
 }
 
 /// Service for crawling application menu bars using Accessibility API.
-actor MenuCrawler {
+/// Must run on main thread as Accessibility API may trigger menu modifications.
+@MainActor
+final class MenuCrawler {
     /// Cache duration in seconds.
     private static let cacheDuration: TimeInterval = 0.5
 
