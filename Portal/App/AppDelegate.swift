@@ -21,8 +21,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
-        checkAccessibilityPermission()
+
+        // Skip accessibility check in test mode to avoid permission dialogs
+        if !TestConfiguration.shouldSkipAccessibilityCheck {
+            checkAccessibilityPermission()
+        }
+
         setupHotkeyManager()
+        setupPermissionObserver()
+
+        // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
+        if TestConfiguration.shouldShowPanelOnLaunch {
+            DispatchQueue.main.async { [weak self] in
+                self?.panelController.show()
+            }
+        }
+    }
+
+    private func setupPermissionObserver() {
+        // Update permission status when app becomes active (e.g., after returning from System Settings)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func applicationDidBecomeActive() {
+        updatePermissionMenuItemIfNeeded()
     }
 
     private func checkAccessibilityPermission() {
@@ -68,8 +95,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Initialize icon based on current permission state to avoid flicker
         updateStatusBarIcon(isGranted: AccessibilityService.isGranted)
 
+        // Add accessibility identifier to status item button
+        if let button = statusItem?.button {
+            button.setAccessibilityIdentifier("PortalStatusBarButton")
+        }
+
         let menu = NSMenu()
         menu.delegate = self
+        menu.setAccessibilityIdentifier("PortalStatusBarMenu")
 
         let permissionItem = NSMenuItem(
             title: "Grant Accessibility Permission...",
@@ -78,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         permissionItem.target = self
         permissionItem.isHidden = AccessibilityService.isGranted
+        permissionItem.setAccessibilityIdentifier("GrantPermissionMenuItem")
         menu.addItem(permissionItem)
         self.permissionMenuItem = permissionItem
 
@@ -88,10 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        settingsItem.setAccessibilityIdentifier("SettingsMenuItem")
         menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit Portal", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
+        quitItem.setAccessibilityIdentifier("QuitMenuItem")
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
