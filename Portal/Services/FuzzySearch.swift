@@ -21,7 +21,8 @@ struct FuzzySearch {
         let item: MenuItem
         /// Match score (higher is better).
         let score: Int
-        /// Ranges of matched characters in the item's title.
+        /// Ranges of matched characters in the item's original (non-normalized) `title` string.
+        /// These ranges are string indices into `item.title`, suitable for use in UI highlighting.
         let matchedRanges: [Range<String.Index>]
     }
 
@@ -133,6 +134,7 @@ struct FuzzySearch {
                 let nextTargetIndex = normalizedTarget.index(after: targetIndex)
                 let isLastQueryChar = nextQueryIndex == query.endIndex
                 let isLastTargetChar = nextTargetIndex == normalizedTarget.endIndex
+                // Safe to access: only compare when both indices are in bounds
                 let nextWontMatch = !isLastQueryChar && !isLastTargetChar &&
                     query[nextQueryIndex] != normalizedTarget[nextTargetIndex]
 
