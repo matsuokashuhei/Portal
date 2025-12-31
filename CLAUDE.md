@@ -123,7 +123,6 @@ PortalTests/
 
 PortalUITests/
 ├── PortalUITests.swift                  # パネルUIテスト（8テスト）
-├── PortalStatusBarTests.swift           # ステータスバーテスト（2テスト）
 └── PortalUITestsLaunchTests.swift       # 起動テスト
 
 docs/

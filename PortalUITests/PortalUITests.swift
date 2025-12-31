@@ -92,8 +92,12 @@ final class PortalUITests: XCTestCase {
         let searchTextField = panelDialog.textFields.firstMatch
         XCTAssertTrue(searchTextField.exists)
 
-        // Wait a moment for focus to be set
-        Thread.sleep(forTimeInterval: 0.5)
+        // Wait for the search field to gain keyboard focus
+        let focusExpectation = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: searchTextField
+        )
+        wait(for: [focusExpectation], timeout: 2.0)
 
         // Type directly without clicking - if focused, text should appear
         searchTextField.typeText("focus test")

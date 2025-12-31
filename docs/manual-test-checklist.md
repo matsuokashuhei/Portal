@@ -97,12 +97,13 @@
 
 ## 6. 自動テストのカバレッジ
 
-以下の項目はXCUITestで自動化済み:
+以下の代表的な項目はXCUITestで自動化済みです（最新の一覧は PortalUITests.swift を参照）:
 
 - [x] パネル表示（testCommandPaletteViewExists）
 - [x] Escapeキーでパネル非表示（testEscapeKeyHidesPanel）
 - [x] 検索フィールド存在確認（testSearchFieldExists）
 - [x] 検索フィールドプレースホルダー（testSearchFieldHasPlaceholder）
+- [x] 検索フィールドフォーカス（testSearchFieldHasFocusOnLaunch）
 - [x] 検索フィールド入力（testSearchFieldAcceptsInput）
 - [x] 結果リスト存在確認（testResultsListExists）
 - [x] 起動パフォーマンス（testLaunchPerformance）

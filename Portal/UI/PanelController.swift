@@ -134,9 +134,13 @@ final class PanelController: NSObject, NSWindowDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
                   let panel = self.panel,
-                  let contentView = panel.contentView,
-                  let textField = self.findTextField(in: contentView) else { return }
-            panel.makeFirstResponder(textField)
+                  let contentView = panel.contentView else { return }
+
+            if let textField = self.findTextField(in: contentView) {
+                panel.makeFirstResponder(textField)
+            } else {
+                print("[PanelController] Warning: Could not find text field to focus")
+            }
         }
     }
 

@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let permissionRequestCooldown: TimeInterval = 5.0
     private var permissionCheckTimer: Timer?
     private var wasPermissionGranted = false
+    private var isCheckingPermission = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -70,6 +71,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func checkAndHandlePermissionChange() {
+        // Prevent concurrent execution from timer and applicationDidBecomeActive
+        guard !isCheckingPermission else { return }
+        isCheckingPermission = true
+        defer { isCheckingPermission = false }
+
         let isNowGranted = AccessibilityService.isGranted
 
         if !wasPermissionGranted && isNowGranted {
@@ -82,8 +88,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func restartHotkeyManager() {
-        hotkeyManager?.stop()
-        hotkeyManager?.start()
+        guard let hotkeyManager = hotkeyManager else { return }
+        hotkeyManager.stop()
+        hotkeyManager.start()
     }
 
     private func checkAccessibilityPermission() {
