@@ -72,6 +72,40 @@ gh pr view {PR番号} --json reviewRequests --jq '.reviewRequests[].login'
 - Copilotが`reviewRequests`にいる場合: レビュー中なので待機を続ける
 - Copilotが`reviewRequests`にいない場合: レビュー完了
 
+### レビュー監視スクリプト
+
+自動的にレビュー完了を監視し、新しいコメントを検出する:
+
+```bash
+# 現在の最新レビュー時刻を記録
+LAST_REVIEW=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
+  --jq '[.[] | select(.user.login | contains("copilot"))] | sort_by(.submitted_at) | last | .submitted_at')
+
+# 30秒おきに最大10分間監視
+for i in {1..20}; do
+  echo "Check $i/20..."
+
+  # レビュー待ち状態を確認
+  PENDING=$(gh pr view {PR番号} --json reviewRequests \
+    --jq '[.reviewRequests[].login] | map(select(contains("copilot"))) | length')
+
+  if [ "$PENDING" -gt 0 ]; then
+    echo "Copilotがレビュー中..."
+  else
+    # 新しいレビューがあるか確認
+    LATEST=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
+      --jq '[.[] | select(.user.login | contains("copilot"))] | sort_by(.submitted_at) | last | .submitted_at')
+
+    if [ "$LATEST" != "$LAST_REVIEW" ]; then
+      echo "新しいレビューを検出: $LATEST"
+      break
+    fi
+  fi
+
+  sleep 30
+done
+```
+
 ### レビューコメント取得
 
 ```bash
@@ -85,6 +119,27 @@ gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews/$REVIEW_ID/comments
 
 - 10分経過しても状態が変わらない場合は確認を終了
 - 新しいコメントがあれば対応し、再度プッシュ
+
+### レビューコメントへの返信
+
+`gh api`を使用してスレッド内に返信する:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{PR番号}/comments \
+  -X POST \
+  -f body="返信内容" \
+  -F in_reply_to={コメントID}
+```
+
+返信内容のフォーマット:
+```markdown
+**日本語訳:** <Copilotのコメントを日本語に翻訳>
+
+**対応:** <修正内容または対応しない理由>
+
+- コミット: https://github.com/{owner}/{repo}/commit/{sha}
+- 該当箇所: https://github.com/{owner}/{repo}/blob/{sha}/{file}#L{line}
+```
 
 ## PRステータス監視
 
