@@ -36,11 +36,9 @@ struct ResultsListView: View {
     }
 
     /// Builds a comprehensive accessibility label for VoiceOver users.
+    /// Uses pathString instead of title to avoid redundancy (title is the last element of path).
     private func buildAccessibilityLabel(item: MenuItem, index: Int, isSelected: Bool) -> String {
-        var components: [String] = [
-            item.title,
-            item.pathString
-        ]
+        var components: [String] = [item.pathString]
 
         if let shortcut = item.keyboardShortcut {
             let spokenShortcut = convertShortcutToSpokenText(shortcut)

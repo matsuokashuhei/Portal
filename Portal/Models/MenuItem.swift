@@ -14,6 +14,11 @@ import ApplicationServices
 ///   the caller should handle `AXError` appropriately when the element is no longer valid.
 ///   The short cache duration (0.5s) in `MenuCrawler` helps mitigate stale references.
 ///
+/// - Note: The `id` property is derived from `path.joined(separator: "\0")`. MenuItems with
+///   empty paths will have an empty `id`, which could cause hash collisions if multiple
+///   empty-path items are used in Set or Dictionary collections. In practice, `MenuCrawler`
+///   never creates MenuItems with empty paths, as it only adds items with non-empty titles.
+///
 /// ## Thread Safety
 /// This type is marked as `@unchecked Sendable` because:
 /// - `MenuCrawler` is `@MainActor`, so all `MenuItem` instances are created on the main thread

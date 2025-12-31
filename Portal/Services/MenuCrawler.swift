@@ -91,7 +91,14 @@ final class MenuCrawler {
         return try await crawlApplication(app)
     }
 
-    /// Invalidates the menu cache.
+    /// Invalidates any cached menu items.
+    ///
+    /// Call this when the UI that displays menu data (e.g., a panel or popover)
+    /// is hidden or closed, or whenever you know the target application's menus
+    /// may have changed and you want to force a fresh crawl on the next request.
+    ///
+    /// Note: The cache already has a short TTL (0.5 seconds), so calling this
+    /// is only necessary if you need immediate invalidation before the TTL expires.
     func invalidateCache() {
         cache = nil
     }
@@ -262,23 +269,31 @@ final class MenuCrawler {
         return formatShortcut(char: cmdChar, modifiers: modifiers)
     }
 
+    /// Carbon-style modifier flags as reported by kAXMenuItemCmdModifiersAttribute.
+    ///
+    /// These values match the legacy Carbon Event Manager constants:
+    ///   - shiftKey   = 1
+    ///   - optionKey  = 2
+    ///   - controlKey = 4
+    ///   - noCommand  = 8 (when set, suppresses the implicit Command key)
+    ///
+    /// This mapping is based on documented Carbon constants. If a future macOS version
+    /// changes these semantics, these bit values may need to be updated.
+    private enum ModifierFlags {
+        static let shift: Int = 1
+        static let option: Int = 2
+        static let control: Int = 4
+        static let noCommand: Int = 8
+    }
+
     /// Formats a keyboard shortcut with modifier symbols.
     private func formatShortcut(char: String, modifiers: Int) -> String {
         var result = ""
 
-        // kAXMenuItemCmdModifiersAttribute uses Carbon-style modifier flags, matching
-        // the legacy Carbon Event Manager constants:
-        //   shiftKey = 1, optionKey = 2, controlKey = 4
-        // The Command key (cmdKey) is implicit and present unless the Accessibility
-        // API sets the "no command" bit (8) to explicitly suppress it.
-        //
-        // This mapping is based on observed behavior of the Accessibility API.
-        // If macOS changes this behavior, these bit values may need adjustment.
-
-        if modifiers & 4 != 0 { result += "⌃" }  // Control
-        if modifiers & 2 != 0 { result += "⌥" }  // Option
-        if modifiers & 1 != 0 { result += "⇧" }  // Shift
-        if modifiers & 8 == 0 { result += "⌘" }  // Command (present unless explicitly suppressed)
+        if modifiers & ModifierFlags.control != 0 { result += "⌃" }
+        if modifiers & ModifierFlags.option != 0 { result += "⌥" }
+        if modifiers & ModifierFlags.shift != 0 { result += "⇧" }
+        if modifiers & ModifierFlags.noCommand == 0 { result += "⌘" }
 
         // Only uppercase single alphabetic characters; special keys (arrows, function keys)
         // may use multi-character strings that shouldn't be uppercased

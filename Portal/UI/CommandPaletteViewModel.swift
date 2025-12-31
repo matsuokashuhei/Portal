@@ -36,7 +36,10 @@ final class CommandPaletteViewModel: ObservableObject {
     }
 
     /// Loads menu items from the specified application.
-    /// - Parameter app: The application to crawl menus from. If nil, crawls the active application.
+    ///
+    /// - Parameter app: The application to crawl menus from. If `nil`, attempts to crawl the
+    ///   frontmost non-Portal application as determined by `MenuCrawler.crawlActiveApplication()`.
+    ///   If Portal is the only regular running app, this may result in a `noActiveApplication` error.
     func loadMenuItems(for app: NSRunningApplication?) {
         // Cancel any in-flight request to prevent race conditions
         loadMenuItemsTask?.cancel()
