@@ -44,7 +44,7 @@ final class CommandPaletteViewModel: ObservableObject {
         // Cancel any in-flight request to prevent race conditions
         loadMenuItemsTask?.cancel()
 
-        loadMenuItemsTask = Task {
+        loadMenuItemsTask = Task { @MainActor in
             isLoading = true
             errorMessage = nil
 
