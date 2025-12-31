@@ -4,7 +4,7 @@
 
 ## 前提条件
 
-- macOS 15.0 (Sequoia) 以上
+- macOS 15.0 (Sequoia) 以降
 - Xcode 16.2 以上
 - Portal.app がビルド済み
 
@@ -12,16 +12,16 @@
 
 ### 1.1 ステータスバーアイコン表示
 
-- [x] アプリ起動後、メニューバーにアイコンが表示される
-- [x] アクセシビリティ権限がない場合: 警告アイコン (exclamationmark.triangle) が表示される
+- [ ] アプリ起動後、メニューバーにアイコンが表示される
+- [ ] アクセシビリティ権限がない場合: 警告アイコン (exclamationmark.triangle) が表示される
 - [ ] アクセシビリティ権限がある場合: command アイコンが表示される
 
 ### 1.2 ステータスバーメニュー
 
-- [x] アイコンをクリックするとメニューが表示される
-- [x] メニューに "Settings..." が表示される (Command+, ショートカット表示あり)
-- [x] メニューに "Quit Portal" が表示される (Command+Q ショートカット表示あり)
-- [x] アクセシビリティ権限がない場合: "Grant Accessibility Permission..." が表示される
+- [ ] アイコンをクリックするとメニューが表示される
+- [ ] メニューに "Settings..." が表示される (Command+, ショートカット表示あり)
+- [ ] メニューに "Quit Portal" が表示される (Command+Q ショートカット表示あり)
+- [ ] アクセシビリティ権限がない場合: "Grant Accessibility Permission..." が表示される
 
 ### 1.3 メニュー項目の動作
 
@@ -39,8 +39,9 @@
 
 ### 2.2 パネル非表示 (Escape)
 
-- [x] パネル表示中に Escape を押すと非表示になる
-- [x] 修飾キーなしの Escape のみが有効
+※ 以下は自動テスト（testEscapeKeyHidesPanel）でカバー済み
+- [ ] パネル表示中に Escape を押すと非表示になる
+- [ ] 修飾キーなしの Escape のみが有効
 
 ### 2.3 権限がない場合のホットキー動作
 
@@ -95,17 +96,18 @@
 
 ---
 
-## 6. 自動テストのカバレッジ
+## 6. 自動テストのカバレッジ（参考）
 
-以下の代表的な項目はXCUITestで自動化済みです（最新の一覧は PortalUITests.swift を参照）:
+以下の代表的な項目はXCUITestで自動化済みです（最新の一覧は PortalUITests.swift を参照）。
+※このセクションは手動テストチェックリストではなく、自動テストでカバーされている項目の参考情報です。
 
-- [x] パネル表示（testCommandPaletteViewExists）
-- [x] Escapeキーでパネル非表示（testEscapeKeyHidesPanel）
-- [x] 検索フィールド存在確認（testSearchFieldExists）
-- [x] 検索フィールドプレースホルダー（testSearchFieldHasPlaceholder）
-- [x] 検索フィールドフォーカス（testSearchFieldHasFocusOnLaunch）
-- [x] 検索フィールド入力（testSearchFieldAcceptsInput）
-- [x] 結果リスト存在確認（testResultsListExists）
+- パネル表示 — `testCommandPaletteViewExists`
+- Escapeキーでパネル非表示 — `testEscapeKeyHidesPanel`
+- 検索フィールド存在確認 — `testSearchFieldExists`
+- 検索フィールドプレースホルダー — `testSearchFieldHasPlaceholder`
+- 検索フィールドフォーカス — `testSearchFieldHasFocusOnLaunch`
+- 検索フィールド入力 — `testSearchFieldAcceptsInput`
+- 結果リスト存在確認 — `testResultsListExists`
 
 ---
 

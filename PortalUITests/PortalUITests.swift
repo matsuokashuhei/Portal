@@ -11,13 +11,6 @@ final class PortalUITests: XCTestCase {
 
     var app: XCUIApplication!
 
-    /// Class-level setup that runs once before all tests in this class.
-    /// This helps absorb XCUITest initialization overhead.
-    override class func setUp() {
-        super.setUp()
-        // XCUITest initialization happens here, before individual tests
-    }
-
     override func setUpWithError() throws {
         continueAfterFailure = false
 
@@ -116,8 +109,7 @@ final class PortalUITests: XCTestCase {
         let searchTextField = panelDialog.textFields.firstMatch
         XCTAssertTrue(searchTextField.exists)
 
-        // Type text into search field
-        searchTextField.click()
+        // Type text into search field (field should already have focus from panel open)
         searchTextField.typeText("test query")
 
         // Verify the text was entered

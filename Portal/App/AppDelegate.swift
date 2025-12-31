@@ -54,19 +54,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func applicationDidBecomeActive() {
-        assert(Thread.isMainThread, "applicationDidBecomeActive must be called on the main thread for thread safety")
+        dispatchPrecondition(condition: .onQueue(.main))
         checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
     }
 
     private func startPermissionCheckTimer() {
         // Poll every 1 second to detect permission changes
-        // Timer callbacks run on main run loop, ensuring thread safety with applicationDidBecomeActive
+        // Timer.scheduledTimer runs on main run loop, callback is guaranteed to be on main thread
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            // Explicitly dispatch to main queue to guarantee thread safety
-            DispatchQueue.main.async {
-                self?.checkAndHandlePermissionChange()
-            }
+            self?.checkAndHandlePermissionChange()
         }
     }
 
