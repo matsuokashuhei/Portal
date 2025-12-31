@@ -104,8 +104,9 @@ struct FuzzySearch {
                     score += Score.prefixMatch
                 }
 
-                // Bonus for word boundary match
-                if isWordBoundary(at: targetIndex, in: normalizedTarget) {
+                // Bonus for word boundary match (but avoid double bonus at string start)
+                if targetIndex != normalizedTarget.startIndex &&
+                    isWordBoundary(at: targetIndex, in: normalizedTarget) {
                     score += Score.wordBoundaryMatch
                 }
 
@@ -123,6 +124,8 @@ struct FuzzySearch {
                 }
 
                 // Track matched ranges
+                // NOTE: This index mapping assumes lowercased() preserves character offsets,
+                // which is true for typical ASCII menu titles but may fail for complex Unicode.
                 let originalTargetIndex = target.index(target.startIndex, offsetBy: normalizedTarget.distance(from: normalizedTarget.startIndex, to: targetIndex))
 
                 if currentRangeStart == nil {
@@ -165,7 +168,10 @@ struct FuzzySearch {
 
         // Close any remaining range
         if let start = currentRangeStart, let lastIdx = lastMatchIndex {
-            let originalLastIndex = target.index(target.startIndex, offsetBy: normalizedTarget.distance(from: normalizedTarget.startIndex, to: lastIdx))
+            // NOTE: This index mapping assumes lowercased() preserves character offsets,
+            // which is true for typical ASCII menu titles but may fail for complex Unicode.
+            let offset = normalizedTarget.distance(from: normalizedTarget.startIndex, to: lastIdx)
+            let originalLastIndex = target.index(target.startIndex, offsetBy: offset)
             let endIndex = target.index(after: originalLastIndex)
             matchedRanges.append(start..<endIndex)
         }
