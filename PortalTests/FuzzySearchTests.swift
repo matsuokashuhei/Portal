@@ -184,8 +184,16 @@ struct FuzzySearchTests {
 
         let results = FuzzySearch.search(query: "far", in: items)
 
-        // Should have multiple ranges: "F", "a", "R"
-        #expect(results.first?.matchedRanges.count ?? 0 >= 1)
+        // Should have three separate matched ranges for "F", "a", and "R"
+        #expect(results.count == 1)
+        if let match = results.first {
+            let ranges = match.matchedRanges
+            #expect(ranges.count == 3)
+
+            let title = match.item.title
+            let matchedTexts = ranges.map { String(title[$0]) }
+            #expect(matchedTexts == ["F", "a", "R"])
+        }
     }
 
     // MARK: - Edge Cases

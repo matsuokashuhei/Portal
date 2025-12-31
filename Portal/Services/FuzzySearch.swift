@@ -72,6 +72,10 @@ struct FuzzySearch {
     ///   - query: The normalized (lowercased) search query.
     ///   - target: The string to match against.
     /// - Returns: A tuple of (score, matchedRanges) if matched, nil if no match.
+    ///
+    /// - Note: The String.Index operations have O(n) complexity per call. For menu item titles
+    ///   (typically < 50 characters), this is negligible. If performance becomes an issue with
+    ///   very long strings, consider maintaining integer offsets alongside String.Index.
     private static func calculateMatch(
         query: String,
         in target: String
@@ -105,6 +109,9 @@ struct FuzzySearch {
                 }
 
                 // Bonus for consecutive matches
+                // The multiplier rewards longer consecutive runs exponentially, making
+                // "Copy" rank higher than "CoOpYard" when searching for "cop".
+                // consecutiveCount starts at 1 to give the first consecutive char a base bonus.
                 if let lastIdx = lastMatchIndex,
                    normalizedTarget.index(after: lastIdx) == targetIndex {
                     consecutiveCount += 1

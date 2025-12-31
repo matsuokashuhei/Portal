@@ -97,7 +97,7 @@ final class CommandPaletteViewModel: ObservableObject {
     }
 
     private func setupSearchDebounce() {
-        // Debounce search text changes
+        // Debounce search text changes and reset selection
         $searchText
             .debounce(
                 for: .milliseconds(Self.searchDebounceMilliseconds),
@@ -105,26 +105,27 @@ final class CommandPaletteViewModel: ObservableObject {
             )
             .removeDuplicates()
             .sink { [weak self] query in
-                self?.performSearch(query: query)
+                self?.performSearch(query: query, resetSelection: true)
             }
             .store(in: &cancellables)
 
-        // Re-filter when menu items change
+        // Re-filter when menu items change (without resetting selection if user hasn't typed)
         $menuItems
-            .dropFirst()
             .sink { [weak self] _ in
-                guard let self else { return }
-                self.performSearch(query: self.searchText)
+                guard let self, !self.searchText.isEmpty else { return }
+                self.performSearch(query: self.searchText, resetSelection: false)
             }
             .store(in: &cancellables)
     }
 
-    private func performSearch(query: String) {
+    private func performSearch(query: String, resetSelection: Bool) {
         if query.isEmpty {
             filteredResults = []
         } else {
             filteredResults = FuzzySearch.search(query: query, in: menuItems)
         }
-        selectedIndex = 0
+        if resetSelection {
+            selectedIndex = 0
+        }
     }
 }
