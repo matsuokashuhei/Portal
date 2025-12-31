@@ -122,7 +122,7 @@ PortalTests/
 └── CommandPaletteViewModelTests.swift   # ViewModelテスト（5テスト）
 
 PortalUITests/
-├── PortalUITests.swift                  # パネルUIテスト（8テスト）
+├── PortalUITests.swift                  # パネルUIテスト（7テスト）
 └── PortalUITestsLaunchTests.swift       # 起動テスト
 
 docs/
@@ -134,6 +134,9 @@ docs/
 ```bash
 # 全テスト実行（Swift Testing + XCUITest）
 xcodebuild -project Portal.xcodeproj -scheme Portal test
+
+# 失敗したテストを自動リトライ（XCUITest初回タイムアウト対策）
+xcodebuild -project Portal.xcodeproj -scheme Portal test -retry-tests-on-failure
 
 # ユニットテストのみ
 xcodebuild -project Portal.xcodeproj -scheme Portal test -only-testing:PortalTests

@@ -9,6 +9,13 @@ import XCTest
 
 final class PortalUITests: XCTestCase {
 
+    // MARK: - Constants
+
+    /// Timeout for panel appearance after app launch
+    private let panelAppearanceTimeout: TimeInterval = 5.0
+
+    // MARK: - Properties
+
     var app: XCUIApplication!
 
     override func setUpWithError() throws {
@@ -35,7 +42,7 @@ final class PortalUITests: XCTestCase {
 
         // NSPanel is recognized as Dialog in accessibility hierarchy
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         // Press Escape key
         panelDialog.typeKey(.escape, modifierFlags: [])
@@ -52,7 +59,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         // Search field is the first text field in the panel
         let searchTextField = panelDialog.textFields.firstMatch
@@ -64,7 +71,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         // Find the text field (first text field in dialog)
         let searchTextField = panelDialog.textFields.firstMatch
@@ -80,7 +87,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         let searchTextField = panelDialog.textFields.firstMatch
         XCTAssertTrue(searchTextField.exists)
@@ -104,7 +111,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         let searchTextField = panelDialog.textFields.firstMatch
         XCTAssertTrue(searchTextField.exists)
@@ -123,7 +130,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         // Results list is a scroll view in the panel
         let scrollView = panelDialog.scrollViews.firstMatch
@@ -137,7 +144,7 @@ final class PortalUITests: XCTestCase {
         app.launch()
 
         let panelDialog = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panelDialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(panelDialog.waitForExistence(timeout: panelAppearanceTimeout))
 
         // CommandPaletteView contains the panel content (Group in accessibility hierarchy)
         let group = panelDialog.groups.firstMatch
