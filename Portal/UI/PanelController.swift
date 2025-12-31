@@ -20,15 +20,15 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel?.isVisible ?? false
     }
 
-    func toggle() {
+    func toggle(targetApp: NSRunningApplication? = nil) {
         if isVisible {
             hide()
         } else {
-            show()
+            show(targetApp: targetApp)
         }
     }
 
-    func show() {
+    func show(targetApp: NSRunningApplication? = nil) {
         if panel == nil {
             createPanel()
         }
@@ -43,6 +43,14 @@ final class PanelController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         stopEscapeMonitor()
         startEscapeMonitor()
+
+        // Post notification with target app info.
+        // NOTE: targetApp is captured by the caller (AppDelegate) BEFORE showing the panel,
+        // so observers can act on the original frontmost app. By the time this notification
+        // is posted, Portal is already the frontmost application. When targetApp is nil,
+        // observers should NOT attempt to infer the target from the current frontmost app.
+        let userInfo: [String: Any] = targetApp.map { [NotificationUserInfoKey.targetApp: $0] } ?? [:]
+        NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo)
     }
 
     func hide() {

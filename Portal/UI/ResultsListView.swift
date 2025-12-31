@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ResultsListView: View {
-    var results: [String]
+    var results: [MenuItem]
     var selectedIndex: Int
 
     var body: some View {
@@ -21,18 +21,11 @@ struct ResultsListView: View {
                         .padding()
                 } else {
                     ForEach(results.indices, id: \.self) { index in
+                        let item = results[index]
                         let isSelected = index == selectedIndex
-                        Text(results[index])
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(
-                                isSelected
-                                    ? Color.accentColor.opacity(0.1)
-                                    : Color.clear
-                            )
+                        MenuItemRow(item: item, isSelected: isSelected)
                             .accessibilityLabel(
-                                "\(results[index]), Result \(index + 1) of \(results.count)\(isSelected ? ", selected" : "")"
+                                buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
                             )
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
@@ -40,5 +33,96 @@ struct ResultsListView: View {
             }
         }
         .accessibilityIdentifier("ResultsListView")
+    }
+
+    /// Builds a comprehensive accessibility label for VoiceOver users.
+    /// Uses pathString instead of title to avoid redundancy (title is the last element of path).
+    private func buildAccessibilityLabel(item: MenuItem, index: Int, isSelected: Bool) -> String {
+        var components: [String] = [item.pathString]
+
+        if let shortcut = item.keyboardShortcut {
+            let spokenShortcut = convertShortcutToSpokenText(shortcut)
+            components.append("shortcut \(spokenShortcut)")
+        }
+
+        if !item.isEnabled {
+            components.append("disabled")
+        }
+
+        components.append("Result \(index + 1) of \(results.count)")
+
+        if isSelected {
+            components.append("selected")
+        }
+
+        return components.joined(separator: ", ")
+    }
+
+    /// Converts keyboard shortcut symbols to VoiceOver-friendly spoken text.
+    /// For example: "⌃⌥⇧⌘N" → "Control Option Shift Command N"
+    private func convertShortcutToSpokenText(_ shortcut: String) -> String {
+        let symbolMap: [Character: String] = [
+            "⌃": "Control",
+            "⌥": "Option",
+            "⇧": "Shift",
+            "⌘": "Command"
+        ]
+
+        var components: [String] = []
+
+        for character in shortcut {
+            if let mapped = symbolMap[character] {
+                components.append(mapped)
+            } else if character != " " {
+                components.append(String(character))
+            }
+        }
+
+        return components.joined(separator: " ")
+    }
+}
+
+// MARK: - Menu Item Row
+
+private struct MenuItemRow: View {
+    let item: MenuItem
+    let isSelected: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.body)
+                    .foregroundColor(item.isEnabled ? .primary : .secondary)
+
+                if let parentPath = item.parentPathString {
+                    Text(parentPath)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            if let shortcut = item.keyboardShortcut {
+                Text(shortcut)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .background(
+            isSelected
+                ? Color.accentColor.opacity(0.2)
+                : Color.clear
+        )
+        .cornerRadius(6)
+        .opacity(item.isEnabled ? 1.0 : 0.5)
     }
 }

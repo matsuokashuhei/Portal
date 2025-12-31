@@ -45,10 +45,14 @@ Portal/
 ├── Assets.xcassets/
 ├── App/
 │   ├── AppDelegate.swift      # ステータスバー、ホットキー、パネル管理
+│   ├── Notifications.swift    # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
+├── Models/
+│   └── MenuItem.swift         # メニュー項目のデータモデル
 ├── Services/
 │   ├── HotkeyManager.swift    # Option+Space検出
-│   └── AccessibilityService.swift  # 権限チェック・リクエスト
+│   ├── AccessibilityService.swift  # 権限チェック・リクエスト
+│   └── MenuCrawler.swift      # メニューバー走査サービス
 └── UI/
     ├── PanelController.swift  # NSPanel + パネル管理
     ├── CommandPaletteView.swift    # ルートビュー
@@ -63,11 +67,7 @@ Portal/
 
 | ファイル | 目的 | Issue |
 |---------|------|-------|
-| UI/CommandPaletteViewModel.swift | 状態管理 | #46 |
-| Services/MenuCrawler.swift | メニュー走査 | #48 |
 | Services/FuzzySearch.swift | 検索アルゴリズム | #49 |
-| Models/Command.swift | コマンドProtocol | #50 |
-| Models/MenuCommand.swift | メニューコマンド | #50 |
 | Settings/SettingsView.swift | 設定画面 | #51 |
 
 ## 実装の要点
@@ -75,8 +75,8 @@ Portal/
 ### Accessibility API
 - [x] App Sandboxを無効化（#43）
 - [x] `AXIsProcessTrusted()` 権限チェック（#47）
-- [ ] `AXUIElementCreateApplication()` アプリ要素取得（#48）
-- [ ] `kAXMenuBarAttribute` メニュー走査（#48）
+- [x] `AXUIElementCreateApplication()` アプリ要素取得（#48）
+- [x] `kAXMenuBarAttribute` メニュー走査（#48）
 - [ ] `AXUIElementPerformAction()` 実行（#50）
 
 ### メニューバーアプリ
