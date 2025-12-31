@@ -22,8 +22,8 @@ final class CommandPaletteViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var loadMenuItemsTask: Task<Void, Never>?
 
-    /// Debounce interval for search in milliseconds.
-    static let searchDebounceMilliseconds = 50
+    /// Debounce interval for search.
+    static let searchDebounceInterval: Int = 50
 
     init() {
         setupNotificationObserver()
@@ -100,7 +100,7 @@ final class CommandPaletteViewModel: ObservableObject {
         // Debounce search text changes and reset selection
         $searchText
             .debounce(
-                for: .milliseconds(Self.searchDebounceMilliseconds),
+                for: .milliseconds(Self.searchDebounceInterval),
                 scheduler: DispatchQueue.main
             )
             .removeDuplicates()

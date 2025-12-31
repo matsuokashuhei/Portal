@@ -109,15 +109,16 @@ struct FuzzySearch {
                 }
 
                 // Bonus for consecutive matches
-                // The multiplier rewards longer consecutive runs exponentially, making
+                // The multiplier rewards longer consecutive runs, making
                 // "Copy" rank higher than "CoOpYard" when searching for "cop".
-                // consecutiveCount starts at 1 to give the first consecutive char a base bonus.
+                // Consecutive bonus only applies from the second consecutive character onward.
                 if let lastIdx = lastMatchIndex,
                    normalizedTarget.index(after: lastIdx) == targetIndex {
                     consecutiveCount += 1
                     score += Score.consecutiveMatch * consecutiveCount
                 } else {
-                    consecutiveCount = 1
+                    // Starting a new sequence - no consecutive bonus for first char
+                    consecutiveCount = 0
                 }
 
                 // Track matched ranges
