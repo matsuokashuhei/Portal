@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func applicationDidBecomeActive() {
+        assert(Thread.isMainThread, "applicationDidBecomeActive must be called on the main thread for thread safety")
         checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
     }
@@ -82,19 +83,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let isNowGranted = AccessibilityService.isGranted
 
-        if !wasPermissionGranted && isNowGranted {
-            restartHotkeyManager()
-            updatePermissionMenuItemIfNeeded()
+        // Always stop timer when permission is granted to ensure it doesn't run indefinitely
+        if isNowGranted {
             stopPermissionCheckTimer()
+            if !wasPermissionGranted {
+                restartHotkeyManager()
+                updatePermissionMenuItemIfNeeded()
+            }
         }
 
         wasPermissionGranted = isNowGranted
     }
 
     private func restartHotkeyManager() {
-        guard let hotkeyManager = hotkeyManager else { return }
-        hotkeyManager.stop()
-        hotkeyManager.start()
+        // stop() must be called before start() because start() is not idempotent
+        // (it adds monitors without checking if they already exist)
+        hotkeyManager?.stop()
+        hotkeyManager?.start()
     }
 
     private func checkAccessibilityPermission() {
