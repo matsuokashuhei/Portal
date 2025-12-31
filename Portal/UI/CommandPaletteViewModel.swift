@@ -81,7 +81,6 @@ final class CommandPaletteViewModel: ObservableObject {
 
     private func setupNotificationObserver() {
         NotificationCenter.default.publisher(for: .panelDidShow)
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
                 let targetApp = notification.userInfo?[NotificationUserInfoKey.targetApp] as? NSRunningApplication
                 self?.loadMenuItems(for: targetApp)

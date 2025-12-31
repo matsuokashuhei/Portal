@@ -80,7 +80,9 @@ PRを作成すると自動的にGitHub Copilotがレビューを行う。また�
      - 指摘が誤解に基づいている場合
      - 過剰な複雑化を招く場合
 
-**対応手順（Copilot・人間レビュアー共通）:**
+### 対応手順
+
+**Copilot・人間レビュアー共通:**
 
 1. 指摘事項を評価し、対応方針に基づいて修正の要否を判断する
 2. 各指摘に対して、同じスレッド内で対応内容を返信する
@@ -88,92 +90,35 @@ PRを作成すると自動的にGitHub Copilotがレビューを行う。また�
    - 修正コミットのURL（例: `https://github.com/{owner}/{repo}/commit/{sha}`）
    - 対応した箇所へのURL（例: `https://github.com/{owner}/{repo}/blob/{sha}/{file}#L{line}`）
 3. 返信後、レビューコメントをResolvedにする
+4. すべての指摘に対応するまで1-3を繰り返す
 
-**レビューコメントの取得:**
+### レビューコメントの取得
+
+⚠️ **重要**: `gh api`のデフォルトは30件のみ返却。`--paginate`オプションで全件取得すること。
+
+⚠️ **`--paginate`と`--jq`の注意点**: `--paginate`使用時、`--jq`は各ページに対して個別に適用される。そのため`[...] | last`のような配列操作は各ページの最後の要素を返し、意図しない結果になる。代わりに、各要素を1行ずつ出力し`| tail -1`で最後を取得する。
 
 ```bash
+# すべてのレビューを一覧表示（--paginateで全件取得）
+gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews --paginate \
+  --jq '.[] | {id: .id, user: .user.login, state: .state, submitted_at: .submitted_at}'
+
 # 特定のレビューIDに紐づくインラインコメントを取得
 gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews/{レビューID}/comments \
-  --jq '.[] | {id: .id, path: .path, body: .body}'
+  --jq '.[] | {id: .id, path: .path, line: .line, body: .body}'
 
 # レビュー本文（body）を取得（人間レビュアーの場合に重要）
 gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews/{レビューID} \
   --jq '{id: .id, state: .state, body: .body, user: .user.login}'
 
-# すべてのレビューを一覧表示
-gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
-  --jq '.[] | {id: .id, user: .user.login, state: .state, submitted_at: .submitted_at}'
-```
-
-**注意:** 人間レビュアー（matsuokashuhei等）は、インラインコメントなしでレビュー本文のみに指摘を記載することがある。レビュー本文が空でないか必ず確認すること。
-
-### 再レビューリクエスト
-
-修正コミットをプッシュした後:
-
-```bash
-gh api repos/{owner}/{repo}/pulls/{PR番号}/requested_reviewers \
-  -X POST -f "reviewers[]=copilot-pull-request-reviewer[bot]"
-```
-
-### レビュー完了確認
-
-30秒おきに確認:
-
-```bash
-gh pr view {PR番号} --json reviewRequests --jq '.reviewRequests[].login'
-```
-
-- Copilotが`reviewRequests`にいる場合: レビュー中なので待機を続ける
-- Copilotが`reviewRequests`にいない場合: レビュー完了
-
-### レビュー監視スクリプト
-
-自動的にレビュー完了を監視し、新しいコメントを検出する:
-
-```bash
-# 現在の最新レビュー時刻を記録
-LAST_REVIEW=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
-  --jq '[.[] | select(.user.login | contains("copilot"))] | sort_by(.submitted_at) | last | .submitted_at')
-
-# 30秒おきに最大10分間監視
-for i in {1..20}; do
-  echo "Check $i/20..."
-
-  # レビュー待ち状態を確認
-  PENDING=$(gh pr view {PR番号} --json reviewRequests \
-    --jq '[.reviewRequests[].login] | map(select(contains("copilot"))) | length')
-
-  if [ "$PENDING" -gt 0 ]; then
-    echo "Copilotがレビュー中..."
-  else
-    # 新しいレビューがあるか確認
-    LATEST=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
-      --jq '[.[] | select(.user.login | contains("copilot"))] | sort_by(.submitted_at) | last | .submitted_at')
-
-    if [ "$LATEST" != "$LAST_REVIEW" ]; then
-      echo "新しいレビューを検出: $LATEST"
-      break
-    fi
-  fi
-
-  sleep 30
-done
-```
-
-### レビューコメント取得
-
-```bash
-# 最新のCopilotレビューIDを取得
-REVIEW_ID=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews \
-  --jq '[.[] | select(.user.login | contains("copilot"))] | last | .id')
-
-# そのレビューに紐づくコメントを取得
+# 最新のCopilotレビューIDを取得してコメントを表示
+# ※ --paginateでは配列操作（[...] | last）が各ページに適用されるため、tail -1を使用
+REVIEW_ID=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews --paginate \
+  --jq '.[] | select(.user.login | contains("copilot")) | .id' | tail -1)
 gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews/$REVIEW_ID/comments
 ```
 
-- 10分経過しても状態が変わらない場合は確認を終了
-- 新しいコメントがあれば対応し、再度プッシュ
+**注意:** 人間レビュアー（matsuokashuhei等）は、インラインコメントなしでレビュー本文のみに指摘を記載することがある。レビュー本文が空でないか必ず確認すること。
 
 ### レビューコメントへの返信
 
@@ -188,7 +133,7 @@ gh api repos/{owner}/{repo}/pulls/{PR番号}/comments \
 
 返信内容のフォーマット:
 ```markdown
-**日本語訳:** <Copilotのコメントを日本語に翻訳>
+**日本語訳:** <レビューコメントを日本語に翻訳>
 
 **対応:** <修正内容または対応しない理由>
 
@@ -196,13 +141,108 @@ gh api repos/{owner}/{repo}/pulls/{PR番号}/comments \
 - 該当箇所: https://github.com/{owner}/{repo}/blob/{sha}/{file}#L{line}
 ```
 
+### 再レビューリクエスト
+
+修正コミットをプッシュした後:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{PR番号}/requested_reviewers \
+  -X POST -f "reviewers[]=copilot-pull-request-reviewer[bot]"
+```
+
+### レビュー状態確認
+
+#### 方法1: reviewRequests（シンプル）
+
+```bash
+gh pr view {PR番号} --json reviewRequests --jq '.reviewRequests[].login'
+```
+
+- `copilot-pull-request-reviewer[bot]`が表示される → レビュー待ち
+- 表示されない → レビュー開始済みまたは完了
+
+⚠️ **注意**: レビュー開始後は`reviewRequests`から消えるため、この方法では「レビュー中」と「レビュー完了」を区別できない。
+
+#### 方法2: タイムラインイベント比較（正確）
+
+`copilot_work_started`イベントと最新レビューのタイムスタンプを比較:
+
+```bash
+# レビュー開始時刻を取得（--paginateで全件取得、tail -1で最後を取得）
+STARTED=$(gh api repos/{owner}/{repo}/issues/{PR番号}/timeline --paginate \
+  --jq '.[] | select(.event == "copilot_work_started") | .created_at' | tail -1)
+
+# 最新レビュー完了時刻を取得（--paginateで全件取得、tail -1で最後を取得）
+REVIEWED=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews --paginate \
+  --jq '.[] | select(.user.login | contains("copilot")) | .submitted_at' | tail -1)
+
+# 判定
+if [ -z "$STARTED" ]; then
+  echo "Copilotレビュー未開始"
+elif [ -z "$REVIEWED" ] || [[ "$STARTED" > "$REVIEWED" ]]; then
+  echo "Copilotがレビュー中..."
+else
+  echo "レビュー完了"
+fi
+```
+
+#### 判定ロジック
+
+| `copilot_work_started` | 最新レビュー時刻 | 結果 |
+|------------------------|-----------------|------|
+| なし | - | 未開始 |
+| あり | なし | レビュー中 |
+| あり | 開始より前 | レビュー中 |
+| あり | 開始より後 | 完了 |
+
+### レビュー監視スクリプト
+
+自動的にレビュー完了を監視し、新しいコメントを検出する:
+
+```bash
+# 現在の最新レビュー時刻を記録（--paginateで全件取得、tail -1で最後を取得）
+LAST_REVIEW=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews --paginate \
+  --jq '.[] | select(.user.login | contains("copilot")) | .submitted_at' | tail -1)
+
+# 30秒おきに最大10分間監視
+for i in {1..20}; do
+  echo "Check $i/20..."
+
+  # タイムラインイベント方式で状態確認（--paginateで全件取得、tail -1で最後を取得）
+  STARTED=$(gh api repos/{owner}/{repo}/issues/{PR番号}/timeline --paginate \
+    --jq '.[] | select(.event == "copilot_work_started") | .created_at' | tail -1)
+  REVIEWED=$(gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews --paginate \
+    --jq '.[] | select(.user.login | contains("copilot")) | .submitted_at' | tail -1)
+
+  if [ -z "$STARTED" ]; then
+    echo "Copilotレビュー未開始"
+    break
+  elif [ -z "$REVIEWED" ] || [[ "$STARTED" > "$REVIEWED" ]]; then
+    echo "Copilotがレビュー中..."
+  else
+    # 新しいレビューがあるか確認
+    if [ "$REVIEWED" != "$LAST_REVIEW" ]; then
+      echo "新しいレビューを検出: $REVIEWED"
+      break
+    else
+      echo "レビュー完了（新規コメントなし）"
+      break
+    fi
+  fi
+
+  sleep 30
+done
+```
+
+- 10分経過しても状態が変わらない場合は確認を終了
+- 新しいコメントがあれば対応し、再度プッシュ
+
 ## PRステータス監視
 
 ```bash
 gh pr view <PR番号>              # PRの状態を確認
 gh pr checks <PR番号>            # CIチェックの状況を確認
-gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews   # レビューコメント確認
-gh api repos/{owner}/{repo}/pulls/{PR番号}/comments  # コメント詳細確認
+gh api repos/{owner}/{repo}/pulls/{PR番号}/reviews   # レビュー一覧確認
 ```
 
 すべてのチェックがパスし、レビュー承認を得るまで対応を続ける。
