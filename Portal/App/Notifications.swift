@@ -5,7 +5,7 @@
 //  Created by Claude Code on 2025/12/31.
 //
 
-import AppKit
+import Foundation
 
 extension Notification.Name {
     /// Posted when the command palette panel is shown.

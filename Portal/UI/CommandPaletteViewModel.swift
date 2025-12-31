@@ -51,6 +51,7 @@ final class CommandPaletteViewModel: ObservableObject {
         loadMenuItemsTask = Task { @MainActor in
             isLoading = true
             errorMessage = nil
+            defer { isLoading = false }
 
             do {
                 let items: [MenuItem]
@@ -73,8 +74,6 @@ final class CommandPaletteViewModel: ObservableObject {
                 menuItems = []
                 selectedIndex = 0
             }
-
-            isLoading = false
         }
     }
 
