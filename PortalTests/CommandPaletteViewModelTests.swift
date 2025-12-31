@@ -11,25 +11,25 @@ import Testing
 struct CommandPaletteViewModelTests {
 
     @Test @MainActor
-    func testInitialSearchTextIsEmpty() async throws {
+    func testInitialSearchTextIsEmpty() {
         let viewModel = CommandPaletteViewModel()
         #expect(viewModel.searchText == "")
     }
 
     @Test @MainActor
-    func testInitialSelectedIndexIsZero() async throws {
+    func testInitialSelectedIndexIsZero() {
         let viewModel = CommandPaletteViewModel()
         #expect(viewModel.selectedIndex == 0)
     }
 
     @Test @MainActor
-    func testInitialResultsIsEmpty() async throws {
+    func testInitialResultsIsEmpty() {
         let viewModel = CommandPaletteViewModel()
         #expect(viewModel.results.isEmpty)
     }
 
     @Test @MainActor
-    func testClearSearchResetsSearchText() async throws {
+    func testClearSearchResetsSearchText() {
         let viewModel = CommandPaletteViewModel()
         viewModel.searchText = "test query"
         viewModel.clearSearch()
@@ -37,7 +37,7 @@ struct CommandPaletteViewModelTests {
     }
 
     @Test @MainActor
-    func testClearSearchResetsSelectedIndex() async throws {
+    func testClearSearchResetsSelectedIndex() {
         let viewModel = CommandPaletteViewModel()
         viewModel.selectedIndex = 5
         viewModel.clearSearch()

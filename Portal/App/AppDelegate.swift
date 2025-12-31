@@ -60,8 +60,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func startPermissionCheckTimer() {
         // Poll every 1 second to detect permission changes
+        // Timer callbacks run on main run loop, ensuring thread safety with applicationDidBecomeActive
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.checkAndHandlePermissionChange()
+            // Explicitly dispatch to main queue to guarantee thread safety
+            DispatchQueue.main.async {
+                self?.checkAndHandlePermissionChange()
+            }
         }
     }
 
@@ -212,5 +216,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        stopPermissionCheckTimer()
     }
 }
