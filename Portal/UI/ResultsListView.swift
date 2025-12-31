@@ -25,7 +25,7 @@ struct ResultsListView: View {
                         let isSelected = index == selectedIndex
                         MenuItemRow(item: item, isSelected: isSelected)
                             .accessibilityLabel(
-                                "\(item.title), \(item.pathString), Result \(index + 1) of \(results.count)\(isSelected ? ", selected" : "")"
+                                buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
                             )
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
@@ -33,6 +33,30 @@ struct ResultsListView: View {
             }
         }
         .accessibilityIdentifier("ResultsListView")
+    }
+
+    /// Builds a comprehensive accessibility label for VoiceOver users.
+    private func buildAccessibilityLabel(item: MenuItem, index: Int, isSelected: Bool) -> String {
+        var components: [String] = [
+            item.title,
+            item.pathString
+        ]
+
+        if let shortcut = item.keyboardShortcut {
+            components.append("shortcut \(shortcut)")
+        }
+
+        if !item.isEnabled {
+            components.append("disabled")
+        }
+
+        components.append("Result \(index + 1) of \(results.count)")
+
+        if isSelected {
+            components.append("selected")
+        }
+
+        return components.joined(separator: ", ")
     }
 }
 

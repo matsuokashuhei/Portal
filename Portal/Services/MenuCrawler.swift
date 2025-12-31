@@ -31,6 +31,11 @@ enum MenuCrawlerError: Error, LocalizedError {
 @MainActor
 final class MenuCrawler {
     /// Cache duration in seconds.
+    /// Note: This short duration is a trade-off between performance and freshness.
+    /// Menu items may become stale if the target application modifies its menus
+    /// dynamically (e.g., enabling/disabling items based on context). For most
+    /// applications, 0.5 seconds provides a good balance. Future improvements could
+    /// include observing NSMenu notifications for cache invalidation.
     private static let cacheDuration: TimeInterval = 0.5
 
     /// Cached menu items with timestamp and process identifier.
