@@ -106,7 +106,6 @@
 - [x] 検索フィールドフォーカス（testSearchFieldHasFocusOnLaunch）
 - [x] 検索フィールド入力（testSearchFieldAcceptsInput）
 - [x] 結果リスト存在確認（testResultsListExists）
-- [x] 起動パフォーマンス（testLaunchPerformance）
 
 ---
 

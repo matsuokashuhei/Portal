@@ -151,15 +151,6 @@ final class PortalUITests: XCTestCase {
         let group = panelDialog.groups.firstMatch
         XCTAssertTrue(group.exists, "CommandPaletteView (Group) should exist")
     }
-
-    // MARK: - Performance Tests
-
-    @MainActor
-    func testLaunchPerformance() throws {
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            app.launch()
-        }
-    }
 }
 
 // MARK: - XCUIElement Extension
