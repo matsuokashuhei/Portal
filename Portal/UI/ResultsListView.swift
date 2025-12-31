@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ResultsListView: View {
-    var results: [String]
+    var results: [MenuItem]
     var selectedIndex: Int
 
     var body: some View {
@@ -21,18 +21,11 @@ struct ResultsListView: View {
                         .padding()
                 } else {
                     ForEach(results.indices, id: \.self) { index in
+                        let item = results[index]
                         let isSelected = index == selectedIndex
-                        Text(results[index])
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(
-                                isSelected
-                                    ? Color.accentColor.opacity(0.1)
-                                    : Color.clear
-                            )
+                        MenuItemRow(item: item, isSelected: isSelected)
                             .accessibilityLabel(
-                                "\(results[index]), Result \(index + 1) of \(results.count)\(isSelected ? ", selected" : "")"
+                                "\(item.title), \(item.pathString), Result \(index + 1) of \(results.count)\(isSelected ? ", selected" : "")"
                             )
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
@@ -40,5 +33,48 @@ struct ResultsListView: View {
             }
         }
         .accessibilityIdentifier("ResultsListView")
+    }
+}
+
+// MARK: - Menu Item Row
+
+private struct MenuItemRow: View {
+    let item: MenuItem
+    let isSelected: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.body)
+                    .foregroundColor(item.isEnabled ? .primary : .secondary)
+
+                Text(item.pathString)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            if let shortcut = item.keyboardShortcut {
+                Text(shortcut)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .background(
+            isSelected
+                ? Color.accentColor.opacity(0.2)
+                : Color.clear
+        )
+        .cornerRadius(6)
+        .opacity(item.isEnabled ? 1.0 : 0.5)
     }
 }

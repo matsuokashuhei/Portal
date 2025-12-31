@@ -43,6 +43,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         stopEscapeMonitor()
         startEscapeMonitor()
+        NotificationCenter.default.post(name: .panelDidShow, object: nil)
     }
 
     func hide() {
