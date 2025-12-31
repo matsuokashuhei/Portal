@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var lastPermissionRequestTime: Date?
     private let permissionRequestCooldown: TimeInterval = 5.0
+    private var permissionCheckTimer: Timer?
+    private var wasPermissionGranted = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -25,8 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Skip accessibility check in test mode to avoid permission dialogs
         if !TestConfiguration.shouldSkipAccessibilityCheck {
             checkAccessibilityPermission()
+            startPermissionCheckTimer()
         }
 
+        wasPermissionGranted = AccessibilityService.isGranted
         setupHotkeyManager()
         setupPermissionObserver()
 
@@ -49,7 +53,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func applicationDidBecomeActive() {
+        checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
+    }
+
+    private func startPermissionCheckTimer() {
+        // Poll every 1 second to detect permission changes
+        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkAndHandlePermissionChange()
+        }
+    }
+
+    private func stopPermissionCheckTimer() {
+        permissionCheckTimer?.invalidate()
+        permissionCheckTimer = nil
+    }
+
+    private func checkAndHandlePermissionChange() {
+        let isNowGranted = AccessibilityService.isGranted
+
+        if !wasPermissionGranted && isNowGranted {
+            restartHotkeyManager()
+            updatePermissionMenuItemIfNeeded()
+            stopPermissionCheckTimer()
+        }
+
+        wasPermissionGranted = isNowGranted
+    }
+
+    private func restartHotkeyManager() {
+        hotkeyManager?.stop()
+        hotkeyManager?.start()
     }
 
     private func checkAccessibilityPermission() {
