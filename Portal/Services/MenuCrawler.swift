@@ -33,8 +33,8 @@ final class MenuCrawler {
     /// Cache duration in seconds.
     private static let cacheDuration: TimeInterval = 0.5
 
-    /// Cached menu items with timestamp.
-    private var cache: (items: [MenuItem], timestamp: Date, bundleID: String)?
+    /// Cached menu items with timestamp and process identifier.
+    private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t)?
 
     /// Crawls the menu bar of the specified application.
     /// - Parameter app: The application to crawl menus from.
@@ -45,11 +45,11 @@ final class MenuCrawler {
             throw MenuCrawlerError.accessibilityNotGranted
         }
 
-        let bundleID = app.bundleIdentifier ?? ""
+        let pid = app.processIdentifier
 
         // Check cache validity
         if let cached = cache,
-           cached.bundleID == bundleID,
+           cached.pid == pid,
            Date().timeIntervalSince(cached.timestamp) < Self.cacheDuration {
             return cached.items
         }
@@ -58,7 +58,7 @@ final class MenuCrawler {
         let items = try crawlMenuBar(for: app)
 
         // Update cache
-        cache = (items: items, timestamp: Date(), bundleID: bundleID)
+        cache = (items: items, timestamp: Date(), pid: pid)
 
         return items
     }
@@ -122,9 +122,13 @@ final class MenuCrawler {
             throw MenuCrawlerError.menuBarNotAccessible
         }
 
+        // Safe cast using CFTypeRef to AXUIElement
+        // swiftlint:disable:next force_cast
+        let menuBarElement = menuBar as! AXUIElement
+
         // Get menu bar items (top-level menus like File, Edit, etc.)
         var menuBarItemsRef: CFTypeRef?
-        let itemsResult = AXUIElementCopyAttributeValue(menuBar as! AXUIElement, kAXChildrenAttribute as CFString, &menuBarItemsRef)
+        let itemsResult = AXUIElementCopyAttributeValue(menuBarElement, kAXChildrenAttribute as CFString, &menuBarItemsRef)
 
         guard itemsResult == .success,
               let menuBarItems = menuBarItemsRef as? [AXUIElement] else {
@@ -134,11 +138,11 @@ final class MenuCrawler {
         var allMenuItems: [MenuItem] = []
 
         // Iterate through each top-level menu
-        for menuBarItem in menuBarItems {
+        for (index, menuBarItem) in menuBarItems.enumerated() {
             let menuTitle = getTitle(from: menuBarItem) ?? ""
 
-            // Skip Apple menu and empty titles
-            if menuTitle.isEmpty || menuTitle == "Apple" {
+            // Skip Apple menu (always first menu bar item) and empty titles
+            if index == 0 || menuTitle.isEmpty {
                 continue
             }
 
@@ -250,13 +254,13 @@ final class MenuCrawler {
         var result = ""
 
         // kAXMenuItemCmdModifiersAttribute uses Carbon modifier flags:
-        // Shift = 1, Option = 2, Control = 4, Command = 0 (implicit)
-        // Note: Command is implicit unless cmdVirtualKey is set
+        // Shift = 1, Option = 2, Control = 4
+        // Command is implicit unless the "no command" bit (8) is set.
 
         if modifiers & 4 != 0 { result += "⌃" }  // Control
         if modifiers & 2 != 0 { result += "⌥" }  // Option
         if modifiers & 1 != 0 { result += "⇧" }  // Shift
-        result += "⌘"  // Command is always implied for menu shortcuts
+        if modifiers & 8 == 0 { result += "⌘" }  // Command (only if not explicitly suppressed)
 
         result += char.uppercased()
 

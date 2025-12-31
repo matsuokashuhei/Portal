@@ -45,11 +45,8 @@ final class PanelController: NSObject, NSWindowDelegate {
         startEscapeMonitor()
 
         // Post notification with target app info
-        var userInfo: [String: Any] = [:]
-        if let app = targetApp {
-            userInfo[NotificationUserInfoKey.targetApp] = app
-        }
-        NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo.isEmpty ? nil : userInfo)
+        let userInfo: [String: Any] = targetApp.map { [NotificationUserInfoKey.targetApp: $0] } ?? [:]
+        NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo)
     }
 
     func hide() {
