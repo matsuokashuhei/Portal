@@ -8,6 +8,11 @@
 import ApplicationServices
 
 /// Represents a menu item from an application's menu bar.
+///
+/// - Important: The `axElement` reference can become invalid if the source application
+///   modifies its menu structure, quits, or crashes. When executing menu actions (Issue #50),
+///   the caller should handle `AXError` appropriately when the element is no longer valid.
+///   The short cache duration (0.5s) in `MenuCrawler` helps mitigate stale references.
 struct MenuItem: Identifiable, @unchecked Sendable {
     /// Unique identifier based on menu path.
     let id: String
@@ -22,6 +27,7 @@ struct MenuItem: Identifiable, @unchecked Sendable {
     let keyboardShortcut: String?
 
     /// Reference to the accessibility element for performing actions.
+    /// - Note: This reference may become invalid if the target app modifies its menus.
     let axElement: AXUIElement
 
     /// Whether the menu item is currently enabled.

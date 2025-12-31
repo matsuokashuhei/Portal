@@ -44,7 +44,11 @@ final class PanelController: NSObject, NSWindowDelegate {
         stopEscapeMonitor()
         startEscapeMonitor()
 
-        // Post notification with target app info
+        // Post notification with target app info.
+        // NOTE: targetApp is captured by the caller (AppDelegate) BEFORE showing the panel,
+        // so observers can act on the original frontmost app. By the time this notification
+        // is posted, Portal is already the frontmost application. When targetApp is nil,
+        // observers should NOT attempt to infer the target from the current frontmost app.
         let userInfo: [String: Any] = targetApp.map { [NotificationUserInfoKey.targetApp: $0] } ?? [:]
         NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo)
     }

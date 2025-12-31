@@ -127,7 +127,9 @@ final class MenuCrawler {
             throw MenuCrawlerError.menuBarNotAccessible
         }
 
-        // Safe cast using CFTypeRef to AXUIElement
+        // The Accessibility API guarantees that kAXMenuBarAttribute returns an AXUIElement
+        // when AXUIElementCopyAttributeValue returns .success. The force cast is safe here
+        // because CoreFoundation types cannot use conditional casting (as? always succeeds).
         // swiftlint:disable:next force_cast
         let menuBarElement = menuBar as! AXUIElement
 
@@ -258,14 +260,19 @@ final class MenuCrawler {
     private func formatShortcut(char: String, modifiers: Int) -> String {
         var result = ""
 
-        // kAXMenuItemCmdModifiersAttribute uses Carbon modifier flags:
-        // Shift = 1, Option = 2, Control = 4
-        // Command is implicit unless the "no command" bit (8) is set.
+        // kAXMenuItemCmdModifiersAttribute uses Carbon-style modifier flags, matching
+        // the legacy Carbon Event Manager constants:
+        //   shiftKey = 1, optionKey = 2, controlKey = 4
+        // The Command key (cmdKey) is implicit and present unless the Accessibility
+        // API sets the "no command" bit (8) to explicitly suppress it.
+        //
+        // This mapping is based on observed behavior of the Accessibility API.
+        // If macOS changes this behavior, these bit values may need adjustment.
 
         if modifiers & 4 != 0 { result += "⌃" }  // Control
         if modifiers & 2 != 0 { result += "⌥" }  // Option
         if modifiers & 1 != 0 { result += "⇧" }  // Shift
-        if modifiers & 8 == 0 { result += "⌘" }  // Command (only if not explicitly suppressed)
+        if modifiers & 8 == 0 { result += "⌘" }  // Command (present unless explicitly suppressed)
 
         result += char.uppercased()
 

@@ -49,9 +49,11 @@ final class CommandPaletteViewModel: ObservableObject {
                     items = try await menuCrawler.crawlActiveApplication()
                 }
                 menuItems = items
+                selectedIndex = 0
             } catch {
                 errorMessage = error.localizedDescription
                 menuItems = []
+                selectedIndex = 0
             }
 
             isLoading = false
