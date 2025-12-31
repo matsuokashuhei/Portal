@@ -52,7 +52,8 @@ Portal/
 ├── Services/
 │   ├── HotkeyManager.swift    # Option+Space検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
-│   └── MenuCrawler.swift      # メニューバー走査サービス
+│   ├── MenuCrawler.swift      # メニューバー走査サービス
+│   └── FuzzySearch.swift      # スコアベース曖昧検索
 └── UI/
     ├── PanelController.swift  # NSPanel + パネル管理
     ├── CommandPaletteView.swift    # ルートビュー
@@ -67,7 +68,6 @@ Portal/
 
 | ファイル | 目的 | Issue |
 |---------|------|-------|
-| Services/FuzzySearch.swift | 検索アルゴリズム | #49 |
 | Settings/SettingsView.swift | 設定画面 | #51 |
 
 ## 実装の要点
@@ -92,8 +92,8 @@ Portal/
 - [x] Escapeキーでパネル非表示（#45）
 
 ### 検索・実行
-- [ ] FuzzySearch実装（#49）
-- [ ] 50msデバウンス（#49）
+- [x] FuzzySearch実装（#49）
+- [x] 50msデバウンス（#49）
 - [ ] キーボードナビゲーション（#50）
 - [ ] メニュー実行（#50）
 
@@ -119,7 +119,9 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 ```
 PortalTests/
 ├── PortalTests.swift                    # テンプレート
-└── CommandPaletteViewModelTests.swift   # ViewModelテスト（5テスト）
+├── CommandPaletteViewModelTests.swift   # ViewModelテスト（8テスト）
+├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（18テスト）
+└── MenuItemTests.swift                  # MenuItemテスト
 
 PortalUITests/
 ├── PortalUITests.swift                  # パネルUIテスト（7テスト）

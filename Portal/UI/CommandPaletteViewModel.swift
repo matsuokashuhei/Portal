@@ -16,22 +16,30 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published var menuItems: [MenuItem] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published private(set) var filteredResults: [FuzzySearch.Match] = []
 
     private let menuCrawler = MenuCrawler()
     private var cancellables = Set<AnyCancellable>()
     private var loadMenuItemsTask: Task<Void, Never>?
 
+    /// Debounce interval for search.
+    static let searchDebounceInterval: Int = 50
+
     init() {
         setupNotificationObserver()
+        setupSearchDebounce()
     }
 
     deinit {
         loadMenuItemsTask?.cancel()
     }
 
-    // TODO: Implement command search/filtering based on `searchText` (Issue #49)
+    /// Filtered menu items based on search text.
     var results: [MenuItem] {
-        menuItems
+        if searchText.isEmpty {
+            return menuItems
+        }
+        return filteredResults.map(\.item)
     }
 
     func clearSearch() {
@@ -86,5 +94,38 @@ final class CommandPaletteViewModel: ObservableObject {
                 self?.loadMenuItems(for: targetApp)
             }
             .store(in: &cancellables)
+    }
+
+    private func setupSearchDebounce() {
+        // Debounce search text changes and reset selection
+        $searchText
+            .debounce(
+                for: .milliseconds(Self.searchDebounceInterval),
+                scheduler: DispatchQueue.main
+            )
+            .removeDuplicates()
+            .sink { [weak self] query in
+                self?.performSearch(query: query, resetSelection: true)
+            }
+            .store(in: &cancellables)
+
+        // Re-filter when menu items change (without resetting selection if user hasn't typed)
+        $menuItems
+            .sink { [weak self] _ in
+                guard let self, !self.searchText.isEmpty else { return }
+                self.performSearch(query: self.searchText, resetSelection: false)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func performSearch(query: String, resetSelection: Bool) {
+        if query.isEmpty {
+            filteredResults = []
+        } else {
+            filteredResults = FuzzySearch.search(query: query, in: menuItems)
+        }
+        if resetSelection {
+            selectedIndex = 0
+        }
     }
 }
