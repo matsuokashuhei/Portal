@@ -13,6 +13,16 @@ import ApplicationServices
 ///   modifies its menu structure, quits, or crashes. When executing menu actions (Issue #50),
 ///   the caller should handle `AXError` appropriately when the element is no longer valid.
 ///   The short cache duration (0.5s) in `MenuCrawler` helps mitigate stale references.
+///
+/// ## Thread Safety
+/// This type is marked as `@unchecked Sendable` because:
+/// - `MenuCrawler` is `@MainActor`, so all `MenuItem` instances are created on the main thread
+/// - `CommandPaletteViewModel` is `@MainActor`, so all access to `MenuItem` occurs on the main thread
+/// - The `AXUIElement` reference is only used for menu execution (Issue #50), which will also
+///   occur on the main thread via `AXUIElementPerformAction`
+/// - All other fields are immutable value types
+///
+/// If `MenuItem` is ever accessed from non-main threads, this assumption must be revisited.
 struct MenuItem: Identifiable, @unchecked Sendable {
     /// Unique identifier based on menu path.
     let id: String

@@ -17,11 +17,11 @@ enum MenuCrawlerError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessibilityNotGranted:
-            return "Accessibility permission is not granted"
+            return "Portal needs Accessibility permission to read menus. Please enable access in System Settings > Privacy & Security > Accessibility."
         case .noActiveApplication:
-            return "No active application found"
+            return "No active application found. Click on an app window to make it active, then try again."
         case .menuBarNotAccessible:
-            return "Menu bar is not accessible"
+            return "Unable to access this app's menu bar. The app may not have a menu bar, may be in full-screen mode, or may have quit."
         }
     }
 }
@@ -205,10 +205,9 @@ final class MenuCrawler {
 
             // Check if this item has a submenu
             var submenuRef: CFTypeRef?
-            let hasSubmenu = AXUIElementCopyAttributeValue(child, kAXChildrenAttribute as CFString, &submenuRef) == .success &&
-                             (submenuRef as? [AXUIElement])?.isEmpty == false
-
-            if hasSubmenu, let submenus = submenuRef as? [AXUIElement] {
+            if AXUIElementCopyAttributeValue(child, kAXChildrenAttribute as CFString, &submenuRef) == .success,
+               let submenus = submenuRef as? [AXUIElement],
+               !submenus.isEmpty {
                 // Recurse into submenu
                 for submenu in submenus {
                     let subItems = crawlMenu(submenu, path: currentPath)
