@@ -5,6 +5,7 @@
 //  Created by Claude Code on 2025/12/30.
 //
 
+import AppKit
 import Combine
 import SwiftUI
 
@@ -33,14 +34,20 @@ final class CommandPaletteViewModel: ObservableObject {
         selectedIndex = 0
     }
 
-    /// Loads menu items from the active application.
-    func loadMenuItemsForActiveApp() {
+    /// Loads menu items from the specified application.
+    /// - Parameter app: The application to crawl menus from. If nil, crawls the active application.
+    func loadMenuItems(for app: NSRunningApplication?) {
         Task {
             isLoading = true
             errorMessage = nil
 
             do {
-                let items = try await menuCrawler.crawlActiveApplication()
+                let items: [MenuItem]
+                if let targetApp = app {
+                    items = try await menuCrawler.crawlApplication(targetApp)
+                } else {
+                    items = try await menuCrawler.crawlActiveApplication()
+                }
                 menuItems = items
             } catch {
                 errorMessage = error.localizedDescription
@@ -56,8 +63,9 @@ final class CommandPaletteViewModel: ObservableObject {
     private func setupNotificationObserver() {
         NotificationCenter.default.publisher(for: .panelDidShow)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.loadMenuItemsForActiveApp()
+            .sink { [weak self] notification in
+                let targetApp = notification.userInfo?[NotificationUserInfoKey.targetApp] as? NSRunningApplication
+                self?.loadMenuItems(for: targetApp)
             }
             .store(in: &cancellables)
     }

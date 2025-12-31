@@ -34,17 +34,13 @@ actor MenuCrawler {
     /// Cached menu items with timestamp.
     private var cache: (items: [MenuItem], timestamp: Date, bundleID: String)?
 
-    /// Crawls the menu bar of the currently active application.
-    /// - Returns: Array of menu items found in the active application.
+    /// Crawls the menu bar of the specified application.
+    /// - Parameter app: The application to crawl menus from.
+    /// - Returns: Array of menu items found in the application.
     /// - Throws: MenuCrawlerError if crawling fails.
-    func crawlActiveApplication() async throws -> [MenuItem] {
+    func crawlApplication(_ app: NSRunningApplication) async throws -> [MenuItem] {
         guard AccessibilityService.isGranted else {
             throw MenuCrawlerError.accessibilityNotGranted
-        }
-
-        // Get frontmost application (excluding Portal itself)
-        guard let app = getFrontmostApp() else {
-            throw MenuCrawlerError.noActiveApplication
         }
 
         let bundleID = app.bundleIdentifier ?? ""
@@ -63,6 +59,22 @@ actor MenuCrawler {
         cache = (items: items, timestamp: Date(), bundleID: bundleID)
 
         return items
+    }
+
+    /// Crawls the menu bar of the currently active application.
+    /// - Returns: Array of menu items found in the active application.
+    /// - Throws: MenuCrawlerError if crawling fails.
+    func crawlActiveApplication() async throws -> [MenuItem] {
+        guard AccessibilityService.isGranted else {
+            throw MenuCrawlerError.accessibilityNotGranted
+        }
+
+        // Get frontmost application (excluding Portal itself)
+        guard let app = getFrontmostApp() else {
+            throw MenuCrawlerError.noActiveApplication
+        }
+
+        return try await crawlApplication(app)
     }
 
     /// Invalidates the menu cache.

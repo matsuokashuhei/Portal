@@ -20,15 +20,15 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel?.isVisible ?? false
     }
 
-    func toggle() {
+    func toggle(targetApp: NSRunningApplication? = nil) {
         if isVisible {
             hide()
         } else {
-            show()
+            show(targetApp: targetApp)
         }
     }
 
-    func show() {
+    func show(targetApp: NSRunningApplication? = nil) {
         if panel == nil {
             createPanel()
         }
@@ -43,7 +43,13 @@ final class PanelController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         stopEscapeMonitor()
         startEscapeMonitor()
-        NotificationCenter.default.post(name: .panelDidShow, object: nil)
+
+        // Post notification with target app info
+        var userInfo: [String: Any] = [:]
+        if let app = targetApp {
+            userInfo[NotificationUserInfoKey.targetApp] = app
+        }
+        NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo.isEmpty ? nil : userInfo)
     }
 
     func hide() {

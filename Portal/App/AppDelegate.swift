@@ -122,7 +122,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func handleHotkeyPressed() {
         if AccessibilityService.isGranted {
-            panelController.toggle()
+            // Capture the frontmost app BEFORE showing the panel (Portal will become frontmost)
+            let targetApp = NSWorkspace.shared.frontmostApplication
+            panelController.toggle(targetApp: targetApp)
         } else {
             let shouldPrompt: Bool
             if let lastRequest = lastPermissionRequestTime {
