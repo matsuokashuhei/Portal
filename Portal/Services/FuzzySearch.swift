@@ -77,6 +77,10 @@ struct FuzzySearch {
     /// - Note: The String.Index operations have O(n) complexity per call. For menu item titles
     ///   (typically < 50 characters), this is negligible. If performance becomes an issue with
     ///   very long strings, consider maintaining integer offsets alongside String.Index.
+    ///
+    /// - Important: This function assumes that `lowercased()` preserves character counts and positions.
+    ///   This is true for ASCII characters but may fail for certain Unicode transformations
+    ///   (e.g., Turkish 'I' → 'ı'). For typical macOS menu titles in English, this is not an issue.
     private static func calculateMatch(
         query: String,
         in target: String
