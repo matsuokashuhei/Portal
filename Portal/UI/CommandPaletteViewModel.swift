@@ -16,22 +16,30 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published var menuItems: [MenuItem] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published private(set) var filteredResults: [FuzzySearch.Match] = []
 
     private let menuCrawler = MenuCrawler()
     private var cancellables = Set<AnyCancellable>()
     private var loadMenuItemsTask: Task<Void, Never>?
 
+    /// Debounce interval for search in milliseconds.
+    static let searchDebounceMilliseconds = 50
+
     init() {
         setupNotificationObserver()
+        setupSearchDebounce()
     }
 
     deinit {
         loadMenuItemsTask?.cancel()
     }
 
-    // TODO: Implement command search/filtering based on `searchText` (Issue #49)
+    /// Filtered menu items based on search text.
     var results: [MenuItem] {
-        menuItems
+        if searchText.isEmpty {
+            return menuItems
+        }
+        return filteredResults.map(\.item)
     }
 
     func clearSearch() {
@@ -86,5 +94,37 @@ final class CommandPaletteViewModel: ObservableObject {
                 self?.loadMenuItems(for: targetApp)
             }
             .store(in: &cancellables)
+    }
+
+    private func setupSearchDebounce() {
+        // Debounce search text changes
+        $searchText
+            .debounce(
+                for: .milliseconds(Self.searchDebounceMilliseconds),
+                scheduler: DispatchQueue.main
+            )
+            .removeDuplicates()
+            .sink { [weak self] query in
+                self?.performSearch(query: query)
+            }
+            .store(in: &cancellables)
+
+        // Re-filter when menu items change
+        $menuItems
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.performSearch(query: self.searchText)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func performSearch(query: String) {
+        if query.isEmpty {
+            filteredResults = []
+        } else {
+            filteredResults = FuzzySearch.search(query: query, in: menuItems)
+        }
+        selectedIndex = 0
     }
 }
