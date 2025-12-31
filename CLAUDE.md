@@ -44,14 +44,19 @@ Portal/
 ├── Info.plist                 # LSUIElement = YES
 ├── Assets.xcassets/
 ├── App/
-│   └── AppDelegate.swift      # ステータスバー、ホットキー、パネル管理
+│   ├── AppDelegate.swift      # ステータスバー、ホットキー、パネル管理
+│   └── TestConfiguration.swift # テスト用起動引数設定
 ├── Services/
 │   ├── HotkeyManager.swift    # Option+Space検出
 │   └── AccessibilityService.swift  # 権限チェック・リクエスト
 └── UI/
-    └── PanelController.swift  # NSPanel + 埋め込みUI
-        # 内蔵: CommandPaletteView, SearchFieldView,
-        #       ResultsListView, VisualEffectBlur
+    ├── PanelController.swift  # NSPanel + パネル管理
+    ├── CommandPaletteView.swift    # ルートビュー
+    ├── CommandPaletteViewModel.swift # 状態管理
+    ├── SearchFieldView.swift       # 検索フィールド
+    ├── FocusableTextField.swift    # NSTextField wrapper
+    ├── ResultsListView.swift       # 結果リスト
+    └── VisualEffectBlur.swift      # ブラー背景
 ```
 
 ### 未実装コンポーネント
@@ -106,6 +111,47 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 
 - 親Issue: #53 (Phase 1: MVP)
 - 子Issues: #43-#52
+
+## テスト
+
+### テストファイル
+
+```
+PortalTests/
+├── PortalTests.swift                    # テンプレート
+└── CommandPaletteViewModelTests.swift   # ViewModelテスト（5テスト）
+
+PortalUITests/
+├── PortalUITests.swift                  # パネルUIテスト（7テスト）
+└── PortalUITestsLaunchTests.swift       # 起動テスト
+
+docs/
+└── manual-test-checklist.md             # 手動テストチェックリスト
+```
+
+### テストコマンド
+
+```bash
+# 全テスト実行（Swift Testing + XCUITest）
+xcodebuild -project Portal.xcodeproj -scheme Portal test
+
+# 失敗したテストを自動リトライ（XCUITest初回タイムアウト対策）
+xcodebuild -project Portal.xcodeproj -scheme Portal test -retry-tests-on-failure
+
+# ユニットテストのみ
+xcodebuild -project Portal.xcodeproj -scheme Portal test -only-testing:PortalTests
+
+# UIテストのみ
+xcodebuild -project Portal.xcodeproj -scheme Portal test -only-testing:PortalUITests
+```
+
+### テスト用起動引数
+
+| 引数 | 説明 |
+|------|------|
+| `--show-panel-on-launch` | パネル自動表示（XCUITest用） |
+| `--skip-accessibility-check` | 権限チェックスキップ |
+| `--disable-panel-auto-hide` | フォーカス喪失時の自動非表示を無効化 |
 
 ## ルール
 

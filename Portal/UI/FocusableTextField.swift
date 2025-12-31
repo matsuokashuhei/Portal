@@ -24,6 +24,8 @@ struct FocusableTextField: NSViewRepresentable {
         textField.focusRingType = .none
         textField.delegate = context.coordinator
         textField.cell?.sendsActionOnEndEditing = false
+        // Add accessibility identifier for XCUITest
+        textField.setAccessibilityIdentifier("SearchTextField")
         return textField
     }
 

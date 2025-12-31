@@ -70,6 +70,8 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.isOpaque = false
         panel.becomesKeyOnlyIfNeeded = false
         panel.delegate = self
+        // Add accessibility identifier for XCUITest
+        panel.setAccessibilityIdentifier("CommandPalettePanel")
 
         let hostingView = NSHostingView(rootView: CommandPaletteView())
         panel.contentView = hostingView
@@ -112,14 +114,33 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
+        // Skip auto-hide in test mode to allow XCUITest to interact with the panel
+        guard !TestConfiguration.shouldDisablePanelAutoHide else { return }
         hide()
     }
 
     private func focusSearchField() {
         guard let panel = panel,
               let contentView = panel.contentView else { return }
+
+        // Try to find and focus immediately
         if let textField = findTextField(in: contentView) {
             panel.makeFirstResponder(textField)
+            return
+        }
+
+        // If not found, SwiftUI view hierarchy may not be ready yet.
+        // Defer to next run loop to allow layout to complete.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let panel = self.panel,
+                  let contentView = panel.contentView else { return }
+
+            if let textField = self.findTextField(in: contentView) {
+                panel.makeFirstResponder(textField)
+            } else {
+                print("[PanelController] Warning: Could not find text field to focus")
+            }
         }
     }
 

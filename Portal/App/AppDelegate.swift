@@ -18,11 +18,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var lastPermissionRequestTime: Date?
     private let permissionRequestCooldown: TimeInterval = 5.0
+    private var permissionCheckTimer: Timer?
+    private var wasPermissionGranted = false
+    private var isCheckingPermission = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
-        checkAccessibilityPermission()
+
+        // Skip accessibility check in test mode to avoid permission dialogs
+        if !TestConfiguration.shouldSkipAccessibilityCheck {
+            checkAccessibilityPermission()
+            // Only start timer if permission is not already granted
+            if !AccessibilityService.isGranted {
+                startPermissionCheckTimer()
+            }
+        }
+
+        wasPermissionGranted = AccessibilityService.isGranted
         setupHotkeyManager()
+        setupPermissionObserver()
+
+        // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
+        if TestConfiguration.shouldShowPanelOnLaunch {
+            DispatchQueue.main.async { [weak self] in
+                self?.panelController.show()
+            }
+        }
+    }
+
+    private func setupPermissionObserver() {
+        // Update permission status when app becomes active (e.g., after returning from System Settings)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func applicationDidBecomeActive() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        checkAndHandlePermissionChange()
+        updatePermissionMenuItemIfNeeded()
+    }
+
+    private func startPermissionCheckTimer() {
+        // Poll every 1 second to detect permission changes
+        // Timer.scheduledTimer runs on main run loop, callback is guaranteed to be on main thread
+        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkAndHandlePermissionChange()
+        }
+    }
+
+    private func stopPermissionCheckTimer() {
+        permissionCheckTimer?.invalidate()
+        permissionCheckTimer = nil
+    }
+
+    private func checkAndHandlePermissionChange() {
+        // Prevent concurrent execution from timer and applicationDidBecomeActive
+        guard !isCheckingPermission else { return }
+        isCheckingPermission = true
+        defer { isCheckingPermission = false }
+
+        let isNowGranted = AccessibilityService.isGranted
+
+        // Always stop timer when permission is granted to ensure it doesn't run indefinitely
+        if isNowGranted {
+            stopPermissionCheckTimer()
+            if !wasPermissionGranted {
+                restartHotkeyManager()
+                updatePermissionMenuItemIfNeeded()
+            }
+        }
+
+        // Only update state when it actually changes
+        if wasPermissionGranted != isNowGranted {
+            wasPermissionGranted = isNowGranted
+        }
+    }
+
+    private func restartHotkeyManager() {
+        // stop() must be called before start() because start() is not idempotent
+        // (it adds monitors without checking if they already exist)
+        hotkeyManager?.stop()
+        hotkeyManager?.start()
     }
 
     private func checkAccessibilityPermission() {
@@ -68,8 +148,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Initialize icon based on current permission state to avoid flicker
         updateStatusBarIcon(isGranted: AccessibilityService.isGranted)
 
+        // Add accessibility identifier to status item button
+        if let button = statusItem?.button {
+            button.setAccessibilityIdentifier("PortalStatusBarButton")
+        }
+
         let menu = NSMenu()
         menu.delegate = self
+        menu.setAccessibilityIdentifier("PortalStatusBarMenu")
 
         let permissionItem = NSMenuItem(
             title: "Grant Accessibility Permission...",
@@ -78,6 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         permissionItem.target = self
         permissionItem.isHidden = AccessibilityService.isGranted
+        permissionItem.setAccessibilityIdentifier("GrantPermissionMenuItem")
         menu.addItem(permissionItem)
         self.permissionMenuItem = permissionItem
 
@@ -88,10 +175,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        settingsItem.setAccessibilityIdentifier("SettingsMenuItem")
         menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit Portal", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
+        quitItem.setAccessibilityIdentifier("QuitMenuItem")
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
@@ -133,5 +224,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        stopPermissionCheckTimer()
     }
 }
