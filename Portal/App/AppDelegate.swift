@@ -28,7 +28,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Skip accessibility check in test mode to avoid permission dialogs
         if !TestConfiguration.shouldSkipAccessibilityCheck {
             checkAccessibilityPermission()
-            startPermissionCheckTimer()
+            // Only start timer if permission is not already granted
+            if !AccessibilityService.isGranted {
+                startPermissionCheckTimer()
+            }
         }
 
         wasPermissionGranted = AccessibilityService.isGranted
@@ -89,7 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
-        wasPermissionGranted = isNowGranted
+        // Only update state when it actually changes
+        if wasPermissionGranted != isNowGranted {
+            wasPermissionGranted = isNowGranted
+        }
     }
 
     private func restartHotkeyManager() {

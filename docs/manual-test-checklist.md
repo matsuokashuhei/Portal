@@ -39,9 +39,9 @@
 
 ### 2.2 パネル非表示 (Escape)
 
-※ 以下は自動テスト（testEscapeKeyHidesPanel）でカバー済み
-- [ ] パネル表示中に Escape を押すと非表示になる
-- [ ] 修飾キーなしの Escape のみが有効
+※ 自動テスト（testEscapeKeyHidesPanel）でカバー済みのため、手動確認は通常不要
+- パネル表示中に Escape を押すと非表示になる
+- 修飾キーなしの Escape のみが有効
 
 ### 2.3 権限がない場合のホットキー動作
 

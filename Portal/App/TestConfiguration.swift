@@ -47,4 +47,12 @@ enum TestConfiguration {
     static var shouldDisablePanelAutoHide: Bool {
         hasLaunchArgument(LaunchArguments.disablePanelAutoHide)
     }
+
+    /// Whether the app is running in UI test mode.
+    /// Returns `true` if any test-related launch arguments are present.
+    static var isTestMode: Bool {
+        shouldShowPanelOnLaunch
+            || shouldSkipAccessibilityCheck
+            || shouldDisablePanelAutoHide
+    }
 }
