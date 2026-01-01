@@ -108,10 +108,11 @@ struct ResultsListView: View {
 
     private func scrollToIndexIfNeeded(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
         guard index >= 0, index < results.count else { return }
-        guard let itemFrame = itemFrames[index] else { return }
 
-        // Check if target item is at least partially visible
-        guard !isItemPartiallyVisible(itemFrame) else { return }
+        // If frame is available, check visibility. If nil (not yet rendered), scroll is needed.
+        if let itemFrame = itemFrames[index], isItemPartiallyVisible(itemFrame) {
+            return  // Item is visible, no scroll needed
+        }
 
         // Scroll with minimal movement: place item at edge of scroll direction
         let anchor: UnitPoint = direction == .down ? .bottom : .top
