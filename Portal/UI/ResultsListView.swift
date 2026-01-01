@@ -90,25 +90,25 @@ struct ResultsListView: View {
         .accessibilityIdentifier("ResultsListView")
     }
 
-    /// Checks if the item at the given frame is visible within the scroll view.
-    /// Uses scroll view's local coordinate space where visible area is 0 to scrollViewHeight.
-    private func isItemVisible(_ itemFrame: CGRect) -> Bool {
+    /// Checks if the item is at least partially visible within the scroll view.
+    /// Returns true if any part of the item is visible, false only if completely outside.
+    private func isItemPartiallyVisible(_ itemFrame: CGRect) -> Bool {
         let itemTop = itemFrame.minY
         let itemBottom = itemFrame.maxY
 
         // In scroll view's local coordinates:
         // - Items above visible area have negative minY
         // - Items below visible area have minY > scrollViewHeight
-        // Item is fully visible if its entire vertical extent is within [0, scrollViewHeight]
-        return itemTop >= 0 && itemBottom <= scrollViewHeight
+        // Item is partially visible if it overlaps with visible area [0, scrollViewHeight]
+        return itemBottom > 0 && itemTop < scrollViewHeight
     }
 
     private func scrollToIndexIfNeeded(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
         guard index >= 0, index < results.count else { return }
         guard let itemFrame = itemFrames[index] else { return }
 
-        // Check if target item is already fully visible
-        guard !isItemVisible(itemFrame) else { return }
+        // Check if target item is at least partially visible
+        guard !isItemPartiallyVisible(itemFrame) else { return }
 
         // Scroll with minimal movement: place item at edge of scroll direction
         let anchor: UnitPoint = direction == .down ? .bottom : .top
