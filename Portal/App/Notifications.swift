@@ -23,6 +23,9 @@ extension Notification.Name {
 
     /// Posted when the panel should hide (e.g., after command execution).
     static let hidePanel = Notification.Name("com.matsuokashuhei.Portal.hidePanel")
+
+    /// Posted when the hotkey configuration changes in Settings.
+    static let hotkeyConfigurationChanged = Notification.Name("com.matsuokashuhei.Portal.hotkeyConfigurationChanged")
 }
 
 /// Keys for notification userInfo dictionaries.

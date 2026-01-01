@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         wasPermissionGranted = AccessibilityService.isGranted
         setupHotkeyManager()
         setupPermissionObserver()
+        setupHotkeyConfigurationObserver()
 
         // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
         if TestConfiguration.shouldShowPanelOnLaunch {
@@ -114,10 +115,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func setupHotkeyManager() {
-        hotkeyManager = HotkeyManager { [weak self] in
+        let config = HotkeyConfiguration.load()
+        hotkeyManager = HotkeyManager(configuration: config) { [weak self] in
             self?.handleHotkeyPressed()
         }
         hotkeyManager?.start()
+    }
+
+    private func setupHotkeyConfigurationObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(hotkeyConfigurationDidChange),
+            name: .hotkeyConfigurationChanged,
+            object: nil
+        )
+    }
+
+    @objc private func hotkeyConfigurationDidChange() {
+        // Recreate HotkeyManager with new configuration
+        hotkeyManager?.stop()
+        hotkeyManager = nil
+        setupHotkeyManager()
     }
 
     private func handleHotkeyPressed() {

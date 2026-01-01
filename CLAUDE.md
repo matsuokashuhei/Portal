@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PortalはmacOS向けUniversal Command Palette。Accessibility APIを使用してアクティブアプリのメニュー項目を検索・実行する。
 
-- **デフォルトホットキー**: Option+Space
+- **デフォルトホットキー**: Option+Space（設定画面で変更可能）
 - **MVPスコープ**: メニューコマンド検索・実行のみ
 
 ## 技術スタック
@@ -51,11 +51,14 @@ Portal/
 │   ├── MenuItem.swift         # メニュー項目のデータモデル
 │   └── CommandExecutionError.swift # 実行エラー型
 ├── Services/
-│   ├── HotkeyManager.swift    # Option+Space検出
+│   ├── HotkeyManager.swift    # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
 │   ├── FuzzySearch.swift      # スコアベース曖昧検索
 │   └── CommandExecutor.swift  # メニューコマンド実行
+├── Settings/
+│   ├── HotkeyConfiguration.swift   # ホットキー設定モデル
+│   └── SettingsView.swift          # 設定画面UI
 ├── Testing/
 │   └── MockMenuItemFactory.swift # テスト用モックMenuItem生成
 └── UI/
@@ -67,12 +70,6 @@ Portal/
     ├── ResultsListView.swift       # 結果リスト
     └── VisualEffectBlur.swift      # ブラー背景
 ```
-
-### 未実装コンポーネント
-
-| ファイル | 目的 | Issue |
-|---------|------|-------|
-| Settings/SettingsView.swift | 設定画面 | #51 |
 
 ## 実装の要点
 
@@ -94,6 +91,8 @@ Portal/
 - [x] `addLocalMonitorForEvents`（#45）
 - [x] Option+Space検出（#45）
 - [x] Escapeキーでパネル非表示（#45）
+- [x] ホットキー設定変更（#51）
+- [x] @AppStorage永続化（#51）
 
 ### 検索・実行
 - [x] FuzzySearch実装（#49）
@@ -125,6 +124,7 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── CommandPaletteViewModelTests.swift   # ViewModelテスト（12テスト）
 ├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（18テスト）
+├── HotkeyConfigurationTests.swift       # ホットキー設定テスト（12テスト）
 └── MenuItemTests.swift                  # MenuItemテスト
 
 PortalUITests/
