@@ -117,6 +117,7 @@ struct ResultsListView: View {
 private struct MenuItemRow: View {
     let item: MenuItem
     let isSelected: Bool
+    @State private var isHovered = false
 
     var body: some View {
         HStack {
@@ -150,9 +151,14 @@ private struct MenuItemRow: View {
         .background(
             isSelected
                 ? Color.accentColor.opacity(0.2)
-                : Color.clear
+                : isHovered
+                    ? Color.secondary.opacity(0.1)
+                    : Color.clear
         )
         .cornerRadius(6)
         .opacity(item.isEnabled ? 1.0 : 0.5)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
