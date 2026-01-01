@@ -245,4 +245,102 @@ struct FuzzySearchTests {
         // "Paste" should be first due to prefix match
         #expect(results.first?.item.title == "Paste")
     }
+
+    // MARK: - Unicode and CJK Tests
+
+    @Test
+    func testJapaneseExactMatch() {
+        let items = [makeMenuItem(title: "コピー")]
+
+        let results = FuzzySearch.search(query: "コピー", in: items)
+
+        #expect(results.count == 1)
+        #expect(results.first?.item.title == "コピー")
+    }
+
+    @Test
+    func testJapanesePartialMatch() {
+        let items = [makeMenuItem(title: "ファイルを開く")]
+
+        let results = FuzzySearch.search(query: "ファイル", in: items)
+
+        #expect(results.count == 1)
+        if let match = results.first, let range = match.matchedRanges.first {
+            let matchedText = String(match.item.title[range])
+            #expect(matchedText == "ファイル")
+        }
+    }
+
+    @Test
+    func testJapaneseFuzzyMatch() {
+        let items = [makeMenuItem(title: "新規作成")]
+
+        let results = FuzzySearch.search(query: "新作", in: items)
+
+        #expect(results.count == 1)
+        if let match = results.first {
+            // "新" and "作" as separate ranges
+            #expect(match.matchedRanges.count == 2)
+        }
+    }
+
+    @Test
+    func testChineseExactMatch() {
+        let items = [makeMenuItem(title: "打开文件")]
+
+        let results = FuzzySearch.search(query: "文件", in: items)
+
+        #expect(results.count == 1)
+    }
+
+    @Test
+    func testKoreanExactMatch() {
+        let items = [makeMenuItem(title: "파일열기")]
+
+        let results = FuzzySearch.search(query: "파일", in: items)
+
+        #expect(results.count == 1)
+    }
+
+    @Test
+    func testMixedLanguageMatch() {
+        let items = [
+            makeMenuItem(title: "File Open"),
+            makeMenuItem(title: "ファイルを開く"),
+            makeMenuItem(title: "打开文件")
+        ]
+
+        let englishResults = FuzzySearch.search(query: "file", in: items)
+        #expect(englishResults.count == 1)
+        #expect(englishResults.first?.item.title == "File Open")
+
+        let japaneseResults = FuzzySearch.search(query: "ファイル", in: items)
+        #expect(japaneseResults.count == 1)
+        #expect(japaneseResults.first?.item.title == "ファイルを開く")
+    }
+
+    @Test
+    func testJapaneseMatchedRangesCorrect() {
+        let items = [makeMenuItem(title: "新規作成")]
+
+        let results = FuzzySearch.search(query: "新規", in: items)
+
+        #expect(results.count == 1)
+        if let match = results.first, let range = match.matchedRanges.first {
+            let matchedText = String(match.item.title[range])
+            #expect(matchedText == "新規")
+        }
+    }
+
+    @Test
+    func testUnicodeNormalizationNFDInput() {
+        // NFD representation: か + combining dakuten = が
+        let nfdTitle = "か\u{3099}を開く"  // "がを開く" in NFD
+        let items = [makeMenuItem(title: nfdTitle)]
+
+        // NFC query
+        let results = FuzzySearch.search(query: "が", in: items)
+
+        #expect(results.count == 1)
+    }
 }

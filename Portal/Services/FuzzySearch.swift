@@ -7,6 +7,18 @@
 
 import Foundation
 
+// MARK: - Unicode Normalization
+
+private extension String {
+    /// Returns the string in NFC (Canonical Decomposition, followed by Canonical Composition) form.
+    /// This ensures consistent character representation for matching, handling cases like:
+    /// - Composed vs decomposed Japanese dakuten (が vs か + ゛)
+    /// - macOS file system NFD strings
+    var nfcNormalized: String {
+        (self as NSString).precomposedStringWithCanonicalMapping
+    }
+}
+
 /// Performs fuzzy string matching with scoring for menu items.
 ///
 /// The algorithm scores matches based on:
@@ -50,7 +62,7 @@ struct FuzzySearch {
     ///   - items: The menu items to search within.
     /// - Returns: Array of matches sorted by score (highest first), excluding non-matches.
     static func search(query: String, in items: [MenuItem]) -> [Match] {
-        let normalizedQuery = query.lowercased()
+        let normalizedQuery = query.nfcNormalized.lowercased()
 
         guard !normalizedQuery.isEmpty else {
             return items.map { Match(item: $0, score: 0, matchedRanges: []) }
@@ -70,7 +82,7 @@ struct FuzzySearch {
     /// Calculates the match score and ranges for a query against a target string.
     ///
     /// - Parameters:
-    ///   - query: The normalized (lowercased) search query.
+    ///   - query: The normalized (NFC + lowercased) search query.
     ///   - target: The string to match against.
     /// - Returns: A tuple of (score, matchedRanges) if matched, nil if no match.
     ///
@@ -78,14 +90,15 @@ struct FuzzySearch {
     ///   (typically < 50 characters), this is negligible. If performance becomes an issue with
     ///   very long strings, consider maintaining integer offsets alongside String.Index.
     ///
-    /// - Important: This function assumes that `lowercased()` preserves character counts and positions.
-    ///   This is true for ASCII characters but may fail for certain Unicode transformations
-    ///   (e.g., Turkish 'I' → 'ı'). For typical macOS menu titles in English, this is not an issue.
+    /// - Note: Unicode-safe implementation using NFC normalization. The index mapping works
+    ///   correctly because Swift String indexing operates on grapheme clusters, and NFC +
+    ///   lowercased() preserve grapheme cluster counts for supported languages (English,
+    ///   Japanese, Chinese, Korean).
     private static func calculateMatch(
         query: String,
         in target: String
     ) -> (score: Int, ranges: [Range<String.Index>])? {
-        let normalizedTarget = target.lowercased()
+        let normalizedTarget = target.nfcNormalized.lowercased()
 
         var queryIndex = query.startIndex
         var targetIndex = normalizedTarget.startIndex
@@ -127,9 +140,7 @@ struct FuzzySearch {
                     consecutiveCount = 0
                 }
 
-                // Track matched ranges
-                // NOTE: This index mapping assumes lowercased() preserves character offsets,
-                // which is true for typical ASCII menu titles but may fail for complex Unicode.
+                // Track matched ranges (Unicode-safe with NFC normalization)
                 let originalTargetIndex = target.index(target.startIndex, offsetBy: normalizedTarget.distance(from: normalizedTarget.startIndex, to: targetIndex))
 
                 if currentRangeStart == nil {
@@ -170,10 +181,8 @@ struct FuzzySearch {
             return nil
         }
 
-        // Close any remaining range
+        // Close any remaining range (Unicode-safe with NFC normalization)
         if let start = currentRangeStart, let lastIdx = lastMatchIndex {
-            // NOTE: This index mapping assumes lowercased() preserves character offsets,
-            // which is true for typical ASCII menu titles but may fail for complex Unicode.
             let offset = normalizedTarget.distance(from: normalizedTarget.startIndex, to: lastIdx)
             let originalLastIndex = target.index(target.startIndex, offsetBy: offset)
             let endIndex = target.index(after: originalLastIndex)

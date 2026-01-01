@@ -97,6 +97,7 @@ Portal/
 ### 検索・実行
 - [x] FuzzySearch実装（#49）
 - [x] 50msデバウンス（#49）
+- [x] Unicode/CJK対応（#74）
 - [x] キーボードナビゲーション（#50）
 - [x] メニュー実行（#50）
 
@@ -123,7 +124,7 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── CommandPaletteViewModelTests.swift   # ViewModelテスト（12テスト）
-├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（18テスト）
+├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（26テスト）
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト（12テスト）
 └── MenuItemTests.swift                  # MenuItemテスト
 
