@@ -113,8 +113,11 @@ final class PanelController: NSObject, NSWindowDelegate {
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
-            // Only handle keys without modifiers
-            guard modifiers.isEmpty else { return event }
+            // Only handle keys without meaningful modifiers (Cmd, Opt, Ctrl, Shift).
+            // Note: Arrow keys have .numericPad and .function flags set by macOS,
+            // so we check for user-intentional modifiers instead of isEmpty.
+            let meaningfulModifiers: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+            guard modifiers.intersection(meaningfulModifiers).isEmpty else { return event }
 
             switch event.keyCode {
             case Self.escapeKeyCode:
