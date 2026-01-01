@@ -46,9 +46,21 @@ struct ResultsListView: View {
             }
             .onChange(of: selectedIndex) { oldValue, newValue in
                 guard newValue >= 0, newValue < results.count else { return }
-                // Use top anchor when scrolling down, bottom when scrolling up
-                // to keep the selected item visible at the edge of scroll direction
-                let anchor: UnitPoint = newValue > oldValue ? .top : .bottom
+
+                // For step navigation (±1), use direction-based anchor:
+                // - .top when moving down (index increases)
+                // - .bottom when moving up (index decreases)
+                // For larger jumps (e.g., search results changed, wrap-around),
+                // use .center to avoid surprising scroll behavior.
+                let isStepNavigation = abs(newValue - oldValue) == 1
+
+                let anchor: UnitPoint
+                if isStepNavigation {
+                    anchor = newValue > oldValue ? .top : .bottom
+                } else {
+                    anchor = .center
+                }
+
                 withAnimation(.easeInOut(duration: 0.15)) {
                     proxy.scrollTo(newValue, anchor: anchor)
                 }
