@@ -97,4 +97,34 @@ struct CommandPaletteViewModelTests {
         viewModel.executeCommand(at: 100)
         #expect(viewModel.errorMessage == nil)
     }
+
+    // MARK: - Error Clearing Tests
+
+    @Test @MainActor
+    func testMoveSelectionDownClearsErrorMessage() {
+        let viewModel = CommandPaletteViewModel()
+        // Add mock items to enable navigation
+        viewModel.menuItems = MockMenuItemFactory.createMockItems(count: 3)
+        viewModel.selectedIndex = 0
+        // Set an error to simulate a previous failed execution
+        viewModel.errorMessage = "Test error"
+
+        viewModel.moveSelectionDown()
+
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.selectedIndex == 1)
+    }
+
+    @Test @MainActor
+    func testMoveSelectionUpClearsErrorMessage() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.menuItems = MockMenuItemFactory.createMockItems(count: 3)
+        viewModel.selectedIndex = 2
+        viewModel.errorMessage = "Test error"
+
+        viewModel.moveSelectionUp()
+
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.selectedIndex == 1)
+    }
 }

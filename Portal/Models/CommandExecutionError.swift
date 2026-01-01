@@ -19,11 +19,12 @@ enum CommandExecutionError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .elementInvalid:
-            return "Menu item unavailable. Try reopening the command palette to refresh."
+            // Menu cache refreshes automatically on each panel open (0.5s cache duration)
+            return "Menu item unavailable. Close and reopen the palette to refresh."
         case .itemDisabled:
             return "This menu item is disabled. Check if the required conditions are met in the app."
         case .actionFailed(let code):
-            return "Execution failed (code: \(code)). Try reopening the command palette."
+            return "Execution failed (code: \(code)). Close and reopen the palette to refresh."
         }
     }
 }

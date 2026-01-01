@@ -121,8 +121,16 @@ final class HotkeyManager {
         CGEvent.tapEnable(tap: tap, enable: true)
     }
 
+    /// Stops and cleans up the CGEventTap.
+    ///
+    /// ## Thread Safety
+    /// This method must be called on the same thread where the event tap was created.
+    /// Disabling the tap with `CGEvent.tapEnable` ensures no callbacks are in progress
+    /// or will occur after this call returns, making it safe for the callback's
+    /// unretained reference to be invalidated during deinit.
     private func stopEventTap() {
         if let tap = eventTap {
+            // Disable tap first to prevent new callbacks
             CGEvent.tapEnable(tap: tap, enable: false)
             if let source = runLoopSource {
                 CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
