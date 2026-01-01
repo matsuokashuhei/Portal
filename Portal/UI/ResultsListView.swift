@@ -12,10 +12,6 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onItemClicked: ((Int) -> Void)?
 
-    private enum NavigationDirection {
-        case up, down
-    }
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -52,24 +48,20 @@ struct ResultsListView: View {
             // Only scroll on keyboard navigation, not on hover selection.
             // Calculate target index BEFORE ViewModel updates selectedIndex.
             .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
-                let targetIndex = selectedIndex - 1
-                scrollToIndex(targetIndex, direction: .up, proxy: proxy)
+                scrollToIndex(selectedIndex - 1, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
-                let targetIndex = selectedIndex + 1
-                scrollToIndex(targetIndex, direction: .down, proxy: proxy)
+                scrollToIndex(selectedIndex + 1, proxy: proxy)
             }
         }
         .accessibilityIdentifier("ResultsListView")
     }
 
-    private func scrollToIndex(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
+    private func scrollToIndex(_ index: Int, proxy: ScrollViewProxy) {
         guard index >= 0, index < results.count else { return }
 
-        let anchor: UnitPoint = direction == .down ? .bottom : .top
-
         withAnimation(.easeInOut(duration: 0.15)) {
-            proxy.scrollTo(index, anchor: anchor)
+            proxy.scrollTo(index)
         }
     }
 
