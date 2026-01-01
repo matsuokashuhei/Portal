@@ -9,7 +9,7 @@ import AppKit
 import Carbon.HIToolbox
 
 /// Space key code constant (must be at file level for CGEventTapCallBack)
-private let kSpaceKeyCode: Int64 = 49
+private let spaceKeyCode: Int64 = 49
 
 final class HotkeyManager {
     private var eventTap: CFMachPort?
@@ -77,7 +77,7 @@ final class HotkeyManager {
                 !flags.contains(.maskControl) &&
                 !flags.contains(.maskShift)
 
-            if optionOnly && keyCode == kSpaceKeyCode {
+            if optionOnly && keyCode == spaceKeyCode {
                 // Dispatch callback to main thread
                 DispatchQueue.main.async {
                     manager.onHotkeyPressed()
@@ -185,7 +185,7 @@ final class HotkeyManager {
     private func isHotkeyEvent(_ event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         // Use Int64 for consistency with CGEventTap callback comparison
-        return modifiers == .option && Int64(event.keyCode) == kSpaceKeyCode
+        return modifiers == .option && Int64(event.keyCode) == spaceKeyCode
     }
 
     deinit {

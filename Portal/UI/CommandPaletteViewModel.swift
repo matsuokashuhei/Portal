@@ -204,6 +204,10 @@ final class CommandPaletteViewModel: ObservableObject {
     /// Portal uses a single CommandPaletteView instance, so multiple-instance concerns don't apply.
     /// If multiple instances become necessary, consider injecting a NotificationCenter instance
     /// or using a delegate pattern.
+    ///
+    /// ## Lifecycle
+    /// This method is called exactly once from init(). The observers are stored in `cancellables`
+    /// and cleaned up automatically on deinit via AnyCancellable's behavior.
     private func setupNavigationObservers() {
         NotificationCenter.default.publisher(for: .navigateUp)
             .sink { [weak self] _ in self?.moveSelectionUp() }
