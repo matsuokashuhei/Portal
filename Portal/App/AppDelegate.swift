@@ -308,18 +308,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 /// Custom NSWindow for the settings UI that adds keyboard-based dismissal.
 ///
-/// This window overrides `keyDown(with:)` so that pressing the Escape key
-/// closes the window. Handling this at the window level ensures the behavior
-/// is consistent regardless of which control has focus inside the settings view,
-/// and matches the common macOS pattern of using Escape to dismiss configuration windows.
+/// This window overrides `cancelOperation(_:)` so that pressing the Escape key
+/// closes the window. Using `cancelOperation` instead of `keyDown` ensures the behavior
+/// works correctly even when a control (e.g., Picker) has focus, and matches the
+/// common macOS pattern of using Escape to dismiss configuration windows.
 final class SettingsWindow: NSWindow {
-    private static let escapeKeyCode: UInt16 = 53
-
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == Self.escapeKeyCode {
-            close()
-        } else {
-            super.keyDown(with: event)
-        }
+    /// Handles the Escape key press to close the window.
+    /// `cancelOperation` is the proper method to override for Escape key handling in macOS,
+    /// as `keyDown` may not receive the event when a control (e.g., Picker) has focus.
+    override func cancelOperation(_ sender: Any?) {
+        close()
     }
 }
