@@ -124,7 +124,9 @@ final class HotkeyManager {
     /// Stops and cleans up the CGEventTap.
     ///
     /// ## Thread Safety
-    /// This method must be called on the same thread where the event tap was created.
+    /// This method must be called on the main thread (where the event tap was created).
+    /// The CGEventTap callback runs on the thread that owns the run loop to which the tap
+    /// is added (CFRunLoopGetCurrent() in startEventTap(), which is the main run loop).
     /// Disabling the tap with `CGEvent.tapEnable` ensures no callbacks are in progress
     /// or will occur after this call returns, making it safe for the callback's
     /// unretained reference to be invalidated during deinit.

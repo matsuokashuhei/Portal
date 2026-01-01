@@ -71,13 +71,23 @@ final class CommandPaletteViewModel: ObservableObject {
 
     /// Executes the currently selected command.
     func executeSelectedCommand() {
-        guard selectedIndex >= 0, selectedIndex < results.count else { return }
+        guard selectedIndex >= 0, selectedIndex < results.count else {
+            #if DEBUG
+            print("[CommandPaletteViewModel] executeSelectedCommand: invalid selectedIndex=\(selectedIndex), results.count=\(results.count)")
+            #endif
+            return
+        }
         executeCommand(at: selectedIndex)
     }
 
     /// Executes the command at the specified index.
     func executeCommand(at index: Int) {
-        guard index >= 0, index < results.count else { return }
+        guard index >= 0, index < results.count else {
+            #if DEBUG
+            print("[CommandPaletteViewModel] executeCommand: invalid index=\(index), results.count=\(results.count)")
+            #endif
+            return
+        }
 
         let menuItem = results[index]
         let result = commandExecutor.execute(menuItem)
@@ -201,8 +211,9 @@ final class CommandPaletteViewModel: ObservableObject {
     /// Global notifications decouple PanelController (AppKit keyboard handling) from this
     /// ViewModel (SwiftUI state management), avoiding a direct dependency between layers.
     /// Portal uses a single CommandPaletteView instance, so multiple-instance concerns don't apply.
-    /// If multiple instances become necessary, consider injecting a NotificationCenter instance
-    /// or using a delegate pattern.
+    /// Supporting multiple independent instances would require broader architectural changes
+    /// (e.g., instance-specific notification identifiers or a delegate/closure-based API),
+    /// not just injecting a different NotificationCenter, since notification names are global.
     ///
     /// ## Lifecycle
     /// This method is called exactly once from init(). The observers are stored in `cancellables`

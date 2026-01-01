@@ -34,6 +34,9 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     /// Calculated panel size based on item dimensions.
     /// Height = searchFieldHeight + dividerHeight + (visibleItemCount × itemHeight) + ((visibleItemCount - 1) × itemSpacing)
+    ///
+    /// - Important: This value is computed once when the class loads. Changes to the layout constants
+    ///   above require rebuilding the app to take effect.
     static let panelSize: NSSize = {
         let listHeight = CGFloat(visibleItemCount) * itemHeight + CGFloat(visibleItemCount - 1) * itemSpacing
         let totalHeight = searchFieldHeight + dividerHeight + listHeight
