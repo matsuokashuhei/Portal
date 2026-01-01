@@ -25,18 +25,21 @@ struct CommandPaletteView: View {
                 }
             )
             .frame(maxHeight: .infinity)
-
+        }
+        .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
+        .overlay(alignment: .bottom) {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .foregroundColor(.red)
                     .font(.caption)
                     .padding(.horizontal)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red.opacity(0.1))
                     .accessibilityAddTraits(.updatesFrequently)
                     .accessibilityLabel("Error: \(errorMessage)")
             }
         }
-        .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
         .background(VisualEffectBlur())
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityIdentifier("CommandPaletteView")

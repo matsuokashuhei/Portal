@@ -44,9 +44,6 @@ final class MenuCrawler {
     /// risk of stale AXUIElement references causing unintended actions.
     private static let finderCacheDuration: TimeInterval = 0.1
 
-    /// Finder's bundle identifier.
-    private static let finderBundleIdentifier = "com.apple.finder"
-
     /// Cached menu items with timestamp, process identifier, and bundle identifier.
     private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t, bundleId: String?)?
 
@@ -82,7 +79,7 @@ final class MenuCrawler {
 
     /// Returns the appropriate cache duration for the given application.
     private func getCacheDuration(for bundleId: String?) -> TimeInterval {
-        bundleId == Self.finderBundleIdentifier ? Self.finderCacheDuration : Self.defaultCacheDuration
+        bundleId == Constants.BundleIdentifier.finder ? Self.finderCacheDuration : Self.defaultCacheDuration
     }
 
     /// Crawls the menu bar of the currently active application.
