@@ -32,7 +32,7 @@ struct CommandPaletteView: View {
                     .font(.caption)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
-                    .accessibilityAddTraits(.isStaticText)
+                    .accessibilityAddTraits(.updatesFrequently)
                     .accessibilityLabel("Error: \(errorMessage)")
             }
         }
