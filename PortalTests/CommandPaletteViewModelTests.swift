@@ -61,4 +61,38 @@ struct CommandPaletteViewModelTests {
         let viewModel = CommandPaletteViewModel()
         #expect(viewModel.errorMessage == nil)
     }
+
+    // MARK: - Navigation Tests
+
+    @Test @MainActor
+    func testMoveSelectionUpWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.selectedIndex = 0
+        viewModel.moveSelectionUp()
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @Test @MainActor
+    func testMoveSelectionDownWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.selectedIndex = 0
+        viewModel.moveSelectionDown()
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @Test @MainActor
+    func testExecuteSelectedCommandWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.executeSelectedCommand()
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func testExecuteCommandAtInvalidIndexDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.executeCommand(at: -1)
+        #expect(viewModel.errorMessage == nil)
+        viewModel.executeCommand(at: 100)
+        #expect(viewModel.errorMessage == nil)
+    }
 }

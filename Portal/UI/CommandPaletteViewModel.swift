@@ -19,6 +19,7 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published private(set) var filteredResults: [FuzzySearch.Match] = []
 
     private let menuCrawler = MenuCrawler()
+    private let commandExecutor = CommandExecutor()
     private var cancellables = Set<AnyCancellable>()
     private var loadMenuItemsTask: Task<Void, Never>?
 
@@ -28,6 +29,7 @@ final class CommandPaletteViewModel: ObservableObject {
     init() {
         setupNotificationObserver()
         setupSearchDebounce()
+        setupNavigationObservers()
     }
 
     deinit {
@@ -45,6 +47,55 @@ final class CommandPaletteViewModel: ObservableObject {
     func clearSearch() {
         searchText = ""
         selectedIndex = 0
+    }
+
+    // MARK: - Navigation
+
+    /// Moves selection up by one item, wrapping to bottom if at top.
+    func moveSelectionUp() {
+        let count = results.count
+        guard count > 0 else { return }
+
+        if selectedIndex > 0 {
+            selectedIndex -= 1
+        } else {
+            selectedIndex = count - 1
+        }
+    }
+
+    /// Moves selection down by one item, wrapping to top if at bottom.
+    func moveSelectionDown() {
+        let count = results.count
+        guard count > 0 else { return }
+
+        if selectedIndex < count - 1 {
+            selectedIndex += 1
+        } else {
+            selectedIndex = 0
+        }
+    }
+
+    // MARK: - Execution
+
+    /// Executes the currently selected command.
+    func executeSelectedCommand() {
+        guard selectedIndex >= 0, selectedIndex < results.count else { return }
+        executeCommand(at: selectedIndex)
+    }
+
+    /// Executes the command at the specified index.
+    func executeCommand(at index: Int) {
+        guard index >= 0, index < results.count else { return }
+
+        let menuItem = results[index]
+        let result = commandExecutor.execute(menuItem)
+
+        switch result {
+        case .success:
+            NotificationCenter.default.post(name: .hidePanel, object: nil)
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+        }
     }
 
     /// Loads menu items from the specified application.
@@ -127,5 +178,19 @@ final class CommandPaletteViewModel: ObservableObject {
         if resetSelection {
             selectedIndex = 0
         }
+    }
+
+    private func setupNavigationObservers() {
+        NotificationCenter.default.publisher(for: .navigateUp)
+            .sink { [weak self] _ in self?.moveSelectionUp() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .navigateDown)
+            .sink { [weak self] _ in self?.moveSelectionDown() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .executeSelectedCommand)
+            .sink { [weak self] _ in self?.executeSelectedCommand() }
+            .store(in: &cancellables)
     }
 }

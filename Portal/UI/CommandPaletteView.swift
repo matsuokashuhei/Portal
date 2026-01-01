@@ -17,8 +17,22 @@ struct CommandPaletteView: View {
 
             Divider()
 
-            ResultsListView(results: viewModel.results, selectedIndex: viewModel.selectedIndex)
-                .frame(maxHeight: .infinity)
+            ResultsListView(
+                results: viewModel.results,
+                selectedIndex: $viewModel.selectedIndex,
+                onItemClicked: { index in
+                    viewModel.executeCommand(at: index)
+                }
+            )
+            .frame(maxHeight: .infinity)
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
         }
         .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)
         .background(VisualEffectBlur())

@@ -10,11 +10,17 @@ import SwiftUI
 
 final class PanelController: NSObject, NSWindowDelegate {
     private static let escapeKeyCode: UInt16 = 53
+    private static let upArrowKeyCode: UInt16 = 126
+    private static let downArrowKeyCode: UInt16 = 125
+    private static let returnKeyCode: UInt16 = 36
+    private static let enterKeyCode: UInt16 = 76
+
     static let panelSize = NSSize(width: 600, height: 400)
 
     private var panel: NSPanel?
-    private var escapeMonitor: Any?
+    private var keyboardMonitor: Any?
     private var hasBeenPositioned = false
+    private var hidePanelObserver: NSObjectProtocol?
 
     var isVisible: Bool {
         panel?.isVisible ?? false
@@ -41,8 +47,9 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        stopEscapeMonitor()
-        startEscapeMonitor()
+        stopKeyboardMonitor()
+        startKeyboardMonitor()
+        setupHidePanelObserver()
 
         // Post notification with target app info.
         // NOTE: targetApp is captured by the caller (AppDelegate) BEFORE showing the panel,
@@ -54,7 +61,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     func hide() {
-        stopEscapeMonitor()
+        stopKeyboardMonitor()
+        removeHidePanelObserver()
         panel?.orderOut(nil)
         panel = nil
         hasBeenPositioned = false
@@ -99,21 +107,58 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
-    private func startEscapeMonitor() {
-        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+    private func startKeyboardMonitor() {
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if event.keyCode == Self.escapeKeyCode && modifiers.isEmpty {
+
+            // Only handle keys without modifiers
+            guard modifiers.isEmpty else { return event }
+
+            switch event.keyCode {
+            case Self.escapeKeyCode:
                 self?.hide()
                 return nil
+
+            case Self.upArrowKeyCode:
+                NotificationCenter.default.post(name: .navigateUp, object: nil)
+                return nil
+
+            case Self.downArrowKeyCode:
+                NotificationCenter.default.post(name: .navigateDown, object: nil)
+                return nil
+
+            case Self.returnKeyCode, Self.enterKeyCode:
+                NotificationCenter.default.post(name: .executeSelectedCommand, object: nil)
+                return nil
+
+            default:
+                return event
             }
-            return event
         }
     }
 
-    private func stopEscapeMonitor() {
-        if let monitor = escapeMonitor {
+    private func stopKeyboardMonitor() {
+        if let monitor = keyboardMonitor {
             NSEvent.removeMonitor(monitor)
-            escapeMonitor = nil
+            keyboardMonitor = nil
+        }
+    }
+
+    private func setupHidePanelObserver() {
+        removeHidePanelObserver()
+        hidePanelObserver = NotificationCenter.default.addObserver(
+            forName: .hidePanel,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hide()
+        }
+    }
+
+    private func removeHidePanelObserver() {
+        if let observer = hidePanelObserver {
+            NotificationCenter.default.removeObserver(observer)
+            hidePanelObserver = nil
         }
     }
 
@@ -165,6 +210,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     deinit {
-        stopEscapeMonitor()
+        stopKeyboardMonitor()
+        removeHidePanelObserver()
     }
 }

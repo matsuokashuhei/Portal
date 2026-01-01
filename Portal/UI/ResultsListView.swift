@@ -9,26 +9,45 @@ import SwiftUI
 
 struct ResultsListView: View {
     var results: [MenuItem]
-    var selectedIndex: Int
+    @Binding var selectedIndex: Int
+    var onItemClicked: ((Int) -> Void)?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
-                if results.isEmpty {
-                    Text("Type to search commands...")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding()
-                } else {
-                    ForEach(results.indices, id: \.self) { index in
-                        let item = results[index]
-                        let isSelected = index == selectedIndex
-                        MenuItemRow(item: item, isSelected: isSelected)
-                            .accessibilityLabel(
-                                buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
-                            )
-                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    if results.isEmpty {
+                        Text("Type to search commands...")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding()
+                    } else {
+                        ForEach(results.indices, id: \.self) { index in
+                            let item = results[index]
+                            let isSelected = index == selectedIndex
+                            MenuItemRow(item: item, isSelected: isSelected)
+                                .id(index)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onItemClicked?(index)
+                                }
+                                .onHover { isHovering in
+                                    if isHovering {
+                                        selectedIndex = index
+                                    }
+                                }
+                                .accessibilityLabel(
+                                    buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
+                                )
+                                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        }
                     }
+                }
+            }
+            .onChange(of: selectedIndex) { _, newValue in
+                guard newValue >= 0, newValue < results.count else { return }
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    proxy.scrollTo(newValue, anchor: .center)
                 }
             }
         }
