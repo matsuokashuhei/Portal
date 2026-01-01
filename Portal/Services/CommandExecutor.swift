@@ -55,6 +55,14 @@ final class CommandExecutor {
     ///   - element: The AXUIElement to validate.
     ///   - expectedTitle: The title the element should have.
     /// - Returns: `true` if the element's title and role match expectations.
+    ///
+    /// ## Limitations
+    /// This validation checks title and role, but not the full menu path. In theory,
+    /// dynamic menus could have items with the same title at different paths. In practice,
+    /// this is rare because:
+    /// 1. Menu items typically have unique titles within an application
+    /// 2. The short cache duration (0.5s) minimizes the window for menu changes
+    /// 3. Portal's typical use case is immediate execution after selection
     private func isElementValid(_ element: AXUIElement, expectedTitle: String) -> Bool {
         // Verify title
         var titleRef: CFTypeRef?

@@ -196,6 +196,14 @@ final class CommandPaletteViewModel: ObservableObject {
         }
     }
 
+    /// Sets up observers for keyboard navigation notifications from PanelController.
+    ///
+    /// ## Architecture Note
+    /// Global notifications decouple PanelController (AppKit keyboard handling) from this
+    /// ViewModel (SwiftUI state management), avoiding a direct dependency between layers.
+    /// Portal uses a single CommandPaletteView instance, so multiple-instance concerns don't apply.
+    /// If multiple instances become necessary, consider injecting a NotificationCenter instance
+    /// or using a delegate pattern.
     private func setupNavigationObservers() {
         NotificationCenter.default.publisher(for: .navigateUp)
             .sink { [weak self] _ in self?.moveSelectionUp() }

@@ -10,9 +10,13 @@ import ApplicationServices
 /// Factory for creating mock menu items for testing purposes.
 /// This file is included in the app target to support UI testing with mock data.
 ///
-/// - Warning: Mock items share a system-wide AXUIElement and should NOT be used
-///   for execution tests. CommandExecutor will fail when attempting to execute
-///   these items as they are not valid menu items.
+/// ## Safety
+/// Mock items are safe from accidental execution because:
+/// 1. All items use `AXUIElementCreateSystemWide()` which is not a valid menu element
+/// 2. `CommandExecutor.isElementValid()` checks title and role, which will fail validation
+/// 3. The `[Mock]` prefix makes items visually identifiable as test data
+///
+/// - Warning: Do not use for execution tests. For testing execution, use real app menu items.
 enum MockMenuItemFactory {
     /// Prefix added to all mock item titles to clearly identify them as test data.
     private static let mockPrefix = "[Mock] "

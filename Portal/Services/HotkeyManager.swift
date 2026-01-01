@@ -40,6 +40,13 @@ final class HotkeyManager {
     /// Unlike `addGlobalMonitorForEvents`, CGEventTap can actually consume events,
     /// preventing them from being delivered to other applications. This is necessary
     /// to prevent Option+Space from triggering Quick Look in Finder.
+    ///
+    /// ## Fallback Behavior
+    /// If CGEventTap creation fails (typically when Accessibility permission is not granted),
+    /// we fall back to `addGlobalMonitorForEvents` which CANNOT consume events. In this case:
+    /// - Portal will still respond to Option+Space
+    /// - Quick Look may also trigger simultaneously in Finder
+    /// - Once the user grants Accessibility permission and relaunches Portal, CGEventTap will work
     private func startEventTap() {
         // Create callback that will be called for each keyboard event
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in

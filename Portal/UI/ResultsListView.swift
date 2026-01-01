@@ -40,15 +40,16 @@ struct ResultsListView: View {
                     }
                 }
             }
-            // Only scroll on keyboard navigation, not on hover selection.
-            // Calculate target index BEFORE ViewModel updates selectedIndex.
+            // Keyboard navigation scroll: notification handlers calculate the NEW target index
+            // using selectedIndex ± 1 BEFORE ViewModel updates the state. This allows animation
+            // to start immediately. Example: if selectedIndex=5, navigateDown scrolls to 6.
             .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
                 scrollToIndex(selectedIndex - 1, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
                 scrollToIndex(selectedIndex + 1, proxy: proxy)
             }
-            // Ensure selected item is visible after rapid key presses (no animation for instant snap)
+            // Safety net for rapid key presses: ensures final position is correct without animation
             .onChange(of: selectedIndex) { _, newIndex in
                 guard newIndex >= 0, newIndex < results.count else { return }
                 proxy.scrollTo(newIndex)
