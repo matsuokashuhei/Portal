@@ -95,19 +95,21 @@ final class PanelController: NSObject, NSWindowDelegate {
     ///
     /// - Parameter restoreFocus:
     ///   If `true`, restores focus to `targetApp` (the app that was frontmost before the panel was shown)
-    ///   after hiding the panel. Use this when closing the panel via Escape key or after command execution.
+    ///   before hiding the panel. Use this when closing the panel via Escape key or after command execution.
     ///   If `false` (default), no focus restoration is performed. Use this when the panel is hidden
     ///   due to focus loss (e.g., user clicked another app), where explicit focus switching is unnecessary.
+    ///
+    /// - Note: Focus restoration must occur BEFORE `panel?.orderOut(nil)` because once the panel is
+    ///   hidden, Portal may no longer have the ability to activate other applications reliably.
     func hide(restoreFocus: Bool = false) {
+        if restoreFocus {
+            restoreFocusToTargetApp()
+        }
         stopKeyboardMonitor()
         removeHidePanelObserver()
         panel?.orderOut(nil)
         panel = nil
         hasBeenPositioned = false
-
-        if restoreFocus {
-            restoreFocusToTargetApp()
-        }
         targetApp = nil
     }
 
