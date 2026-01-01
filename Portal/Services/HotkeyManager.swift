@@ -95,7 +95,9 @@ final class HotkeyManager {
             userInfo: refcon
         ) else {
             // Fall back to global monitor if event tap fails (e.g., no accessibility permission)
+            #if DEBUG
             print("[HotkeyManager] CGEventTap creation failed, falling back to global monitor")
+            #endif
             startGlobalMonitorFallback()
             return
         }
