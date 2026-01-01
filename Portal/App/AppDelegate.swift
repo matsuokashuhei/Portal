@@ -260,7 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let settingsView = SettingsView()
         let hostingController = NSHostingController(rootView: settingsView)
 
-        let window = NSWindow(contentViewController: hostingController)
+        let window = SettingsWindow(contentViewController: hostingController)
         window.title = "Portal Settings"
         window.styleMask = [.titled, .closable]
         window.setContentSize(NSSize(width: 450, height: 250))
@@ -288,5 +288,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     deinit {
         NotificationCenter.default.removeObserver(self)
         stopPermissionCheckTimer()
+    }
+}
+
+// MARK: - SettingsWindow
+
+/// Custom NSWindow that closes on Escape key press.
+final class SettingsWindow: NSWindow {
+    override func keyDown(with event: NSEvent) {
+        // Escape key code is 53
+        if event.keyCode == 53 {
+            close()
+        } else {
+            super.keyDown(with: event)
+        }
     }
 }
