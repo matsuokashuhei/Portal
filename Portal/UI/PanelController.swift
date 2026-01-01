@@ -192,6 +192,11 @@ final class PanelController: NSObject, NSWindowDelegate {
                 return nil
 
             case Self.returnKeyCode, Self.enterKeyCode:
+                // Check if IME is composing text (has marked/uncommitted text).
+                // If so, pass the event through to let IME confirm the input.
+                if self?.isIMEComposing() == true {
+                    return event
+                }
                 NotificationCenter.default.post(name: .executeSelectedCommand, object: nil)
                 return nil
 
@@ -199,6 +204,18 @@ final class PanelController: NSObject, NSWindowDelegate {
                 return event
             }
         }
+    }
+
+    /// Checks if the current first responder has marked text (IME composing state).
+    ///
+    /// When using Japanese, Chinese, Korean, or other IME input methods, pressing Enter
+    /// should first confirm the composed text before executing any command.
+    private func isIMEComposing() -> Bool {
+        guard let panel = panel,
+              let firstResponder = panel.firstResponder as? NSTextInputClient else {
+            return false
+        }
+        return firstResponder.hasMarkedText()
     }
 
     private func stopKeyboardMonitor() {
