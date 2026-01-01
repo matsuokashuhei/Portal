@@ -55,4 +55,4 @@ Check the PR description's "Review scope" section:
 
 ## Language
 
-Provide review comments in English.
+Provide review comments in Japanese.
