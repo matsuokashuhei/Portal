@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupHotkeyManager()
         setupPermissionObserver()
         setupHotkeyConfigurationObserver()
+        setupOpenSettingsObserver()
 
         // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
         if TestConfiguration.shouldShowPanelOnLaunch {
@@ -138,6 +139,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hotkeyManager?.stop()
         hotkeyManager = nil
         setupHotkeyManager()
+    }
+
+    private func setupOpenSettingsObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(openSettings),
+            name: .openSettings,
+            object: nil
+        )
     }
 
     private func handleHotkeyPressed() {
@@ -249,6 +259,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
+        // Hide the command palette panel first
+        panelController.hide()
+
         // If window already exists, just bring it to front
         if let window = settingsWindow {
             window.makeKeyAndOrderFront(nil)
@@ -256,8 +269,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        // Create settings window with NSHostingController
-        // (SwiftUI Settings scene doesn't work well with menu bar apps)
+        // Create custom SettingsWindow with NSHostingController
+        // This approach allows ESC key handling via cancelOperation(_:)
         let settingsView = SettingsView()
         let hostingController = NSHostingController(rootView: settingsView)
 
@@ -269,7 +282,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Clean up reference when window closes
         window.isReleasedWhenClosed = false
-        // Remove previous observer if window was closed and reopened
         if let observer = settingsWindowObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -306,16 +318,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 // MARK: - SettingsWindow
 
-/// Custom NSWindow for the settings UI that adds keyboard-based dismissal.
+/// Custom NSWindow for the settings UI that supports ESC key dismissal.
 ///
-/// This window overrides `cancelOperation(_:)` so that pressing the Escape key
-/// closes the window. Using `cancelOperation` instead of `keyDown` ensures the behavior
-/// works correctly even when a control (e.g., Picker) has focus, and matches the
-/// common macOS pattern of using Escape to dismiss configuration windows.
+/// SwiftUI's `Settings` scene does not natively support ESC key dismissal.
+/// By using a custom NSWindow with `cancelOperation(_:)` override, we can
+/// reliably handle ESC key regardless of which control has focus.
 final class SettingsWindow: NSWindow {
     /// Handles the Escape key press to close the window.
-    /// `cancelOperation` is the proper method to override for Escape key handling in macOS,
-    /// as `keyDown` may not receive the event when a control (e.g., Picker) has focus.
+    ///
+    /// `cancelOperation(_:)` is the standard NSResponder method for handling ESC key.
+    /// Unlike `keyDown(with:)`, it works reliably even when SwiftUI controls
+    /// (Picker, TextField, etc.) have focus.
     override func cancelOperation(_ sender: Any?) {
         close()
     }
