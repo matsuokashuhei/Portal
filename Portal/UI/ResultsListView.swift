@@ -32,7 +32,7 @@ struct ResultsListView: View {
                                     onItemClicked?(index)
                                 }
                                 .onHover { isHovering in
-                                    if isHovering {
+                                    if isHovering, selectedIndex != index {
                                         selectedIndex = index
                                     }
                                 }

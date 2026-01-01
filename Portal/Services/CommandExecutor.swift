@@ -11,6 +11,12 @@ import ApplicationServices
 ///
 /// This service must run on the main thread as `AXUIElementPerformAction` requires it.
 /// The `@MainActor` attribute ensures all method calls are dispatched to the main thread.
+///
+/// ## Testing
+/// Unit testing this class is difficult because `AXUIElement` references cannot be mocked
+/// without a real application context. The error handling paths are indirectly tested through
+/// integration tests by executing commands against real applications. For isolated unit tests,
+/// consider introducing a protocol abstraction if mock injection becomes necessary.
 @MainActor
 final class CommandExecutor {
     /// Executes a menu item by performing the press action on its AXUIElement.

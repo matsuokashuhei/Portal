@@ -63,6 +63,13 @@ struct CommandPaletteViewModelTests {
     }
 
     // MARK: - Navigation Tests
+    //
+    // Note: Testing navigation wrapping behavior (e.g., moving up from index 0 wraps to last item)
+    // requires populating `results`, which depends on `menuItems` containing valid `MenuItem` objects.
+    // Since `MenuItem` requires an `AXUIElement` reference that cannot be mocked without a real
+    // application context, we focus on boundary condition tests with empty results.
+    // The wrapping logic in `moveSelectionUp()` and `moveSelectionDown()` is tested indirectly
+    // through manual testing and UI tests.
 
     @Test @MainActor
     func testMoveSelectionUpWithEmptyResultsDoesNothing() {
