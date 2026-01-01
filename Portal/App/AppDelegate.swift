@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyManager: HotkeyManager?
     private let panelController = PanelController()
+    private var settingsWindow: NSWindow?
 
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
@@ -247,9 +248,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
-        // Activate the app first (required for menu bar apps with LSUIElement=YES)
+        // If window already exists, just bring it to front
+        if let window = settingsWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        // Create settings window with NSHostingController
+        // (SwiftUI Settings scene doesn't work well with menu bar apps)
+        let settingsView = SettingsView()
+        let hostingController = NSHostingController(rootView: settingsView)
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Portal Settings"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 450, height: 250))
+        window.center()
+
+        // Clean up reference when window closes
+        window.isReleasedWhenClosed = false
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            self?.settingsWindow = nil
+        }
+
+        self.settingsWindow = window
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector("showSettingsWindow:"), to: nil, from: nil)
     }
 
     @objc private func quitApp() {
