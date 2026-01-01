@@ -56,6 +56,8 @@ Portal/
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
 │   ├── FuzzySearch.swift      # スコアベース曖昧検索
 │   └── CommandExecutor.swift  # メニューコマンド実行
+├── Testing/
+│   └── MockMenuItemFactory.swift # テスト用モックMenuItem生成
 └── UI/
     ├── PanelController.swift  # NSPanel + パネル管理
     ├── CommandPaletteView.swift    # ルートビュー
@@ -127,6 +129,7 @@ PortalTests/
 
 PortalUITests/
 ├── PortalUITests.swift                  # パネルUIテスト（7テスト）
+├── ScrollBehaviorUITests.swift          # スクロール動作テスト（5テスト）
 └── PortalUITestsLaunchTests.swift       # 起動テスト
 
 docs/
@@ -156,6 +159,7 @@ xcodebuild -project Portal.xcodeproj -scheme Portal test -only-testing:PortalUIT
 | `--show-panel-on-launch` | パネル自動表示（XCUITest用） |
 | `--skip-accessibility-check` | 権限チェックスキップ |
 | `--disable-panel-auto-hide` | フォーカス喪失時の自動非表示を無効化 |
+| `--use-mock-menu-items=<count>` | モックメニュー項目を使用（スクロールテスト用） |
 
 ## ルール
 

@@ -36,6 +36,7 @@ struct ResultsListView: View {
                             let isSelected = index == selectedIndex
                             MenuItemRow(item: item, isSelected: isSelected)
                                 .id(index)
+                                .accessibilityIdentifier("ResultItem_\(index)")
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     onItemClicked?(index)

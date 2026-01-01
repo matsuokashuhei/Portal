@@ -97,7 +97,17 @@ final class CommandPaletteViewModel: ObservableObject {
     /// - Parameter app: The application to crawl menus from. If `nil`, attempts to crawl the
     ///   frontmost non-Portal application as determined by `MenuCrawler.crawlActiveApplication()`.
     ///   If Portal is the only regular running app, this may result in a `noActiveApplication` error.
+    ///
+    /// - Note: In test mode with `--use-mock-menu-items=<count>`, mock items are used instead of
+    ///   real menu crawling. This enables UI testing of scroll behavior with predictable data.
     func loadMenuItems(for app: NSRunningApplication?) {
+        // In mock mode, use mock items instead of real menu crawling
+        if let mockCount = TestConfiguration.mockMenuItemsCount {
+            menuItems = MockMenuItemFactory.createMockItems(count: mockCount)
+            selectedIndex = 0
+            return
+        }
+
         // Cancel any in-flight request to prevent race conditions
         loadMenuItemsTask?.cancel()
 

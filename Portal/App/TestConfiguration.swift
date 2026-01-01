@@ -24,6 +24,11 @@ enum TestConfiguration {
         /// When present, disable panel auto-hide on focus loss.
         /// Useful for UI testing where the panel would otherwise hide when XCUITest interacts with it.
         static let disablePanelAutoHide = "--disable-panel-auto-hide"
+
+        /// Prefix for mock menu items argument.
+        /// Format: --use-mock-menu-items=<count>
+        /// When present, use mock menu items instead of real MenuCrawler data.
+        static let useMockMenuItemsPrefix = "--use-mock-menu-items="
     }
 
     /// Checks if a launch argument is present in the current process.
@@ -54,5 +59,18 @@ enum TestConfiguration {
         shouldShowPanelOnLaunch
             || shouldSkipAccessibilityCheck
             || shouldDisablePanelAutoHide
+            || mockMenuItemsCount != nil
+    }
+
+    /// Returns the mock menu items count if specified via launch argument, otherwise nil.
+    /// Example: --use-mock-menu-items=30 returns 30
+    static var mockMenuItemsCount: Int? {
+        for argument in ProcessInfo.processInfo.arguments {
+            if argument.hasPrefix(LaunchArguments.useMockMenuItemsPrefix) {
+                let countString = argument.dropFirst(LaunchArguments.useMockMenuItemsPrefix.count)
+                return Int(countString)
+            }
+        }
+        return nil
     }
 }
