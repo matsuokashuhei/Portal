@@ -29,19 +29,12 @@ struct AccessibilityService {
     /// Opens System Settings directly to the Accessibility privacy pane.
     /// Use this when the user needs guidance on where to enable permissions.
     static func openAccessibilitySettings() {
-        let workspace = NSWorkspace.shared
-
-        // macOS 13+ (Ventura) renamed System Preferences to System Settings
-        // and uses x-apple.systemsettings scheme. Since Portal targets macOS 15+,
-        // this is the primary scheme.
-        if let settingsURL = URL(string: "x-apple.systemsettings:com.apple.preference.security?Privacy_Accessibility"),
-           workspace.open(settingsURL) {
+        // Portal targets macOS 15+ (Sequoia), which uses x-apple.systemsettings scheme.
+        // macOS 13+ (Ventura) renamed System Preferences to System Settings.
+        // No fallback needed for older versions as they're not supported.
+        guard let url = URL(string: "x-apple.systemsettings:com.apple.preference.security?Privacy_Accessibility") else {
             return
         }
-
-        // Fallback to x-apple.systempreferences for older macOS versions (macOS 12 and earlier)
-        if let preferencesURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            workspace.open(preferencesURL)
-        }
+        NSWorkspace.shared.open(url)
     }
 }
