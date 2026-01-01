@@ -247,6 +247,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
+        // Activate the app first (required for menu bar apps with LSUIElement=YES)
+        NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector("showSettingsWindow:"), to: nil, from: nil)
     }
 
