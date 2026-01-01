@@ -56,6 +56,8 @@ final class CommandPaletteViewModel: ObservableObject {
         let count = results.count
         guard count > 0 else { return }
 
+        errorMessage = nil
+
         if selectedIndex > 0 {
             selectedIndex -= 1
         } else {
@@ -67,6 +69,8 @@ final class CommandPaletteViewModel: ObservableObject {
     func moveSelectionDown() {
         let count = results.count
         guard count > 0 else { return }
+
+        errorMessage = nil
 
         if selectedIndex < count - 1 {
             selectedIndex += 1
@@ -171,6 +175,8 @@ final class CommandPaletteViewModel: ObservableObject {
     }
 
     private func performSearch(query: String, resetSelection: Bool) {
+        errorMessage = nil
+
         if query.isEmpty {
             filteredResults = []
         } else {

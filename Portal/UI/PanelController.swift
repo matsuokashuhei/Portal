@@ -12,7 +12,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let escapeKeyCode: UInt16 = 53
     private static let upArrowKeyCode: UInt16 = 126
     private static let downArrowKeyCode: UInt16 = 125
+    /// Return key on the main keyboard area.
     private static let returnKeyCode: UInt16 = 36
+    /// Enter key on the numeric keypad (different from Return).
     private static let enterKeyCode: UInt16 = 76
 
     static let panelSize = NSSize(width: 600, height: 400)

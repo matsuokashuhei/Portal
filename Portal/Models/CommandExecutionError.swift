@@ -19,11 +19,11 @@ enum CommandExecutionError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .elementInvalid:
-            return "The menu item is no longer available. The target app may have changed its menus."
+            return "Menu item unavailable. Try reopening the command palette to refresh."
         case .itemDisabled:
-            return "This menu item is currently disabled."
+            return "This menu item is disabled. Check if the required conditions are met in the app."
         case .actionFailed(let code):
-            return "Failed to execute menu action (error code: \(code))."
+            return "Execution failed (code: \(code)). Try reopening the command palette."
         }
     }
 }

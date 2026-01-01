@@ -44,10 +44,13 @@ struct ResultsListView: View {
                     }
                 }
             }
-            .onChange(of: selectedIndex) { _, newValue in
+            .onChange(of: selectedIndex) { oldValue, newValue in
                 guard newValue >= 0, newValue < results.count else { return }
+                // Use top anchor when scrolling down, bottom when scrolling up
+                // to keep the selected item visible at the edge of scroll direction
+                let anchor: UnitPoint = newValue > oldValue ? .top : .bottom
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    proxy.scrollTo(newValue, anchor: .center)
+                    proxy.scrollTo(newValue, anchor: anchor)
                 }
             }
         }
