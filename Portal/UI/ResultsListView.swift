@@ -53,6 +53,10 @@ struct ResultsListView: View {
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
                 scrollToIndex(selectedIndex + 1, proxy: proxy)
             }
+            // Ensure selected item is visible after rapid key presses
+            .onChange(of: selectedIndex) { _, newIndex in
+                scrollToIndex(newIndex, proxy: proxy)
+            }
         }
         .accessibilityIdentifier("ResultsListView")
     }
