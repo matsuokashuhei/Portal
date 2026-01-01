@@ -63,8 +63,8 @@ struct CommandPaletteViewModelTests {
     }
 
     // MARK: - Navigation Tests
-    // Note: Wrapping behavior requires MenuItem with AXUIElement (not mockable).
-    // Tested via UI tests and manual testing.
+    // Note: Testing with actual results requires MenuItem with AXUIElement (not mockable).
+    // Full navigation behavior is tested via UI tests and manual testing.
 
     @Test @MainActor
     func testMoveSelectionUpWithEmptyResultsDoesNothing() {
