@@ -16,8 +16,6 @@ struct ResultsListView: View {
     @State private var scrollViewFrame: CGRect = .zero
     /// Stores the frame of each item in global coordinates.
     @State private var itemFrames: [Int: CGRect] = [:]
-    /// Tracks the last navigation direction for scroll anchor calculation.
-    @State private var lastNavigationDirection: NavigationDirection?
 
     private enum NavigationDirection {
         case up, down
@@ -77,43 +75,44 @@ struct ResultsListView: View {
             .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
                 itemFrames.merge(frames) { _, new in new }
             }
-            // Only scroll on keyboard navigation, not on hover selection
+            // Only scroll on keyboard navigation, not on hover selection.
+            // Calculate target index BEFORE ViewModel updates selectedIndex.
             .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
-                lastNavigationDirection = .up
-                scrollToSelectedIfNeeded(proxy: proxy)
+                let targetIndex = selectedIndex - 1
+                scrollToIndexIfNeeded(targetIndex, direction: .up, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
-                lastNavigationDirection = .down
-                scrollToSelectedIfNeeded(proxy: proxy)
+                let targetIndex = selectedIndex + 1
+                scrollToIndexIfNeeded(targetIndex, direction: .down, proxy: proxy)
             }
         }
         .accessibilityIdentifier("ResultsListView")
     }
 
-    private func scrollToSelectedIfNeeded(proxy: ScrollViewProxy) {
-        // Defer scroll to next run loop to ensure ViewModel has updated selectedIndex
-        DispatchQueue.main.async {
-            guard selectedIndex >= 0, selectedIndex < results.count else { return }
-            guard let itemFrame = itemFrames[selectedIndex] else { return }
+    /// Checks if the item at the given frame is visible within the scroll view.
+    private func isItemVisible(_ itemFrame: CGRect) -> Bool {
+        // Check if item's vertical bounds are within the scroll view's visible area
+        let itemTop = itemFrame.minY
+        let itemBottom = itemFrame.maxY
+        let scrollTop = scrollViewFrame.minY
+        let scrollBottom = scrollViewFrame.maxY
 
-            // Check if item is already fully visible
-            let isVisible = scrollViewFrame.contains(itemFrame)
-            guard !isVisible else { return }
+        // Item is visible if its entire vertical extent is within scroll view bounds
+        return itemTop >= scrollTop && itemBottom <= scrollBottom
+    }
 
-            // Scroll with minimal movement: place item at edge of scroll direction
-            let anchor: UnitPoint
-            switch lastNavigationDirection {
-            case .down:
-                anchor = .bottom  // Item appears at bottom edge (minimal scroll down)
-            case .up:
-                anchor = .top     // Item appears at top edge (minimal scroll up)
-            case .none:
-                anchor = .center
-            }
+    private func scrollToIndexIfNeeded(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
+        guard index >= 0, index < results.count else { return }
+        guard let itemFrame = itemFrames[index] else { return }
 
-            withAnimation(.easeInOut(duration: 0.15)) {
-                proxy.scrollTo(selectedIndex, anchor: anchor)
-            }
+        // Check if target item is already fully visible
+        guard !isItemVisible(itemFrame) else { return }
+
+        // Scroll with minimal movement: place item at edge of scroll direction
+        let anchor: UnitPoint = direction == .down ? .bottom : .top
+
+        withAnimation(.easeInOut(duration: 0.15)) {
+            proxy.scrollTo(index, anchor: anchor)
         }
     }
 
