@@ -12,8 +12,11 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onItemClicked: ((Int) -> Void)?
 
+    /// Stores the frame of the scroll view's visible area in global coordinates.
+    @State private var scrollViewFrame: CGRect = .zero
+    /// Stores the frame of each item in global coordinates.
+    @State private var itemFrames: [Int: CGRect] = [:]
     /// Tracks the last navigation direction for scroll anchor calculation.
-    /// Set by keyboard navigation notifications, not by hover.
     @State private var lastNavigationDirection: NavigationDirection?
 
     private enum NavigationDirection {
@@ -44,6 +47,14 @@ struct ResultsListView: View {
                                         selectedIndex = index
                                     }
                                 }
+                                .background(
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(
+                                            key: ItemFramePreferenceKey.self,
+                                            value: [index: geometry.frame(in: .global)]
+                                        )
+                                    }
+                                )
                                 .accessibilityLabel(
                                     buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
                                 )
@@ -52,31 +63,50 @@ struct ResultsListView: View {
                     }
                 }
             }
+            .background(
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: ScrollViewFramePreferenceKey.self,
+                        value: geometry.frame(in: .global)
+                    )
+                }
+            )
+            .onPreferenceChange(ScrollViewFramePreferenceKey.self) { frame in
+                scrollViewFrame = frame
+            }
+            .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
+                itemFrames.merge(frames) { _, new in new }
+            }
             // Only scroll on keyboard navigation, not on hover selection
             .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
                 lastNavigationDirection = .up
-                scrollToSelected(proxy: proxy)
+                scrollToSelectedIfNeeded(proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
                 lastNavigationDirection = .down
-                scrollToSelected(proxy: proxy)
+                scrollToSelectedIfNeeded(proxy: proxy)
             }
         }
         .accessibilityIdentifier("ResultsListView")
     }
 
-    private func scrollToSelected(proxy: ScrollViewProxy) {
+    private func scrollToSelectedIfNeeded(proxy: ScrollViewProxy) {
         // Defer scroll to next run loop to ensure ViewModel has updated selectedIndex
         DispatchQueue.main.async {
             guard selectedIndex >= 0, selectedIndex < results.count else { return }
+            guard let itemFrame = itemFrames[selectedIndex] else { return }
 
-            // Use direction-based anchor for keyboard navigation
+            // Check if item is already fully visible
+            let isVisible = scrollViewFrame.contains(itemFrame)
+            guard !isVisible else { return }
+
+            // Scroll with minimal movement: place item at edge of scroll direction
             let anchor: UnitPoint
             switch lastNavigationDirection {
             case .down:
-                anchor = .top
+                anchor = .bottom  // Item appears at bottom edge (minimal scroll down)
             case .up:
-                anchor = .bottom
+                anchor = .top     // Item appears at top edge (minimal scroll up)
             case .none:
                 anchor = .center
             }
@@ -176,5 +206,23 @@ private struct MenuItemRow: View {
         )
         .cornerRadius(6)
         .opacity(item.isEnabled ? 1.0 : 0.5)
+    }
+}
+
+// MARK: - Preference Keys for Scroll Visibility Detection
+
+/// Preference key for tracking the scroll view's visible frame.
+private struct ScrollViewFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+/// Preference key for tracking individual item frames.
+private struct ItemFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [Int: CGRect] = [:]
+    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
