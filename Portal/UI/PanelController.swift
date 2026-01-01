@@ -17,7 +17,26 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// Enter key on the numeric keypad (different from Return).
     private static let enterKeyCode: UInt16 = 76
 
-    static let panelSize = NSSize(width: 600, height: 400)
+    // MARK: - Panel Size Calculation
+
+    /// Height of the search field area including wrapper padding (16 + 48 + 16).
+    private static let searchFieldHeight: CGFloat = 80
+    /// Height of the divider between search field and results.
+    private static let dividerHeight: CGFloat = 1
+    /// Height of a single MenuItemRow including vertical padding (6 + ~32 + 6).
+    private static let itemHeight: CGFloat = 44
+    /// Spacing between items in the results list.
+    private static let itemSpacing: CGFloat = 4
+    /// Number of visible items in the results list.
+    private static let visibleItemCount: Int = 8
+
+    /// Calculated panel size based on item dimensions.
+    /// Height = searchFieldHeight + dividerHeight + (visibleItemCount × itemHeight) + ((visibleItemCount - 1) × itemSpacing)
+    static let panelSize: NSSize = {
+        let listHeight = CGFloat(visibleItemCount) * itemHeight + CGFloat(visibleItemCount - 1) * itemSpacing
+        let totalHeight = searchFieldHeight + dividerHeight + listHeight
+        return NSSize(width: 600, height: totalHeight)
+    }()
 
     private var panel: NSPanel?
     private var keyboardMonitor: Any?
