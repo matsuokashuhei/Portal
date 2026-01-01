@@ -8,7 +8,7 @@
 import XCTest
 
 /// UI tests for scroll behavior during keyboard navigation.
-/// These tests verify that scrolling only occurs when navigating to items outside the visible area.
+/// These tests verify that scrolling works correctly when navigating through the results list.
 final class ScrollBehaviorUITests: XCTestCase {
 
     // MARK: - Constants
@@ -21,9 +21,6 @@ final class ScrollBehaviorUITests: XCTestCase {
 
     /// Small delay after keyboard navigation to allow animation to complete
     private let navigationDelay: TimeInterval = 0.2
-
-    /// Accuracy for frame comparison (allows for floating point precision)
-    private let frameAccuracy: CGFloat = 1.0
 
     // MARK: - Properties
 
@@ -76,106 +73,7 @@ final class ScrollBehaviorUITests: XCTestCase {
         XCTAssertTrue(firstItem.waitForExistence(timeout: 2.0), "Mock items should load")
     }
 
-    // MARK: - No Scroll Tests (Within Visible Area)
-
-    @MainActor
-    func testNavigateDownWithinVisibleArea_NoScroll() throws {
-        app.launch()
-
-        let panel = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panel.waitForExistence(timeout: panelAppearanceTimeout))
-
-        waitForMockItemsToLoad()
-
-        // Record frame of first item (reference)
-        let frameBefore = frameOfItem(at: 0)
-
-        // Navigate down by 1 (from index 0 to 1)
-        // Item 1 should be visible, so no scroll should occur
-        pressDownArrow()
-        _ = XCTWaiter().wait(for: [], timeout: navigationDelay)
-
-        // Record frame after navigation
-        let frameAfter = frameOfItem(at: 0)
-
-        // Frames should be identical (no scroll occurred)
-        XCTAssertEqual(
-            frameBefore.origin.y, frameAfter.origin.y,
-            accuracy: frameAccuracy,
-            "First item frame should not change when navigating within visible area"
-        )
-    }
-
-    @MainActor
-    func testNavigateUpWithinVisibleArea_NoScroll() throws {
-        app.launch()
-
-        let panel = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panel.waitForExistence(timeout: panelAppearanceTimeout))
-
-        waitForMockItemsToLoad()
-
-        // Navigate down a few times to move away from index 0
-        for _ in 0..<3 {
-            pressDownArrow()
-            _ = XCTWaiter().wait(for: [], timeout: 0.1)
-        }
-
-        // Now at index 3, navigate up to index 2
-        let frameBefore = frameOfItem(at: 0)
-        pressUpArrow()
-        _ = XCTWaiter().wait(for: [], timeout: navigationDelay)
-        let frameAfter = frameOfItem(at: 0)
-
-        // Frame should not change (item 2 is visible)
-        XCTAssertEqual(
-            frameBefore.origin.y, frameAfter.origin.y,
-            accuracy: frameAccuracy,
-            "First item frame should not change when navigating up within visible area"
-        )
-    }
-
-    @MainActor
-    func testMultipleNavigationsWithinVisibleArea_NoScroll() throws {
-        app.launch()
-
-        let panel = app.dialogs["CommandPalettePanel"]
-        XCTAssertTrue(panel.waitForExistence(timeout: panelAppearanceTimeout))
-
-        waitForMockItemsToLoad()
-
-        let initialFrame = frameOfItem(at: 0)
-
-        // Navigate down a few times, staying within visible area.
-        // Panel height is ~400px, each item ~50-60px, so ~6-8 items visible.
-        // Navigate 3 times to stay safely within visible area.
-        for _ in 0..<3 {
-            pressDownArrow()
-            _ = XCTWaiter().wait(for: [], timeout: 0.1)
-        }
-
-        let frameAfterDown = frameOfItem(at: 0)
-        XCTAssertEqual(
-            initialFrame.origin.y, frameAfterDown.origin.y,
-            accuracy: frameAccuracy,
-            "Frame should not change after navigating within visible area"
-        )
-
-        // Navigate back up
-        for _ in 0..<3 {
-            pressUpArrow()
-            _ = XCTWaiter().wait(for: [], timeout: 0.1)
-        }
-
-        let frameAfterUp = frameOfItem(at: 0)
-        XCTAssertEqual(
-            initialFrame.origin.y, frameAfterUp.origin.y,
-            accuracy: frameAccuracy,
-            "Frame should not change after navigating back up within visible area"
-        )
-    }
-
-    // MARK: - Scroll Tests (Outside Visible Area)
+    // MARK: - Scroll Tests
 
     @MainActor
     func testNavigateToItemOutsideVisibleArea_ScrollOccurs() throws {

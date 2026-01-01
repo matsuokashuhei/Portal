@@ -12,11 +12,6 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onItemClicked: ((Int) -> Void)?
 
-    /// Height of the scroll view's visible area.
-    @State private var scrollViewHeight: CGFloat = 0
-    /// Stores the frame of each item in scroll view's local coordinate space.
-    @State private var itemFrames: [Int: CGRect] = [:]
-
     private enum NavigationDirection {
         case up, down
     }
@@ -46,14 +41,6 @@ struct ResultsListView: View {
                                         selectedIndex = index
                                     }
                                 }
-                                .background(
-                                    GeometryReader { geometry in
-                                        Color.clear.preference(
-                                            key: ItemFramePreferenceKey.self,
-                                            value: [index: geometry.frame(in: .named("scrollArea"))]
-                                        )
-                                    }
-                                )
                                 .accessibilityLabel(
                                     buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
                                 )
@@ -62,59 +49,23 @@ struct ResultsListView: View {
                     }
                 }
             }
-            .coordinateSpace(name: "scrollArea")
-            .background(
-                GeometryReader { geometry in
-                    Color.clear.onAppear {
-                        scrollViewHeight = geometry.size.height
-                    }
-                    .onChange(of: geometry.size.height) { _, newHeight in
-                        scrollViewHeight = newHeight
-                    }
-                }
-            )
-            .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
-                itemFrames.merge(frames) { _, new in new }
-            }
-            .onChange(of: results.count) { _, _ in
-                itemFrames.removeAll()
-            }
             // Only scroll on keyboard navigation, not on hover selection.
             // Calculate target index BEFORE ViewModel updates selectedIndex.
             .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
                 let targetIndex = selectedIndex - 1
-                scrollToIndexIfNeeded(targetIndex, direction: .up, proxy: proxy)
+                scrollToIndex(targetIndex, direction: .up, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
                 let targetIndex = selectedIndex + 1
-                scrollToIndexIfNeeded(targetIndex, direction: .down, proxy: proxy)
+                scrollToIndex(targetIndex, direction: .down, proxy: proxy)
             }
         }
         .accessibilityIdentifier("ResultsListView")
     }
 
-    /// Checks if the item is at least partially visible within the scroll view.
-    /// Returns true if any part of the item is visible, false only if completely outside.
-    private func isItemPartiallyVisible(_ itemFrame: CGRect) -> Bool {
-        let itemTop = itemFrame.minY
-        let itemBottom = itemFrame.maxY
-
-        // In scroll view's local coordinates:
-        // - Items above visible area have negative minY
-        // - Items below visible area have minY > scrollViewHeight
-        // Item is partially visible if it overlaps with visible area [0, scrollViewHeight]
-        return itemBottom > 0 && itemTop < scrollViewHeight
-    }
-
-    private func scrollToIndexIfNeeded(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
+    private func scrollToIndex(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
         guard index >= 0, index < results.count else { return }
 
-        // If frame is available, check visibility. If nil (not yet rendered), scroll is needed.
-        if let itemFrame = itemFrames[index], isItemPartiallyVisible(itemFrame) {
-            return  // Item is visible, no scroll needed
-        }
-
-        // Scroll with minimal movement: place item at edge of scroll direction
         let anchor: UnitPoint = direction == .down ? .bottom : .top
 
         withAnimation(.easeInOut(duration: 0.15)) {
@@ -211,15 +162,5 @@ private struct MenuItemRow: View {
         )
         .cornerRadius(6)
         .opacity(item.isEnabled ? 1.0 : 0.5)
-    }
-}
-
-// MARK: - Preference Keys for Scroll Visibility Detection
-
-/// Preference key for tracking individual item frames in scroll view's local coordinate space.
-private struct ItemFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [Int: CGRect] = [:]
-    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
-        value.merge(nextValue()) { _, new in new }
     }
 }
