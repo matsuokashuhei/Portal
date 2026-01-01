@@ -12,9 +12,9 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onItemClicked: ((Int) -> Void)?
 
-    /// Stores the frame of the scroll view's visible area in global coordinates.
-    @State private var scrollViewFrame: CGRect = .zero
-    /// Stores the frame of each item in global coordinates.
+    /// Height of the scroll view's visible area.
+    @State private var scrollViewHeight: CGFloat = 0
+    /// Stores the frame of each item in scroll view's local coordinate space.
     @State private var itemFrames: [Int: CGRect] = [:]
 
     private enum NavigationDirection {
@@ -49,7 +49,7 @@ struct ResultsListView: View {
                                     GeometryReader { geometry in
                                         Color.clear.preference(
                                             key: ItemFramePreferenceKey.self,
-                                            value: [index: geometry.frame(in: .global)]
+                                            value: [index: geometry.frame(in: .named("scrollArea"))]
                                         )
                                     }
                                 )
@@ -61,17 +61,17 @@ struct ResultsListView: View {
                     }
                 }
             }
+            .coordinateSpace(name: "scrollArea")
             .background(
                 GeometryReader { geometry in
-                    Color.clear.preference(
-                        key: ScrollViewFramePreferenceKey.self,
-                        value: geometry.frame(in: .global)
-                    )
+                    Color.clear.onAppear {
+                        scrollViewHeight = geometry.size.height
+                    }
+                    .onChange(of: geometry.size.height) { _, newHeight in
+                        scrollViewHeight = newHeight
+                    }
                 }
             )
-            .onPreferenceChange(ScrollViewFramePreferenceKey.self) { frame in
-                scrollViewFrame = frame
-            }
             .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
                 itemFrames.merge(frames) { _, new in new }
             }
@@ -90,15 +90,16 @@ struct ResultsListView: View {
     }
 
     /// Checks if the item at the given frame is visible within the scroll view.
+    /// Uses scroll view's local coordinate space where visible area is 0 to scrollViewHeight.
     private func isItemVisible(_ itemFrame: CGRect) -> Bool {
-        // Check if item's vertical bounds are within the scroll view's visible area
         let itemTop = itemFrame.minY
         let itemBottom = itemFrame.maxY
-        let scrollTop = scrollViewFrame.minY
-        let scrollBottom = scrollViewFrame.maxY
 
-        // Item is visible if its entire vertical extent is within scroll view bounds
-        return itemTop >= scrollTop && itemBottom <= scrollBottom
+        // In scroll view's local coordinates:
+        // - Items above visible area have negative minY
+        // - Items below visible area have minY > scrollViewHeight
+        // Item is fully visible if its entire vertical extent is within [0, scrollViewHeight]
+        return itemTop >= 0 && itemBottom <= scrollViewHeight
     }
 
     private func scrollToIndexIfNeeded(_ index: Int, direction: NavigationDirection, proxy: ScrollViewProxy) {
@@ -210,15 +211,7 @@ private struct MenuItemRow: View {
 
 // MARK: - Preference Keys for Scroll Visibility Detection
 
-/// Preference key for tracking the scroll view's visible frame.
-private struct ScrollViewFramePreferenceKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
-
-/// Preference key for tracking individual item frames.
+/// Preference key for tracking individual item frames in scroll view's local coordinate space.
 private struct ItemFramePreferenceKey: PreferenceKey {
     static var defaultValue: [Int: CGRect] = [:]
     static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
