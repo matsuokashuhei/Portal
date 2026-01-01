@@ -95,7 +95,11 @@ final class CommandPaletteViewModel: ObservableObject {
         switch result {
         case .success:
             errorMessage = nil
-            NotificationCenter.default.post(name: .hidePanel, object: nil)
+            NotificationCenter.default.post(
+                name: .hidePanel,
+                object: nil,
+                userInfo: [NotificationUserInfoKey.restoreFocus: true]
+            )
         case .failure(let error):
             errorMessage = error.localizedDescription
         }

@@ -35,4 +35,7 @@ extension Notification.Name {
 enum NotificationUserInfoKey {
     /// Key for the target application (NSRunningApplication) to crawl menus from.
     static let targetApp = "targetApp"
+
+    /// Key for restoreFocus flag (Bool) in hidePanel notification.
+    static let restoreFocus = "restoreFocus"
 }

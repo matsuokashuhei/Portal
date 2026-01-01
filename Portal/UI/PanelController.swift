@@ -49,6 +49,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private var keyboardMonitor: Any?
     private var hasBeenPositioned = false
     private var hidePanelObserver: NSObjectProtocol?
+    private var targetApp: NSRunningApplication?
 
     var isVisible: Bool {
         panel?.isVisible ?? false
@@ -63,6 +64,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     func show(targetApp: NSRunningApplication? = nil) {
+        self.targetApp = targetApp
+
         if panel == nil {
             createPanel()
         }
@@ -88,12 +91,34 @@ final class PanelController: NSObject, NSWindowDelegate {
         NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo)
     }
 
-    func hide() {
+    /// Hides the panel.
+    ///
+    /// - Parameter restoreFocus:
+    ///   If `true`, restores focus to `targetApp` (the app that was frontmost before the panel was shown)
+    ///   before hiding the panel. Use this when closing the panel via Escape key or after command execution.
+    ///   If `false` (default), no focus restoration is performed. Use this when the panel is hidden
+    ///   due to focus loss (e.g., user clicked another app), where explicit focus switching is unnecessary.
+    ///
+    /// - Note: Focus restoration must occur BEFORE `panel?.orderOut(nil)` because once the panel is
+    ///   hidden, Portal may no longer have the ability to activate other applications reliably.
+    func hide(restoreFocus: Bool = false) {
+        if restoreFocus {
+            restoreFocusToTargetApp()
+        }
         stopKeyboardMonitor()
         removeHidePanelObserver()
         panel?.orderOut(nil)
         panel = nil
         hasBeenPositioned = false
+        targetApp = nil
+    }
+
+    /// Restores focus to the original application that was frontmost before the panel was shown.
+    ///
+    /// If `targetApp` is `nil`, this method does nothing.
+    private func restoreFocusToTargetApp() {
+        guard let target = targetApp else { return }
+        target.activate(options: [.activateIgnoringOtherApps])
     }
 
     private func createPanel() {
@@ -155,7 +180,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
             switch event.keyCode {
             case Self.escapeKeyCode:
-                self?.hide()
+                self?.hide(restoreFocus: true)
                 return nil
 
             case Self.upArrowKeyCode:
@@ -189,8 +214,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             forName: .hidePanel,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            self?.hide()
+        ) { [weak self] notification in
+            let restoreFocus = notification.userInfo?[NotificationUserInfoKey.restoreFocus] as? Bool ?? false
+            self?.hide(restoreFocus: restoreFocus)
         }
     }
 
