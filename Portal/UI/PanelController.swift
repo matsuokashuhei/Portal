@@ -91,21 +91,32 @@ final class PanelController: NSObject, NSWindowDelegate {
         NotificationCenter.default.post(name: .panelDidShow, object: nil, userInfo: userInfo)
     }
 
+    /// Hides the panel.
+    ///
+    /// - Parameter restoreFocus:
+    ///   If `true`, restores focus to `targetApp` (the app that was frontmost before the panel was shown)
+    ///   after hiding the panel. Use this when closing the panel via Escape key or after command execution.
+    ///   If `false` (default), no focus restoration is performed. Use this when the panel is hidden
+    ///   due to focus loss (e.g., user clicked another app), where explicit focus switching is unnecessary.
     func hide(restoreFocus: Bool = false) {
-        if restoreFocus {
-            restoreFocusToTargetApp()
-        }
         stopKeyboardMonitor()
         removeHidePanelObserver()
         panel?.orderOut(nil)
         panel = nil
         hasBeenPositioned = false
+
+        if restoreFocus {
+            restoreFocusToTargetApp()
+        }
         targetApp = nil
     }
 
+    /// Restores focus to the original application that was frontmost before the panel was shown.
+    ///
+    /// If `targetApp` is `nil`, this method does nothing.
     private func restoreFocusToTargetApp() {
         guard let target = targetApp else { return }
-        target.activate()
+        target.activate(options: [.activateIgnoringOtherApps])
     }
 
     private func createPanel() {
