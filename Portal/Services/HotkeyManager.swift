@@ -15,6 +15,7 @@ final class HotkeyManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var localMonitor: Any?
+    private var fallbackMonitor: Any?
     private let onHotkeyPressed: () -> Void
 
     init(onHotkeyPressed: @escaping () -> Void) {
@@ -29,6 +30,7 @@ final class HotkeyManager {
     func stop() {
         stopEventTap()
         stopLocalMonitor()
+        stopFallbackMonitor()
     }
 
     // MARK: - CGEventTap (Global Hotkey with Event Consumption)
@@ -126,11 +128,18 @@ final class HotkeyManager {
     /// Note: This cannot consume events, so Quick Look may still trigger.
     private func startGlobalMonitorFallback() {
         // This is kept as a fallback but won't consume the event
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        fallbackMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return }
             if self.isHotkeyEvent(event) {
                 self.onHotkeyPressed()
             }
+        }
+    }
+
+    private func stopFallbackMonitor() {
+        if let monitor = fallbackMonitor {
+            NSEvent.removeMonitor(monitor)
+            fallbackMonitor = nil
         }
     }
 

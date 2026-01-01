@@ -32,6 +32,8 @@ struct CommandPaletteView: View {
                     .font(.caption)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
+                    .accessibilityAddTraits(.isStaticText)
+                    .accessibilityLabel("Error: \(errorMessage)")
             }
         }
         .frame(width: PanelController.panelSize.width, height: PanelController.panelSize.height)

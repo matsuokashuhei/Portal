@@ -62,9 +62,8 @@ enum TestConfiguration {
             || mockMenuItemsCount != nil
     }
 
-    /// Returns the mock menu items count if specified via launch argument, otherwise nil.
-    /// Example: --use-mock-menu-items=30 returns 30
-    static var mockMenuItemsCount: Int? {
+    /// Cached value for mock menu items count to avoid repeated argument parsing.
+    private static let _mockMenuItemsCount: Int? = {
         for argument in ProcessInfo.processInfo.arguments {
             if argument.hasPrefix(LaunchArguments.useMockMenuItemsPrefix) {
                 let countString = argument.dropFirst(LaunchArguments.useMockMenuItemsPrefix.count)
@@ -72,5 +71,9 @@ enum TestConfiguration {
             }
         }
         return nil
-    }
+    }()
+
+    /// Returns the mock menu items count if specified via launch argument, otherwise nil.
+    /// Example: --use-mock-menu-items=30 returns 30
+    static var mockMenuItemsCount: Int? { _mockMenuItemsCount }
 }

@@ -93,7 +93,7 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate down by 1 (from index 0 to 1)
         // Item 1 should be visible, so no scroll should occur
         pressDownArrow()
-        Thread.sleep(forTimeInterval: navigationDelay)
+        _ = XCTWaiter().wait(for: [], timeout: navigationDelay)
 
         // Record frame after navigation
         let frameAfter = frameOfItem(at: 0)
@@ -118,13 +118,13 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate down a few times to move away from index 0
         for _ in 0..<3 {
             pressDownArrow()
-            Thread.sleep(forTimeInterval: 0.1)
+            _ = XCTWaiter().wait(for: [], timeout: 0.1)
         }
 
         // Now at index 3, navigate up to index 2
         let frameBefore = frameOfItem(at: 0)
         pressUpArrow()
-        Thread.sleep(forTimeInterval: navigationDelay)
+        _ = XCTWaiter().wait(for: [], timeout: navigationDelay)
         let frameAfter = frameOfItem(at: 0)
 
         // Frame should not change (item 2 is visible)
@@ -151,7 +151,7 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate 3 times to stay safely within visible area.
         for _ in 0..<3 {
             pressDownArrow()
-            Thread.sleep(forTimeInterval: 0.1)
+            _ = XCTWaiter().wait(for: [], timeout: 0.1)
         }
 
         let frameAfterDown = frameOfItem(at: 0)
@@ -164,7 +164,7 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate back up
         for _ in 0..<3 {
             pressUpArrow()
-            Thread.sleep(forTimeInterval: 0.1)
+            _ = XCTWaiter().wait(for: [], timeout: 0.1)
         }
 
         let frameAfterUp = frameOfItem(at: 0)
@@ -192,11 +192,11 @@ final class ScrollBehaviorUITests: XCTestCase {
         // With 30 items and ~8-10 visible, navigating 15+ times should trigger scroll
         for _ in 0..<15 {
             pressDownArrow()
-            Thread.sleep(forTimeInterval: 0.05)
+            _ = XCTWaiter().wait(for: [], timeout: 0.05)
         }
 
         // Allow animation to complete
-        Thread.sleep(forTimeInterval: 0.3)
+        _ = XCTWaiter().wait(for: [], timeout: 0.3)
 
         let frameAfterScroll = frameOfItem(at: 0)
 
@@ -219,9 +219,9 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate down far enough to scroll
         for _ in 0..<20 {
             pressDownArrow()
-            Thread.sleep(forTimeInterval: 0.05)
+            _ = XCTWaiter().wait(for: [], timeout: 0.05)
         }
-        Thread.sleep(forTimeInterval: 0.3)
+        _ = XCTWaiter().wait(for: [], timeout: 0.3)
 
         // Record frame after scrolling down
         let frameAfterScrollDown = frameOfItem(at: 0)
@@ -229,9 +229,9 @@ final class ScrollBehaviorUITests: XCTestCase {
         // Navigate back up to the beginning
         for _ in 0..<20 {
             pressUpArrow()
-            Thread.sleep(forTimeInterval: 0.05)
+            _ = XCTWaiter().wait(for: [], timeout: 0.05)
         }
-        Thread.sleep(forTimeInterval: 0.3)
+        _ = XCTWaiter().wait(for: [], timeout: 0.3)
 
         let frameAfterScrollUp = frameOfItem(at: 0)
 

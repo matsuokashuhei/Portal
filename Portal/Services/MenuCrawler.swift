@@ -66,6 +66,7 @@ final class MenuCrawler {
         // Check cache validity
         if let cached = cache,
            cached.pid == pid,
+           cached.bundleId == bundleId,
            Date().timeIntervalSince(cached.timestamp) < cacheDuration {
             return cached.items
         }

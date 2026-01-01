@@ -42,7 +42,7 @@ struct ResultsListView: View {
                                     onItemClicked?(index)
                                 }
                                 .onHover { isHovering in
-                                    if isHovering, selectedIndex != index {
+                                    if isHovering, index < results.count, selectedIndex != index {
                                         selectedIndex = index
                                     }
                                 }
@@ -75,6 +75,9 @@ struct ResultsListView: View {
             )
             .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
                 itemFrames.merge(frames) { _, new in new }
+            }
+            .onChange(of: results.count) { _, _ in
+                itemFrames.removeAll()
             }
             // Only scroll on keyboard navigation, not on hover selection.
             // Calculate target index BEFORE ViewModel updates selectedIndex.

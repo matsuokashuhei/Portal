@@ -54,13 +54,24 @@ final class CommandExecutor {
     /// - Parameters:
     ///   - element: The AXUIElement to validate.
     ///   - expectedTitle: The title the element should have.
-    /// - Returns: `true` if the element's current title matches the expected title.
+    /// - Returns: `true` if the element's title and role match expectations.
     private func isElementValid(_ element: AXUIElement, expectedTitle: String) -> Bool {
+        // Verify title
         var titleRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
-              let title = titleRef as? String else {
+              let title = titleRef as? String,
+              title == expectedTitle else {
             return false
         }
-        return title == expectedTitle
+
+        // Verify role is still a menu item
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String,
+              role == "AXMenuItem" else {
+            return false
+        }
+
+        return true
     }
 }
