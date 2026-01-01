@@ -16,6 +16,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let returnKeyCode: UInt16 = 36
     /// Enter key on the numeric keypad (different from Return).
     private static let enterKeyCode: UInt16 = 76
+    /// Comma key for Cmd+, settings shortcut.
+    private static let commaKeyCode: UInt16 = 43
 
     // MARK: - Panel Size Calculation
 
@@ -136,6 +138,14 @@ final class PanelController: NSObject, NSWindowDelegate {
     private func startKeyboardMonitor() {
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+            // Handle Cmd+, for opening Settings
+            // This must be handled explicitly because menu keyboard shortcuts don't work
+            // reliably when a floating panel has focus.
+            if modifiers == .command && event.keyCode == Self.commaKeyCode {
+                NotificationCenter.default.post(name: .openSettings, object: nil)
+                return nil
+            }
 
             // Only handle keys without user-intentional modifiers (Cmd, Opt, Ctrl, Shift).
             // Other modifiers like .numericPad, .function, and .capsLock are system-managed

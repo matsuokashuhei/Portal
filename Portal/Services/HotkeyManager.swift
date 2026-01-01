@@ -8,9 +8,6 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Space key code constant (must be at file level for CGEventTapCallBack)
-private let spaceKeyCode: Int64 = 49
-
 final class HotkeyManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -18,7 +15,11 @@ final class HotkeyManager {
     private var fallbackMonitor: Any?
     private let onHotkeyPressed: () -> Void
 
-    init(onHotkeyPressed: @escaping () -> Void) {
+    /// Configurable hotkey combination (modifier + key)
+    private let configuration: HotkeyConfiguration
+
+    init(configuration: HotkeyConfiguration = .load(), onHotkeyPressed: @escaping () -> Void) {
+        self.configuration = configuration
         self.onHotkeyPressed = onHotkeyPressed
     }
 
@@ -39,13 +40,13 @@ final class HotkeyManager {
     ///
     /// Unlike `addGlobalMonitorForEvents`, CGEventTap can actually consume events,
     /// preventing them from being delivered to other applications. This is necessary
-    /// to prevent Option+Space from triggering Quick Look in Finder.
+    /// to prevent the configured hotkey from triggering system shortcuts (e.g., Quick Look).
     ///
     /// ## Fallback Behavior
     /// If CGEventTap creation fails (typically when Accessibility permission is not granted),
     /// we fall back to `addGlobalMonitorForEvents` which CANNOT consume events. In this case:
-    /// - Portal will still respond to Option+Space
-    /// - Quick Look may also trigger simultaneously in Finder
+    /// - Portal will still respond to the configured hotkey
+    /// - System shortcuts may also trigger simultaneously
     /// - Once the user grants Accessibility permission and relaunches Portal, CGEventTap will work
     private func startEventTap() {
         // Create callback that will be called for each keyboard event
@@ -67,17 +68,19 @@ final class HotkeyManager {
                 return Unmanaged.passUnretained(event)
             }
 
-            // Check if this is our hotkey (Option+Space)
+            // Check if this is our configured hotkey
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
             let flags = event.flags
 
-            // Check for Option key (without Command, Control, or Shift)
-            let optionOnly = flags.contains(.maskAlternate) &&
-                !flags.contains(.maskCommand) &&
-                !flags.contains(.maskControl) &&
-                !flags.contains(.maskShift)
+            // Check for the configured modifier (without other modifiers)
+            let targetMask = manager.configuration.modifier.cgEventMask
+            let allModifierMasks: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
+            let otherMasks = allModifierMasks.subtracting(targetMask)
 
-            if optionOnly && keyCode == spaceKeyCode {
+            let hasTargetModifier = flags.contains(targetMask)
+            let hasOtherModifiers = !flags.intersection(otherMasks).isEmpty
+
+            if hasTargetModifier && !hasOtherModifiers && keyCode == manager.configuration.key.keyCode {
                 // Dispatch callback to main thread
                 DispatchQueue.main.async {
                     manager.onHotkeyPressed()
@@ -186,8 +189,9 @@ final class HotkeyManager {
 
     private func isHotkeyEvent(_ event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let targetModifier = configuration.modifier.eventModifier
         // Use Int64 for consistency with CGEventTap callback comparison
-        return modifiers == .option && Int64(event.keyCode) == spaceKeyCode
+        return modifiers == targetModifier && Int64(event.keyCode) == configuration.key.keyCode
     }
 
     deinit {

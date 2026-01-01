@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyManager: HotkeyManager?
     private let panelController = PanelController()
+    private var settingsWindow: NSWindow?
+    private var settingsWindowObserver: NSObjectProtocol?
 
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
@@ -21,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var permissionCheckTimer: Timer?
     private var wasPermissionGranted = false
     private var isCheckingPermission = false
+    private var isRecreatingHotkeyManager = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -37,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         wasPermissionGranted = AccessibilityService.isGranted
         setupHotkeyManager()
         setupPermissionObserver()
+        setupHotkeyConfigurationObserver()
+        setupOpenSettingsObserver()
 
         // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
         if TestConfiguration.shouldShowPanelOnLaunch {
@@ -114,10 +119,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func setupHotkeyManager() {
-        hotkeyManager = HotkeyManager { [weak self] in
+        let config = HotkeyConfiguration.load()
+        hotkeyManager = HotkeyManager(configuration: config) { [weak self] in
             self?.handleHotkeyPressed()
         }
         hotkeyManager?.start()
+    }
+
+    private func setupHotkeyConfigurationObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(hotkeyConfigurationDidChange),
+            name: .hotkeyConfigurationChanged,
+            object: nil
+        )
+    }
+
+    @objc private func hotkeyConfigurationDidChange() {
+        // Ensure we're on the main thread since hotkeyManager manages
+        // UI-related event monitors and run loop sources
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            // Prevent concurrent recreation if multiple notifications arrive rapidly
+            guard !self.isRecreatingHotkeyManager else { return }
+            self.isRecreatingHotkeyManager = true
+            defer { self.isRecreatingHotkeyManager = false }
+
+            // Recreate HotkeyManager with new configuration
+            self.hotkeyManager?.stop()
+            self.hotkeyManager = nil
+            self.setupHotkeyManager()
+        }
+    }
+
+    private func setupOpenSettingsObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(openSettings),
+            name: .openSettings,
+            object: nil
+        )
     }
 
     private func handleHotkeyPressed() {
@@ -229,7 +270,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.sendAction(Selector("showSettingsWindow:"), to: nil, from: nil)
+        // Hide the command palette panel first
+        panelController.hide()
+
+        // If window already exists, just bring it to front
+        if let window = settingsWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        // Create custom SettingsWindow with NSHostingController
+        // This approach allows ESC key handling via cancelOperation(_:)
+        let settingsView = SettingsView()
+        let hostingController = NSHostingController(rootView: settingsView)
+
+        let window = SettingsWindow(contentViewController: hostingController)
+        window.title = "Portal Settings"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 450, height: 250))
+        window.center()
+
+        window.isReleasedWhenClosed = false
+
+        // Remove previous observer if exists (handles rapid open/close cycles)
+        if let observer = settingsWindowObserver {
+            NotificationCenter.default.removeObserver(observer)
+            settingsWindowObserver = nil
+        }
+
+        // Observe window close to cleanup references
+        // Block-based observers MUST be explicitly removed via removeObserver()
+        // Setting settingsWindowObserver to nil alone does NOT unregister it
+        settingsWindowObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            // Remove self (the observer) when window closes
+            if let observer = self.settingsWindowObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            self.settingsWindowObserver = nil
+            self.settingsWindow = nil
+        }
+
+        self.settingsWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func quitApp() {
@@ -238,6 +327,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        if let observer = settingsWindowObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         stopPermissionCheckTimer()
+    }
+}
+
+// MARK: - SettingsWindow
+
+/// Custom NSWindow for the settings UI that supports ESC key dismissal.
+///
+/// SwiftUI's `Settings` scene does not natively support ESC key dismissal.
+/// By using a custom NSWindow with `cancelOperation(_:)` override, we can
+/// reliably handle ESC key regardless of which control has focus.
+final class SettingsWindow: NSWindow {
+    /// Handles the Escape key press to close the window.
+    ///
+    /// `cancelOperation(_:)` is the standard NSResponder method for handling ESC key.
+    /// Unlike `keyDown(with:)`, it works reliably even when SwiftUI controls
+    /// (Picker, TextField, etc.) have focus.
+    override func cancelOperation(_ sender: Any?) {
+        close()
     }
 }
