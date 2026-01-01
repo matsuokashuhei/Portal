@@ -124,9 +124,14 @@ struct HotkeyConfiguration: Equatable {
     static let `default` = HotkeyConfiguration(modifier: .option, key: .space)
 }
 
-/// Keys for UserDefaults/AppStorage settings persistence.
+/// Namespace for UserDefaults keys used throughout the application.
+///
+/// Centralizing keys here prevents typos and ensures consistency
+/// when accessing settings via UserDefaults or @AppStorage.
 enum SettingsKey {
+    /// Key for storing the hotkey modifier (Option/Command/Control/Shift).
     static let hotkeyModifier = "hotkeyModifier"
+    /// Key for storing the hotkey key (Space/Tab/A-Z).
     static let hotkeyKey = "hotkeyKey"
 }
 

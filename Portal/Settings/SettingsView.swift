@@ -74,7 +74,7 @@ struct GeneralSettingsView: View {
                     .frame(width: 100)
                 }
 
-                Text("Current: \(selectedModifier.wrappedValue.symbol)\(selectedKey.wrappedValue.rawValue)")
+                Text("Current: \(selectedModifier.wrappedValue.symbol) \(selectedKey.wrappedValue.rawValue)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
