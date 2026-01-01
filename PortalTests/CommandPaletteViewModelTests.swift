@@ -127,4 +127,34 @@ struct CommandPaletteViewModelTests {
         #expect(viewModel.errorMessage == nil)
         #expect(viewModel.selectedIndex == 1)
     }
+
+    // MARK: - MockMenuItemFactory Tests
+
+    @Test @MainActor
+    func testMockMenuItemFactoryCreatesAllEnabledByDefault() {
+        let items = MockMenuItemFactory.createMockItems(count: 5)
+        #expect(items.count == 5)
+        #expect(items.allSatisfy { $0.isEnabled })
+    }
+
+    @Test @MainActor
+    func testMockMenuItemFactoryCreatesDisabledItems() {
+        let items = MockMenuItemFactory.createMockItems(count: 5, disabledIndices: [1, 3])
+        #expect(items.count == 5)
+        #expect(items[0].isEnabled == true)
+        #expect(items[1].isEnabled == false)
+        #expect(items[2].isEnabled == true)
+        #expect(items[3].isEnabled == false)
+        #expect(items[4].isEnabled == true)
+    }
+
+    @Test @MainActor
+    func testFilteringDisabledItems() {
+        // Simulate what loadMenuItems does: filter disabled items
+        let allItems = MockMenuItemFactory.createMockItems(count: 5, disabledIndices: [1, 3])
+        let filteredItems = allItems.filter { $0.isEnabled }
+
+        #expect(filteredItems.count == 3)
+        #expect(filteredItems.allSatisfy { $0.isEnabled })
+    }
 }

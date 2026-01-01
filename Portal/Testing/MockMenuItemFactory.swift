@@ -22,13 +22,15 @@ enum MockMenuItemFactory {
     private static let mockPrefix = "[Mock] "
 
     /// Creates an array of mock menu items.
-    /// - Parameter count: Number of items to create.
+    /// - Parameters:
+    ///   - count: Number of items to create.
+    ///   - disabledIndices: Set of indices that should be disabled. Defaults to empty (all enabled).
     /// - Returns: Array of MenuItem with sequential titles prefixed with "[Mock] ".
     ///
     /// - Note: All items share the same dummy AXUIElement. These items are suitable
     ///   for UI layout and navigation testing, but not for command execution testing.
     ///   The "[Mock] " prefix makes it immediately obvious these are test items.
-    static func createMockItems(count: Int) -> [MenuItem] {
+    static func createMockItems(count: Int, disabledIndices: Set<Int> = []) -> [MenuItem] {
         let dummyElement = AXUIElementCreateSystemWide()
 
         return (0..<count).map { index in
@@ -38,7 +40,7 @@ enum MockMenuItemFactory {
                 path: ["Mock Menu", title],
                 keyboardShortcut: index < 10 ? "⌘\(index)" : nil,
                 axElement: dummyElement,
-                isEnabled: true
+                isEnabled: !disabledIndices.contains(index)
             )
         }
     }

@@ -140,7 +140,7 @@ final class CommandPaletteViewModel: ObservableObject {
                 // Check for cancellation before updating state
                 guard !Task.isCancelled else { return }
 
-                menuItems = items
+                menuItems = items.filter { $0.isEnabled }
                 selectedIndex = 0
             } catch {
                 // Check for cancellation before updating state
