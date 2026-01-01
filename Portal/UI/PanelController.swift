@@ -18,6 +18,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let enterKeyCode: UInt16 = 76
     /// Comma key for Cmd+, settings shortcut.
     private static let commaKeyCode: UInt16 = 43
+    /// N key for Ctrl+N navigation (Emacs-style).
+    private static let nKeyCode: UInt16 = 45
+    /// P key for Ctrl+P navigation (Emacs-style).
+    private static let pKeyCode: UInt16 = 35
 
     // MARK: - Panel Size Calculation
 
@@ -169,6 +173,18 @@ final class PanelController: NSObject, NSWindowDelegate {
             // reliably when a floating panel has focus.
             if modifiers == .command && event.keyCode == Self.commaKeyCode {
                 NotificationCenter.default.post(name: .openSettings, object: nil)
+                return nil
+            }
+
+            // Handle Ctrl+P for navigating up (Emacs-style)
+            if modifiers == .control && event.keyCode == Self.pKeyCode {
+                NotificationCenter.default.post(name: .navigateUp, object: nil)
+                return nil
+            }
+
+            // Handle Ctrl+N for navigating down (Emacs-style)
+            if modifiers == .control && event.keyCode == Self.nKeyCode {
+                NotificationCenter.default.post(name: .navigateDown, object: nil)
                 return nil
             }
 
