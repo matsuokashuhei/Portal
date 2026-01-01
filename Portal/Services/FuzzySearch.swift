@@ -12,7 +12,7 @@ import Foundation
 private extension String {
     /// Returns the string in NFC (Canonical Decomposition, followed by Canonical Composition) form.
     /// This ensures consistent character representation for matching, handling cases like:
-    /// - Composed vs decomposed Japanese dakuten (が vs か + ゛)
+    /// - Composed vs decomposed Japanese dakuten (が vs か + ◌゙, U+304B + U+3099)
     /// - macOS file system NFD strings
     var nfcNormalized: String {
         (self as NSString).precomposedStringWithCanonicalMapping

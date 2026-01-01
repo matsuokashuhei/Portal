@@ -317,6 +317,10 @@ struct FuzzySearchTests {
         let japaneseResults = FuzzySearch.search(query: "ファイル", in: items)
         #expect(japaneseResults.count == 1)
         #expect(japaneseResults.first?.item.title == "ファイルを開く")
+
+        let chineseResults = FuzzySearch.search(query: "文件", in: items)
+        #expect(chineseResults.count == 1)
+        #expect(chineseResults.first?.item.title == "打开文件")
     }
 
     @Test
@@ -343,5 +347,10 @@ struct FuzzySearchTests {
         let results = FuzzySearch.search(query: nfdQuery, in: items)
 
         #expect(results.count == 1)
+        // Verify matched ranges are correct after NFD→NFC normalization
+        if let match = results.first, let range = match.matchedRanges.first {
+            let matchedText = String(match.item.title[range])
+            #expect(matchedText == "が")
+        }
     }
 }
