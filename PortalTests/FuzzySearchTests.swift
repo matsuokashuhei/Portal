@@ -333,13 +333,14 @@ struct FuzzySearchTests {
     }
 
     @Test
-    func testUnicodeNormalizationNFDInput() {
-        // NFD representation: か + combining dakuten = が
-        let nfdTitle = "か\u{3099}を開く"  // "がを開く" in NFD
-        let items = [makeMenuItem(title: nfdTitle)]
+    func testUnicodeNormalizationNFDQuery() {
+        // Title is NFC ("がを開く")
+        let nfcTitle = "がを開く"
+        let items = [makeMenuItem(title: nfcTitle)]
 
-        // NFC query
-        let results = FuzzySearch.search(query: "が", in: items)
+        // Query is NFD representation: か + combining dakuten = が
+        let nfdQuery = "か\u{3099}"  // "が" in NFD
+        let results = FuzzySearch.search(query: nfdQuery, in: items)
 
         #expect(results.count == 1)
     }
