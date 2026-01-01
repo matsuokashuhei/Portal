@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotkeyManager: HotkeyManager?
     private let panelController = PanelController()
     private var settingsWindow: NSWindow?
+    private var settingsWindowObserver: NSObjectProtocol?
 
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
@@ -268,7 +269,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Clean up reference when window closes
         window.isReleasedWhenClosed = false
-        NotificationCenter.default.addObserver(
+        // Remove previous observer if window was closed and reopened
+        if let observer = settingsWindowObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        settingsWindowObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
             queue: .main
@@ -287,16 +292,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        if let observer = settingsWindowObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         stopPermissionCheckTimer()
     }
 }
 
 // MARK: - SettingsWindow
 
-/// Custom NSWindow that closes on Escape key press.
+/// Custom NSWindow for the settings UI that adds keyboard-based dismissal.
+///
+/// This window overrides `keyDown(with:)` so that pressing the Escape key
+/// closes the window. Handling this at the window level ensures the behavior
+/// is consistent regardless of which control has focus inside the settings view,
+/// and matches the common macOS pattern of using Escape to dismiss configuration windows.
 final class SettingsWindow: NSWindow {
     override func keyDown(with event: NSEvent) {
-        // Escape key code is 53
+        // Escape key code is 53; close the settings window
         if event.keyCode == 53 {
             close()
         } else {

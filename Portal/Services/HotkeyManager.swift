@@ -16,7 +16,7 @@ final class HotkeyManager {
     private let onHotkeyPressed: () -> Void
 
     /// Configurable hotkey combination (modifier + key)
-    let configuration: HotkeyConfiguration
+    private let configuration: HotkeyConfiguration
 
     init(configuration: HotkeyConfiguration = .load(), onHotkeyPressed: @escaping () -> Void) {
         self.configuration = configuration

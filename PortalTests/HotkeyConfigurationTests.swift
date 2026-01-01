@@ -11,6 +11,22 @@ import Testing
 
 struct HotkeyConfigurationTests {
 
+    // MARK: - Test Helper
+
+    /// Creates a unique test suite name for each test run to avoid parallel test conflicts.
+    /// Uses UUID to ensure complete isolation between concurrent test processes.
+    private func withIsolatedDefaults(_ body: (UserDefaults) -> Void) {
+        let testSuiteName = "com.portal.test.\(UUID().uuidString)"
+        let testDefaults = UserDefaults(suiteName: testSuiteName)!
+
+        defer {
+            // Clean up the test suite
+            testDefaults.removePersistentDomain(forName: testSuiteName)
+        }
+
+        body(testDefaults)
+    }
+
     // MARK: - Default Configuration Tests
 
     @Test
@@ -101,92 +117,40 @@ struct HotkeyConfigurationTests {
 
     @Test
     func testSaveAndLoad() {
-        // Save original values to restore later
-        let originalModifier = UserDefaults.standard.string(forKey: SettingsKey.hotkeyModifier)
-        let originalKey = UserDefaults.standard.string(forKey: SettingsKey.hotkeyKey)
+        withIsolatedDefaults { defaults in
+            // Save a custom configuration
+            let config = HotkeyConfiguration(modifier: .command, key: .p)
+            config.save(to: defaults)
 
-        defer {
-            // Restore original values
-            if let orig = originalModifier {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyModifier)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyModifier)
-            }
-            if let orig = originalKey {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyKey)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyKey)
-            }
+            // Load and verify
+            let loaded = HotkeyConfiguration.load(from: defaults)
+            #expect(loaded.modifier == .command)
+            #expect(loaded.key == .p)
         }
-
-        // Save a custom configuration
-        let config = HotkeyConfiguration(modifier: .command, key: .p)
-        config.save()
-
-        // Load and verify
-        let loaded = HotkeyConfiguration.load()
-        #expect(loaded.modifier == .command)
-        #expect(loaded.key == .p)
     }
 
     @Test
     func testLoadWithMissingValuesReturnsDefaults() {
-        // Save original values to restore later
-        let originalModifier = UserDefaults.standard.string(forKey: SettingsKey.hotkeyModifier)
-        let originalKey = UserDefaults.standard.string(forKey: SettingsKey.hotkeyKey)
-
-        defer {
-            // Restore original values
-            if let orig = originalModifier {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyModifier)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyModifier)
-            }
-            if let orig = originalKey {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyKey)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyKey)
-            }
+        withIsolatedDefaults { defaults in
+            // defaults is empty by default, so just load
+            let loaded = HotkeyConfiguration.load(from: defaults)
+            #expect(loaded.modifier == .option)
+            #expect(loaded.key == .space)
         }
-
-        // Clear the values
-        UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyModifier)
-        UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyKey)
-
-        // Load and verify defaults are returned
-        let loaded = HotkeyConfiguration.load()
-        #expect(loaded.modifier == .option)
-        #expect(loaded.key == .space)
     }
 
     @Test
     func testLoadWithInvalidValuesReturnsDefaults() {
-        // Save original values to restore later
-        let originalModifier = UserDefaults.standard.string(forKey: SettingsKey.hotkeyModifier)
-        let originalKey = UserDefaults.standard.string(forKey: SettingsKey.hotkeyKey)
+        withIsolatedDefaults { defaults in
+            // Set invalid values
+            defaults.set("InvalidModifier", forKey: SettingsKey.hotkeyModifier)
+            defaults.set("InvalidKey", forKey: SettingsKey.hotkeyKey)
 
-        defer {
-            // Restore original values
-            if let orig = originalModifier {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyModifier)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyModifier)
-            }
-            if let orig = originalKey {
-                UserDefaults.standard.set(orig, forKey: SettingsKey.hotkeyKey)
-            } else {
-                UserDefaults.standard.removeObject(forKey: SettingsKey.hotkeyKey)
-            }
+            // Load and verify defaults are returned
+            let loaded = HotkeyConfiguration.load(from: defaults)
+            #expect(loaded.modifier == .option)
+            #expect(loaded.key == .space)
         }
-
-        // Set invalid values
-        UserDefaults.standard.set("InvalidModifier", forKey: SettingsKey.hotkeyModifier)
-        UserDefaults.standard.set("InvalidKey", forKey: SettingsKey.hotkeyKey)
-
-        // Load and verify defaults are returned
-        let loaded = HotkeyConfiguration.load()
-        #expect(loaded.modifier == .option)
-        #expect(loaded.key == .space)
     }
 
     // MARK: - Equality Tests

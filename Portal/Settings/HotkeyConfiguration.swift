@@ -137,9 +137,8 @@ enum SettingsKey {
 
 extension HotkeyConfiguration {
     /// Loads configuration from UserDefaults, falling back to defaults.
-    static func load() -> HotkeyConfiguration {
-        let defaults = UserDefaults.standard
-
+    /// - Parameter defaults: UserDefaults instance to read from. Defaults to `.standard`.
+    static func load(from defaults: UserDefaults = .standard) -> HotkeyConfiguration {
         let modifierRaw = defaults.string(forKey: SettingsKey.hotkeyModifier)
             ?? ModifierKey.option.rawValue
         let keyRaw = defaults.string(forKey: SettingsKey.hotkeyKey)
@@ -152,8 +151,8 @@ extension HotkeyConfiguration {
     }
 
     /// Saves configuration to UserDefaults.
-    func save() {
-        let defaults = UserDefaults.standard
+    /// - Parameter defaults: UserDefaults instance to write to. Defaults to `.standard`.
+    func save(to defaults: UserDefaults = .standard) {
         defaults.set(modifier.rawValue, forKey: SettingsKey.hotkeyModifier)
         defaults.set(key.rawValue, forKey: SettingsKey.hotkeyKey)
     }
