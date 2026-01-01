@@ -29,10 +29,17 @@ struct AccessibilityService {
     /// Opens System Settings directly to the Accessibility privacy pane.
     /// Use this when the user needs guidance on where to enable permissions.
     static func openAccessibilitySettings() {
-        // Use x-apple.systempreferences URL scheme (works on macOS 13+)
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+        let workspace = NSWorkspace.shared
+
+        // Try x-apple.systempreferences first (confirmed working on macOS 15)
+        if let preferencesURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
+           workspace.open(preferencesURL) {
             return
         }
-        NSWorkspace.shared.open(url)
+
+        // Fallback to x-apple.systemsettings (macOS 13+ documented scheme)
+        if let settingsURL = URL(string: "x-apple.systemsettings:com.apple.preference.security?Privacy_Accessibility") {
+            workspace.open(settingsURL)
+        }
     }
 }

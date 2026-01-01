@@ -278,7 +278,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             object: window,
             queue: .main
         ) { [weak self] _ in
-            self?.settingsWindow = nil
+            guard let self = self else { return }
+            if let observer = self.settingsWindowObserver {
+                NotificationCenter.default.removeObserver(observer)
+                self.settingsWindowObserver = nil
+            }
+            self.settingsWindow = nil
         }
 
         self.settingsWindow = window
@@ -308,9 +313,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 /// is consistent regardless of which control has focus inside the settings view,
 /// and matches the common macOS pattern of using Escape to dismiss configuration windows.
 final class SettingsWindow: NSWindow {
+    private static let escapeKeyCode: UInt16 = 53
+
     override func keyDown(with event: NSEvent) {
-        // Escape key code is 53; close the settings window
-        if event.keyCode == 53 {
+        if event.keyCode == Self.escapeKeyCode {
             close()
         } else {
             super.keyDown(with: event)
