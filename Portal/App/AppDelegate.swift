@@ -285,21 +285,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.setContentSize(NSSize(width: 450, height: 250))
         window.center()
 
-        // Clean up reference when window closes
         window.isReleasedWhenClosed = false
+
+        // Remove previous observer if exists (handles rapid open/close cycles)
         if let observer = settingsWindowObserver {
             NotificationCenter.default.removeObserver(observer)
+            settingsWindowObserver = nil
         }
+
+        // Observe window close to cleanup references
+        // Block-based observers MUST be explicitly removed via removeObserver()
+        // Setting settingsWindowObserver to nil alone does NOT unregister it
         settingsWindowObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
             queue: .main
         ) { [weak self] _ in
-            guard let self = self else { return }
+            guard let self else { return }
+            // Remove self (the observer) when window closes
             if let observer = self.settingsWindowObserver {
                 NotificationCenter.default.removeObserver(observer)
-                self.settingsWindowObserver = nil
             }
+            self.settingsWindowObserver = nil
             self.settingsWindow = nil
         }
 
