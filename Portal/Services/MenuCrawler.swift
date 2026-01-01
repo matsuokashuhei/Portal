@@ -30,16 +30,25 @@ enum MenuCrawlerError: Error, LocalizedError {
 /// Must run on main thread as Accessibility API may trigger menu modifications.
 @MainActor
 final class MenuCrawler {
-    /// Cache duration in seconds.
+    /// Default cache duration in seconds.
     /// Note: This short duration is a trade-off between performance and freshness.
     /// Menu items may become stale if the target application modifies its menus
     /// dynamically (e.g., enabling/disabling items based on context). For most
     /// applications, 0.5 seconds provides a good balance. Future improvements could
     /// include observing NSMenu notifications for cache invalidation.
-    private static let cacheDuration: TimeInterval = 0.5
+    private static let defaultCacheDuration: TimeInterval = 0.5
 
-    /// Cached menu items with timestamp and process identifier.
-    private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t)?
+    /// Cache duration for Finder.
+    /// Finder's menus change more dynamically than typical apps (based on selection,
+    /// system state, etc.), so we use a much shorter cache duration to reduce the
+    /// risk of stale AXUIElement references causing unintended actions.
+    private static let finderCacheDuration: TimeInterval = 0.1
+
+    /// Finder's bundle identifier.
+    private static let finderBundleIdentifier = "com.apple.finder"
+
+    /// Cached menu items with timestamp, process identifier, and bundle identifier.
+    private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t, bundleId: String?)?
 
     /// Crawls the menu bar of the specified application.
     /// - Parameter app: The application to crawl menus from.
@@ -51,11 +60,13 @@ final class MenuCrawler {
         }
 
         let pid = app.processIdentifier
+        let bundleId = app.bundleIdentifier
+        let cacheDuration = getCacheDuration(for: bundleId)
 
         // Check cache validity
         if let cached = cache,
            cached.pid == pid,
-           Date().timeIntervalSince(cached.timestamp) < Self.cacheDuration {
+           Date().timeIntervalSince(cached.timestamp) < cacheDuration {
             return cached.items
         }
 
@@ -63,9 +74,14 @@ final class MenuCrawler {
         let items = try crawlMenuBar(for: app)
 
         // Update cache
-        cache = (items: items, timestamp: Date(), pid: pid)
+        cache = (items: items, timestamp: Date(), pid: pid, bundleId: bundleId)
 
         return items
+    }
+
+    /// Returns the appropriate cache duration for the given application.
+    private func getCacheDuration(for bundleId: String?) -> TimeInterval {
+        bundleId == Self.finderBundleIdentifier ? Self.finderCacheDuration : Self.defaultCacheDuration
     }
 
     /// Crawls the menu bar of the currently active application.

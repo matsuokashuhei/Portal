@@ -30,6 +30,13 @@ final class CommandExecutor {
             return .failure(.itemDisabled)
         }
 
+        // Validate that the axElement still references the expected menu item.
+        // This prevents executing the wrong menu item when menus have changed
+        // (especially important for Finder whose menus change dynamically).
+        guard isElementValid(menuItem.axElement, expectedTitle: menuItem.title) else {
+            return .failure(.elementInvalid)
+        }
+
         let result = AXUIElementPerformAction(menuItem.axElement, kAXPressAction as CFString)
 
         switch result {
@@ -40,5 +47,20 @@ final class CommandExecutor {
         default:
             return .failure(.actionFailed(result.rawValue))
         }
+    }
+
+    /// Validates that an AXUIElement still points to the expected menu item.
+    ///
+    /// - Parameters:
+    ///   - element: The AXUIElement to validate.
+    ///   - expectedTitle: The title the element should have.
+    /// - Returns: `true` if the element's current title matches the expected title.
+    private func isElementValid(_ element: AXUIElement, expectedTitle: String) -> Bool {
+        var titleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
+              let title = titleRef as? String else {
+            return false
+        }
+        return title == expectedTitle
     }
 }

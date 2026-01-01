@@ -142,11 +142,24 @@ final class CommandPaletteViewModel: ObservableObject {
 
     // MARK: - Private Methods
 
+    /// Finder's bundle identifier for cache invalidation.
+    private static let finderBundleIdentifier = "com.apple.finder"
+
     private func setupNotificationObserver() {
         NotificationCenter.default.publisher(for: .panelDidShow)
             .sink { [weak self] notification in
+                guard let self else { return }
+
                 let targetApp = notification.userInfo?[NotificationUserInfoKey.targetApp] as? NSRunningApplication
-                self?.loadMenuItems(for: targetApp)
+
+                // Force invalidate cache for Finder to ensure fresh menu items.
+                // Finder's menus change dynamically and stale references can cause
+                // unintended actions (including system-level changes like resolution).
+                if targetApp?.bundleIdentifier == Self.finderBundleIdentifier {
+                    self.menuCrawler.invalidateCache()
+                }
+
+                self.loadMenuItems(for: targetApp)
             }
             .store(in: &cancellables)
     }
