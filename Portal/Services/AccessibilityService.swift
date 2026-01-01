@@ -31,15 +31,17 @@ struct AccessibilityService {
     static func openAccessibilitySettings() {
         let workspace = NSWorkspace.shared
 
-        // Try x-apple.systempreferences first (confirmed working on macOS 15)
-        if let preferencesURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
-           workspace.open(preferencesURL) {
+        // macOS 13+ (Ventura) renamed System Preferences to System Settings
+        // and uses x-apple.systemsettings scheme. Since Portal targets macOS 15+,
+        // this is the primary scheme.
+        if let settingsURL = URL(string: "x-apple.systemsettings:com.apple.preference.security?Privacy_Accessibility"),
+           workspace.open(settingsURL) {
             return
         }
 
-        // Fallback to x-apple.systemsettings (macOS 13+ documented scheme)
-        if let settingsURL = URL(string: "x-apple.systemsettings:com.apple.preference.security?Privacy_Accessibility") {
-            workspace.open(settingsURL)
+        // Fallback to x-apple.systempreferences for older macOS versions (macOS 12 and earlier)
+        if let preferencesURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            workspace.open(preferencesURL)
         }
     }
 }

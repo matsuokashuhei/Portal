@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var permissionCheckTimer: Timer?
     private var wasPermissionGranted = false
     private var isCheckingPermission = false
+    private var isRecreatingHotkeyManager = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -138,7 +139,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
+            // Prevent concurrent recreation if multiple notifications arrive rapidly
+            guard !self.isRecreatingHotkeyManager else { return }
+            self.isRecreatingHotkeyManager = true
+            defer { self.isRecreatingHotkeyManager = false }
+
             // Recreate HotkeyManager with new configuration
             self.hotkeyManager?.stop()
             self.hotkeyManager = nil
