@@ -33,16 +33,10 @@ final class MenuCrawler {
     /// Default cache duration in seconds.
     /// Note: This short duration is a trade-off between performance and freshness.
     /// Menu items may become stale if the target application modifies its menus
-    /// dynamically (e.g., enabling/disabling items based on context). For most
-    /// applications, 0.5 seconds provides a good balance. Future improvements could
-    /// include observing NSMenu notifications for cache invalidation.
-    private static let defaultCacheDuration: TimeInterval = 0.5
-
-    /// Cache duration for Finder.
-    /// Finder's menus change more dynamically than typical apps (based on selection,
-    /// system state, etc.), so we use a much shorter cache duration to reduce the
-    /// risk of stale AXUIElement references causing unintended actions.
-    private static let finderCacheDuration: TimeInterval = 0.1
+    /// dynamically (e.g., enabling/disabling items based on context). 0.5 seconds
+    /// provides a good balance for most applications. Finder's dynamic menus are
+    /// handled via explicit cache invalidation in CommandPaletteViewModel.
+    private static let cacheDuration: TimeInterval = 0.5
 
     /// Cached menu items with timestamp, process identifier, and bundle identifier.
     private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t, bundleId: String?)?
@@ -58,13 +52,12 @@ final class MenuCrawler {
 
         let pid = app.processIdentifier
         let bundleId = app.bundleIdentifier
-        let cacheDuration = getCacheDuration(for: bundleId)
 
         // Check cache validity
         if let cached = cache,
            cached.pid == pid,
            cached.bundleId == bundleId,
-           Date().timeIntervalSince(cached.timestamp) < cacheDuration {
+           Date().timeIntervalSince(cached.timestamp) < Self.cacheDuration {
             return cached.items
         }
 
@@ -75,11 +68,6 @@ final class MenuCrawler {
         cache = (items: items, timestamp: Date(), pid: pid, bundleId: bundleId)
 
         return items
-    }
-
-    /// Returns the appropriate cache duration for the given application.
-    private func getCacheDuration(for bundleId: String?) -> TimeInterval {
-        bundleId == Constants.BundleIdentifier.finder ? Self.finderCacheDuration : Self.defaultCacheDuration
     }
 
     /// Crawls the menu bar of the currently active application.

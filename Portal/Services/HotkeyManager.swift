@@ -169,7 +169,8 @@ final class HotkeyManager {
 
     private func isHotkeyEvent(_ event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        return modifiers == .option && event.keyCode == UInt16(kSpaceKeyCode)
+        // Use Int64 for consistency with CGEventTap callback comparison
+        return modifiers == .option && Int64(event.keyCode) == kSpaceKeyCode
     }
 
     deinit {

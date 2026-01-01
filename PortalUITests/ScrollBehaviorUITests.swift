@@ -16,6 +16,10 @@ final class ScrollBehaviorUITests: XCTestCase {
     /// Timeout for panel appearance after app launch
     private let panelAppearanceTimeout: TimeInterval = 5.0
 
+    /// Timeout for mock menu items to appear after panel shows.
+    /// Shorter than panel appearance since items load quickly after panel is visible.
+    private let mockItemsLoadTimeout: TimeInterval = 2.0
+
     /// Number of mock menu items to create
     private let mockItemCount = 30
 
@@ -70,7 +74,7 @@ final class ScrollBehaviorUITests: XCTestCase {
         let firstItem = app.descendants(matching: .any)
             .matching(identifier: "ResultItem_0")
             .firstMatch
-        XCTAssertTrue(firstItem.waitForExistence(timeout: 2.0), "Mock items should load")
+        XCTAssertTrue(firstItem.waitForExistence(timeout: mockItemsLoadTimeout), "Mock items should load")
     }
 
     // MARK: - Scroll Tests
