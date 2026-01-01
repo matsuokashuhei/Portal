@@ -157,4 +157,19 @@ struct CommandPaletteViewModelTests {
         #expect(filteredItems.count == 3)
         #expect(filteredItems.allSatisfy { $0.isEnabled })
     }
+
+    // MARK: - Results Order Tests
+
+    @Test @MainActor
+    func testResultsPreservesMenuItemsOrderWhenSearchTextIsEmpty() {
+        let viewModel = CommandPaletteViewModel()
+        let items = MockMenuItemFactory.createMockItems(count: 5)
+        viewModel.menuItems = items
+
+        #expect(viewModel.searchText.isEmpty)
+        #expect(viewModel.results.count == items.count)
+        for (index, item) in viewModel.results.enumerated() {
+            #expect(item.title == items[index].title)
+        }
+    }
 }
