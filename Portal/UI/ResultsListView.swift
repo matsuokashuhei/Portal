@@ -32,11 +32,6 @@ struct ResultsListView: View {
                                 .onTapGesture {
                                     onItemClicked?(index)
                                 }
-                                .onHover { isHovering in
-                                    if isHovering, index < results.count, selectedIndex != index {
-                                        selectedIndex = index
-                                    }
-                                }
                                 .accessibilityLabel(
                                     buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
                                 )
