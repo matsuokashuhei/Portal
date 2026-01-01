@@ -135,10 +135,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func hotkeyConfigurationDidChange() {
-        // Recreate HotkeyManager with new configuration
-        hotkeyManager?.stop()
-        hotkeyManager = nil
-        setupHotkeyManager()
+        // Ensure we're on the main thread since hotkeyManager manages
+        // UI-related event monitors and run loop sources
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            // Recreate HotkeyManager with new configuration
+            self.hotkeyManager?.stop()
+            self.hotkeyManager = nil
+            self.setupHotkeyManager()
+        }
     }
 
     private func setupOpenSettingsObserver() {
