@@ -53,7 +53,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
     /// Moves selection up by one item. Does nothing if already at the top.
     func moveSelectionUp() {
-        guard results.count > 0, selectedIndex > 0 else { return }
+        guard selectedIndex > 0 else { return }
 
         errorMessage = nil
         selectedIndex -= 1
@@ -61,8 +61,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
     /// Moves selection down by one item. Does nothing if already at the bottom.
     func moveSelectionDown() {
-        let count = results.count
-        guard count > 0, selectedIndex < count - 1 else { return }
+        guard !results.isEmpty, selectedIndex < results.count - 1 else { return }
 
         errorMessage = nil
         selectedIndex += 1

@@ -21,12 +21,12 @@ final class ScrollBehaviorUITests: XCTestCase {
     private let mockItemsLoadTimeout: TimeInterval = 2.0
 
     /// Number of mock menu items to create
-    private let mockItemCount = 30
+    private let mockItemsCount = 30
 
     /// Small delay after keyboard navigation to allow animation to complete.
-    /// Note: We use `XCTWaiter().wait(for: [], timeout:)` with empty expectations as a
-    /// non-blocking delay. This pattern keeps the run loop active (unlike Thread.sleep)
-    /// and is commonly used in XCUITests for brief waits without expectations.
+    /// Note: We use `XCTWaiter().wait(for: [], timeout:)` with empty expectations to introduce
+    /// a brief delay that keeps the run loop active (allowing UI updates to process), unlike
+    /// `Thread.sleep`, and is commonly used in XCUITests for short waits without expectations.
     private let navigationDelay: TimeInterval = 0.2
 
     // MARK: - Properties
@@ -41,7 +41,7 @@ final class ScrollBehaviorUITests: XCTestCase {
             "--show-panel-on-launch",
             "--skip-accessibility-check",
             "--disable-panel-auto-hide",
-            "--use-mock-menu-items=\(mockItemCount)"
+            "--use-mock-menu-items=\(mockItemsCount)"
         ]
     }
 

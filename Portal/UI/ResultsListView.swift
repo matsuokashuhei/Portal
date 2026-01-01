@@ -160,6 +160,13 @@ private struct MenuItemRow: View {
         .opacity(item.isEnabled ? 1.0 : 0.5)
         .onHover { hovering in
             isHovered = hovering
+            if item.isEnabled {
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
         }
     }
 }

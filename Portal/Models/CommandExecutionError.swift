@@ -24,7 +24,7 @@ enum CommandExecutionError: Error, LocalizedError {
         case .itemDisabled:
             return "This menu item is disabled. Check if the required conditions are met in the app."
         case .actionFailed(let code):
-            return "Execution failed (code: \(code)). Try again after a moment, or reopen the palette and retry."
+            return "Execution failed (code: \(code)). Please reopen the palette and try again."
         }
     }
 }

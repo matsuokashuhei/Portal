@@ -23,8 +23,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let searchFieldHeight: CGFloat = 80
     /// Height of the divider between search field and results.
     private static let dividerHeight: CGFloat = 1
-    /// Height of a single MenuItemRow including vertical padding (6 + 32 + 6 = 44).
-    /// This must match the actual height of MenuItemRow; update this constant if the row's layout changes.
+    /// Expected height of a single MenuItemRow, including its internal vertical padding.
+    /// This value must stay in sync with the actual rendered height of `MenuItemRow`; if that
+    /// view's layout (padding, font size, etc.) changes, update this constant to avoid visual misalignment.
     private static let itemHeight: CGFloat = 44
     /// Spacing between items in the results list.
     private static let itemSpacing: CGFloat = 4

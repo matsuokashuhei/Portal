@@ -38,7 +38,10 @@ final class MenuCrawler {
     /// handled via explicit cache invalidation in CommandPaletteViewModel.
     private static let cacheDuration: TimeInterval = 0.5
 
-    /// Cached menu items with timestamp, process identifier, and bundle identifier.
+    /// Cached menu items keyed by timestamp, process identifier, and bundle identifier.
+    /// The bundle identifier is included so that cached data is not incorrectly reused
+    /// if the system recycles a PID and a different application (or a new instance)
+    /// ends up running under the same process identifier.
     private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t, bundleId: String?)?
 
     /// Crawls the menu bar of the specified application.
