@@ -48,12 +48,16 @@ Portal/
 │   ├── Notifications.swift    # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
 ├── Models/
-│   └── MenuItem.swift         # メニュー項目のデータモデル
+│   ├── MenuItem.swift         # メニュー項目のデータモデル
+│   └── CommandExecutionError.swift # 実行エラー型
 ├── Services/
 │   ├── HotkeyManager.swift    # Option+Space検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
-│   └── FuzzySearch.swift      # スコアベース曖昧検索
+│   ├── FuzzySearch.swift      # スコアベース曖昧検索
+│   └── CommandExecutor.swift  # メニューコマンド実行
+├── Testing/
+│   └── MockMenuItemFactory.swift # テスト用モックMenuItem生成
 └── UI/
     ├── PanelController.swift  # NSPanel + パネル管理
     ├── CommandPaletteView.swift    # ルートビュー
@@ -77,7 +81,7 @@ Portal/
 - [x] `AXIsProcessTrusted()` 権限チェック（#47）
 - [x] `AXUIElementCreateApplication()` アプリ要素取得（#48）
 - [x] `kAXMenuBarAttribute` メニュー走査（#48）
-- [ ] `AXUIElementPerformAction()` 実行（#50）
+- [x] `AXUIElementPerformAction()` 実行（#50）
 
 ### メニューバーアプリ
 - [x] `LSUIElement = YES`（#43）
@@ -94,8 +98,8 @@ Portal/
 ### 検索・実行
 - [x] FuzzySearch実装（#49）
 - [x] 50msデバウンス（#49）
-- [ ] キーボードナビゲーション（#50）
-- [ ] メニュー実行（#50）
+- [x] キーボードナビゲーション（#50）
+- [x] メニュー実行（#50）
 
 ## パフォーマンス目標
 
@@ -119,12 +123,13 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 ```
 PortalTests/
 ├── PortalTests.swift                    # テンプレート
-├── CommandPaletteViewModelTests.swift   # ViewModelテスト（8テスト）
+├── CommandPaletteViewModelTests.swift   # ViewModelテスト（12テスト）
 ├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（18テスト）
 └── MenuItemTests.swift                  # MenuItemテスト
 
 PortalUITests/
 ├── PortalUITests.swift                  # パネルUIテスト（7テスト）
+├── ScrollBehaviorUITests.swift          # スクロール動作テスト（5テスト）
 └── PortalUITestsLaunchTests.swift       # 起動テスト
 
 docs/
@@ -154,6 +159,7 @@ xcodebuild -project Portal.xcodeproj -scheme Portal test -only-testing:PortalUIT
 | `--show-panel-on-launch` | パネル自動表示（XCUITest用） |
 | `--skip-accessibility-check` | 権限チェックスキップ |
 | `--disable-panel-auto-hide` | フォーカス喪失時の自動非表示を無効化 |
+| `--use-mock-menu-items=<count>` | モックメニュー項目を使用（スクロールテスト用） |
 
 ## ルール
 

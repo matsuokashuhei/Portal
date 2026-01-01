@@ -30,16 +30,19 @@ enum MenuCrawlerError: Error, LocalizedError {
 /// Must run on main thread as Accessibility API may trigger menu modifications.
 @MainActor
 final class MenuCrawler {
-    /// Cache duration in seconds.
+    /// Default cache duration in seconds.
     /// Note: This short duration is a trade-off between performance and freshness.
     /// Menu items may become stale if the target application modifies its menus
-    /// dynamically (e.g., enabling/disabling items based on context). For most
-    /// applications, 0.5 seconds provides a good balance. Future improvements could
-    /// include observing NSMenu notifications for cache invalidation.
+    /// dynamically (e.g., enabling/disabling items based on context). 0.5 seconds
+    /// provides a good balance for most applications. Finder's dynamic menus are
+    /// handled via explicit cache invalidation in CommandPaletteViewModel.
     private static let cacheDuration: TimeInterval = 0.5
 
-    /// Cached menu items with timestamp and process identifier.
-    private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t)?
+    /// Cached menu items keyed by timestamp, process identifier, and bundle identifier.
+    /// The bundle identifier is included so that cached data is not incorrectly reused
+    /// if the system recycles a PID and a different application (or a new instance)
+    /// ends up running under the same process identifier.
+    private var cache: (items: [MenuItem], timestamp: Date, pid: pid_t, bundleId: String?)?
 
     /// Crawls the menu bar of the specified application.
     /// - Parameter app: The application to crawl menus from.
@@ -51,10 +54,12 @@ final class MenuCrawler {
         }
 
         let pid = app.processIdentifier
+        let bundleId = app.bundleIdentifier
 
         // Check cache validity
         if let cached = cache,
            cached.pid == pid,
+           cached.bundleId == bundleId,
            Date().timeIntervalSince(cached.timestamp) < Self.cacheDuration {
             return cached.items
         }
@@ -63,7 +68,7 @@ final class MenuCrawler {
         let items = try crawlMenuBar(for: app)
 
         // Update cache
-        cache = (items: items, timestamp: Date(), pid: pid)
+        cache = (items: items, timestamp: Date(), pid: pid, bundleId: bundleId)
 
         return items
     }

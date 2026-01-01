@@ -61,4 +61,70 @@ struct CommandPaletteViewModelTests {
         let viewModel = CommandPaletteViewModel()
         #expect(viewModel.errorMessage == nil)
     }
+
+    // MARK: - Navigation Tests
+    // Note: Testing with actual results requires MenuItem with AXUIElement (not mockable).
+    // Full navigation behavior is tested via UI tests and manual testing.
+
+    @Test @MainActor
+    func testMoveSelectionUpWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.selectedIndex = 0
+        viewModel.moveSelectionUp()
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @Test @MainActor
+    func testMoveSelectionDownWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.selectedIndex = 0
+        viewModel.moveSelectionDown()
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @Test @MainActor
+    func testExecuteSelectedCommandWithEmptyResultsDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.executeSelectedCommand()
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func testExecuteCommandAtInvalidIndexDoesNothing() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.executeCommand(at: -1)
+        #expect(viewModel.errorMessage == nil)
+        viewModel.executeCommand(at: 100)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    // MARK: - Error Clearing Tests
+
+    @Test @MainActor
+    func testMoveSelectionDownClearsErrorMessage() {
+        let viewModel = CommandPaletteViewModel()
+        // Add mock items to enable navigation
+        viewModel.menuItems = MockMenuItemFactory.createMockItems(count: 3)
+        viewModel.selectedIndex = 0
+        // Set an error to simulate a previous failed execution
+        viewModel.errorMessage = "Test error"
+
+        viewModel.moveSelectionDown()
+
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.selectedIndex == 1)
+    }
+
+    @Test @MainActor
+    func testMoveSelectionUpClearsErrorMessage() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.menuItems = MockMenuItemFactory.createMockItems(count: 3)
+        viewModel.selectedIndex = 2
+        viewModel.errorMessage = "Test error"
+
+        viewModel.moveSelectionUp()
+
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.selectedIndex == 1)
+    }
 }

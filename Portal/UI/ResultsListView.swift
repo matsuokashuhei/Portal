@@ -9,30 +9,61 @@ import SwiftUI
 
 struct ResultsListView: View {
     var results: [MenuItem]
-    var selectedIndex: Int
+    @Binding var selectedIndex: Int
+    var onItemClicked: ((Int) -> Void)?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
-                if results.isEmpty {
-                    Text("Type to search commands...")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding()
-                } else {
-                    ForEach(results.indices, id: \.self) { index in
-                        let item = results[index]
-                        let isSelected = index == selectedIndex
-                        MenuItemRow(item: item, isSelected: isSelected)
-                            .accessibilityLabel(
-                                buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
-                            )
-                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    if results.isEmpty {
+                        Text("Type to search commands...")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding()
+                    } else {
+                        ForEach(results.indices, id: \.self) { index in
+                            let item = results[index]
+                            let isSelected = index == selectedIndex
+                            MenuItemRow(item: item, isSelected: isSelected)
+                                .id(index)
+                                .accessibilityIdentifier("ResultItem_\(index)")
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onItemClicked?(index)
+                                }
+                                .accessibilityLabel(
+                                    buildAccessibilityLabel(item: item, index: index, isSelected: isSelected)
+                                )
+                                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        }
                     }
                 }
             }
+            // Keyboard navigation scroll: notification handlers calculate the NEW target index
+            // using selectedIndex ± 1 BEFORE ViewModel updates the state. This allows animation
+            // to start immediately. Example: if selectedIndex=5, navigateDown scrolls to 6.
+            .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
+                scrollToIndex(selectedIndex - 1, proxy: proxy)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
+                scrollToIndex(selectedIndex + 1, proxy: proxy)
+            }
+            // Safety net for rapid key presses: ensures final position is correct without animation
+            .onChange(of: selectedIndex) { _, newIndex in
+                guard newIndex >= 0, newIndex < results.count else { return }
+                proxy.scrollTo(newIndex)
+            }
         }
         .accessibilityIdentifier("ResultsListView")
+    }
+
+    private func scrollToIndex(_ index: Int, proxy: ScrollViewProxy) {
+        guard index >= 0, index < results.count else { return }
+
+        withAnimation(.easeInOut(duration: 0.15)) {
+            proxy.scrollTo(index)
+        }
     }
 
     /// Builds a comprehensive accessibility label for VoiceOver users.
@@ -87,6 +118,7 @@ struct ResultsListView: View {
 private struct MenuItemRow: View {
     let item: MenuItem
     let isSelected: Bool
+    @State private var isHovered = false
 
     var body: some View {
         HStack {
@@ -120,9 +152,14 @@ private struct MenuItemRow: View {
         .background(
             isSelected
                 ? Color.accentColor.opacity(0.2)
-                : Color.clear
+                : isHovered
+                    ? Color.secondary.opacity(0.1)
+                    : Color.clear
         )
         .cornerRadius(6)
         .opacity(item.isEnabled ? 1.0 : 0.5)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
