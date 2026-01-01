@@ -12,6 +12,14 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onItemClicked: ((Int) -> Void)?
 
+    /// Tracks the last navigation direction for scroll anchor calculation.
+    /// Set by keyboard navigation notifications, not by hover.
+    @State private var lastNavigationDirection: NavigationDirection?
+
+    private enum NavigationDirection {
+        case up, down
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -44,29 +52,39 @@ struct ResultsListView: View {
                     }
                 }
             }
-            .onChange(of: selectedIndex) { oldValue, newValue in
-                guard newValue >= 0, newValue < results.count else { return }
-
-                // For step navigation (±1), use direction-based anchor:
-                // - .top when moving down (index increases)
-                // - .bottom when moving up (index decreases)
-                // For larger jumps (e.g., search results changed, wrap-around),
-                // use .center to avoid surprising scroll behavior.
-                let isStepNavigation = abs(newValue - oldValue) == 1
-
-                let anchor: UnitPoint
-                if isStepNavigation {
-                    anchor = newValue > oldValue ? .top : .bottom
-                } else {
-                    anchor = .center
-                }
-
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    proxy.scrollTo(newValue, anchor: anchor)
-                }
+            // Only scroll on keyboard navigation, not on hover selection
+            .onReceive(NotificationCenter.default.publisher(for: .navigateUp)) { _ in
+                lastNavigationDirection = .up
+                scrollToSelected(proxy: proxy)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .navigateDown)) { _ in
+                lastNavigationDirection = .down
+                scrollToSelected(proxy: proxy)
             }
         }
         .accessibilityIdentifier("ResultsListView")
+    }
+
+    private func scrollToSelected(proxy: ScrollViewProxy) {
+        // Defer scroll to next run loop to ensure ViewModel has updated selectedIndex
+        DispatchQueue.main.async {
+            guard selectedIndex >= 0, selectedIndex < results.count else { return }
+
+            // Use direction-based anchor for keyboard navigation
+            let anchor: UnitPoint
+            switch lastNavigationDirection {
+            case .down:
+                anchor = .top
+            case .up:
+                anchor = .bottom
+            case .none:
+                anchor = .center
+            }
+
+            withAnimation(.easeInOut(duration: 0.15)) {
+                proxy.scrollTo(selectedIndex, anchor: anchor)
+            }
+        }
     }
 
     /// Builds a comprehensive accessibility label for VoiceOver users.
