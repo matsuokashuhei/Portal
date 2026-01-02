@@ -12,6 +12,9 @@ struct FilterSegmentView: View {
     /// Currently selected filter, used for rendering selection state.
     let selectedFilter: CommandTypeFilter
 
+    /// Modifier key symbol to display in shortcuts (e.g., "⌘", "⌥").
+    let modifierSymbol: String
+
     /// Called when a filter button is tapped.
     /// The parent view is responsible for applying toggle logic and state updates.
     let onFilterTapped: (CommandTypeFilter) -> Void
@@ -26,13 +29,13 @@ struct FilterSegmentView: View {
             )
             FilterButton(
                 title: "Menus",
-                shortcut: "⌘1",
+                shortcut: "\(modifierSymbol)1",
                 isSelected: selectedFilter == .menu,
                 action: { onFilterTapped(.menu) }
             )
             FilterButton(
                 title: "Window",
-                shortcut: "⌘2",
+                shortcut: "\(modifierSymbol)2",
                 isSelected: selectedFilter == .window,
                 action: { onFilterTapped(.window) }
             )

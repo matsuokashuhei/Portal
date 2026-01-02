@@ -22,11 +22,11 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let nKeyCode: UInt16 = 45
     /// P key for Ctrl+P navigation (Emacs-style).
     private static let pKeyCode: UInt16 = 35
-    /// 1 key for Cmd+1 menu filter.
+    /// 1 key for menu filter shortcut.
     private static let oneKeyCode: UInt16 = 18
-    /// 2 key for Cmd+2 sidebar filter.
+    /// 2 key for window filter shortcut.
     private static let twoKeyCode: UInt16 = 19
-    /// 3 key for Cmd+3 content filter.
+    /// 3 key for future filter shortcut (currently unused).
     private static let threeKeyCode: UInt16 = 20
 
     // MARK: - Panel Size Calculation
@@ -174,6 +174,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     private func startKeyboardMonitor() {
+        // Capture filter modifier at panel show time (not per-keystroke) for performance.
+        // Setting changes will take effect on next panel show.
+        let filterModifier = HotkeyConfiguration.load().modifier.eventModifier
+
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
@@ -185,14 +189,14 @@ final class PanelController: NSObject, NSWindowDelegate {
                 return nil
             }
 
-            // Handle Cmd+1 for menu items filter
-            if modifiers == .command && event.keyCode == Self.oneKeyCode {
+            // Handle <Modifier>+1 for menu items filter (uses same modifier as hotkey)
+            if modifiers == filterModifier && event.keyCode == Self.oneKeyCode {
                 NotificationCenter.default.post(name: .toggleMenuFilter, object: nil)
                 return nil
             }
 
-            // Handle Cmd+2 for window items filter
-            if modifiers == .command && event.keyCode == Self.twoKeyCode {
+            // Handle <Modifier>+2 for window items filter
+            if modifiers == filterModifier && event.keyCode == Self.twoKeyCode {
                 NotificationCenter.default.post(name: .toggleWindowFilter, object: nil)
                 return nil
             }

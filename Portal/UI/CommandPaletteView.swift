@@ -14,6 +14,7 @@ struct CommandPaletteView: View {
         VStack(spacing: 0) {
             FilterSegmentView(
                 selectedFilter: viewModel.typeFilter,
+                modifierSymbol: HotkeyConfiguration.load().modifier.symbol,
                 onFilterTapped: { viewModel.toggleTypeFilter($0) }
             )
 
