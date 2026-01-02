@@ -12,6 +12,13 @@ struct CommandPaletteView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            FilterSegmentView(
+                selectedFilter: viewModel.typeFilter,
+                onFilterTapped: { viewModel.toggleTypeFilter($0) }
+            )
+
+            Divider()
+
             SearchFieldView(text: $viewModel.searchText)
                 .padding()
 

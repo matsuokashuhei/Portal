@@ -22,12 +22,18 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let nKeyCode: UInt16 = 45
     /// P key for Ctrl+P navigation (Emacs-style).
     private static let pKeyCode: UInt16 = 35
+    /// 1 key for Cmd+1 menu filter.
+    private static let oneKeyCode: UInt16 = 18
+    /// 2 key for Cmd+2 sidebar filter.
+    private static let twoKeyCode: UInt16 = 19
 
     // MARK: - Panel Size Calculation
 
+    /// Height of the filter segment area including padding (8 + 28 + 8).
+    private static let filterSegmentHeight: CGFloat = 44
     /// Height of the search field area including wrapper padding (16 + 48 + 16).
     private static let searchFieldHeight: CGFloat = 80
-    /// Height of the divider between search field and results.
+    /// Height of the divider between sections.
     private static let dividerHeight: CGFloat = 1
     /// Expected height of a single MenuItemRow, including its internal vertical padding.
     /// This value must stay in sync with the actual rendered height of `MenuItemRow`; if that
@@ -39,13 +45,14 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let visibleItemCount: Int = 8
 
     /// Calculated panel size based on item dimensions.
-    /// Height = searchFieldHeight + dividerHeight + (visibleItemCount × itemHeight) + ((visibleItemCount - 1) × itemSpacing)
+    /// Height = filterSegmentHeight + dividerHeight + searchFieldHeight + dividerHeight
+    ///          + (visibleItemCount × itemHeight) + ((visibleItemCount - 1) × itemSpacing)
     ///
     /// - Important: This value is computed once when the class loads. Changes to the layout constants
     ///   above require rebuilding the app to take effect.
     static let panelSize: NSSize = {
         let listHeight = CGFloat(visibleItemCount) * itemHeight + CGFloat(visibleItemCount - 1) * itemSpacing
-        let totalHeight = searchFieldHeight + dividerHeight + listHeight
+        let totalHeight = filterSegmentHeight + dividerHeight + searchFieldHeight + dividerHeight + listHeight
         return NSSize(width: 600, height: totalHeight)
     }()
 
@@ -173,6 +180,18 @@ final class PanelController: NSObject, NSWindowDelegate {
             // reliably when a floating panel has focus.
             if modifiers == .command && event.keyCode == Self.commaKeyCode {
                 NotificationCenter.default.post(name: .openSettings, object: nil)
+                return nil
+            }
+
+            // Handle Cmd+1 for menu items filter
+            if modifiers == .command && event.keyCode == Self.oneKeyCode {
+                NotificationCenter.default.post(name: .toggleMenuFilter, object: nil)
+                return nil
+            }
+
+            // Handle Cmd+2 for sidebar items filter
+            if modifiers == .command && event.keyCode == Self.twoKeyCode {
+                NotificationCenter.default.post(name: .toggleSidebarFilter, object: nil)
                 return nil
             }
 
