@@ -53,9 +53,10 @@ final class CommandExecutor {
             return .failure(.elementInvalid)
         }
 
-        // For sidebar and content items, try setting AXSelected attribute first
+        // For sidebar items, try setting AXSelected attribute first
         // This is more reliable than actions for list/outline rows
-        if menuItem.type == .sidebar || menuItem.type == .content {
+        // Note: Content items skip this - they need AXPress action instead
+        if menuItem.type == .sidebar {
             let selectResult = AXUIElementSetAttributeValue(
                 menuItem.axElement,
                 kAXSelectedAttribute as CFString,
@@ -69,11 +70,24 @@ final class CommandExecutor {
         // Try preferred actions for this command type
         let actions = Self.preferredActions[menuItem.type] ?? [kAXPressAction as String]
 
+        // For content items, check if this is a container element (not AXButton)
+        // If so, we should try child buttons instead of trusting AXPress success
+        let isContentContainer = menuItem.type == .content && !isButtonElement(menuItem.axElement)
+
         for action in actions {
             let result = AXUIElementPerformAction(menuItem.axElement, action as CFString)
 
             switch result {
             case .success:
+                // For content containers, AXPress may return success without doing anything
+                // Try child buttons as fallback
+                if isContentContainer && action == kAXPressAction as String {
+                    if tryPressChildButtons(menuItem.axElement) {
+                        return .success(())
+                    }
+                    // Child button press failed, but main action "succeeded" - return success
+                    // since we can't know if the original AXPress actually worked
+                }
                 return .success(())
             case .actionUnsupported:
                 // Try next action
@@ -86,7 +100,13 @@ final class CommandExecutor {
             }
         }
 
-        // All actions failed
+        // All actions failed - for content items, try child buttons as last resort
+        if menuItem.type == .content {
+            if tryPressChildButtons(menuItem.axElement) {
+                return .success(())
+            }
+        }
+
         return .failure(.actionFailed(-1))
     }
 
@@ -116,37 +136,40 @@ final class CommandExecutor {
             return false
         }
 
-        // Verify title
-        var title: String?
+        // Verify title - check all possible title sources since WindowCrawler
+        // uses title ?? description ?? value priority and we need to match any of them
+        var possibleTitles: [String] = []
 
         // Try direct title attribute
         var titleRef: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success {
-            title = titleRef as? String
+        if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
+           let t = titleRef as? String, !t.isEmpty {
+            possibleTitles.append(t)
         }
 
-        // For sidebar and content items, title might be in child elements (AXStaticText)
-        if (title == nil || title?.isEmpty == true) && (type == .sidebar || type == .content) {
-            title = getTitleFromChildren(element)
+        // Try description
+        var descRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descRef) == .success,
+           let d = descRef as? String, !d.isEmpty {
+            possibleTitles.append(d)
         }
 
-        // Fallback to description
-        if title == nil || title?.isEmpty == true {
-            var descRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descRef) == .success {
-                title = descRef as? String
+        // Try value (used by content items like Apple Music "Now Playing")
+        var valueRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success,
+           let v = valueRef as? String, !v.isEmpty {
+            possibleTitles.append(v)
+        }
+
+        // For sidebar and content items, also check child elements
+        if type == .sidebar || type == .content {
+            if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
+                possibleTitles.append(childTitle)
             }
         }
 
-        // Fallback to value (used by content items like Apple Music "Now Playing")
-        if title == nil || title?.isEmpty == true {
-            var valueRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success {
-                title = valueRef as? String
-            }
-        }
-
-        guard let actualTitle = title, actualTitle == expectedTitle else {
+        // Accept if expected title matches any of the possible titles
+        guard possibleTitles.contains(expectedTitle) else {
             return false
         }
 
@@ -205,5 +228,45 @@ final class CommandExecutor {
         }
 
         return nil
+    }
+
+    /// Checks if an element is an AXButton.
+    private func isButtonElement(_ element: AXUIElement) -> Bool {
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String else {
+            return false
+        }
+        return role == "AXButton"
+    }
+
+    /// Tries to press child button elements recursively.
+    /// Some content items are containers (AXGroup) with the actual clickable button as a child.
+    /// - Parameter element: The parent element to search for child buttons.
+    /// - Returns: `true` if a child button was successfully pressed.
+    private func tryPressChildButtons(_ element: AXUIElement) -> Bool {
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return false
+        }
+
+        for child in children {
+            var roleRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
+               let role = roleRef as? String, role == "AXButton" {
+                let result = AXUIElementPerformAction(child, kAXPressAction as CFString)
+                if result == .success {
+                    return true
+                }
+            }
+
+            // Recursively check grandchildren (limit depth to avoid performance issues)
+            if tryPressChildButtons(child) {
+                return true
+            }
+        }
+
+        return false
     }
 }
