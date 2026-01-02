@@ -110,7 +110,7 @@ final class WindowCrawler {
         var itemCount = 0
         let allItems = crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount)
 
-        // Deduplicate by stable identifier (same element may be reached via different paths)
+        // Deduplicate by path-based identifier (elements reached via different paths get different IDs)
         var seenIds = Set<String>()
         var uniqueItems: [MenuItem] = []
         for item in allItems {

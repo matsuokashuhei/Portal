@@ -169,7 +169,7 @@ final class CommandExecutor {
             possibleTitles.append(v)
         }
 
-        // For window items (sidebar/content), also check child elements
+        // For window items, also check child elements
         if type == .window {
             if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
                 possibleTitles.append(childTitle)
