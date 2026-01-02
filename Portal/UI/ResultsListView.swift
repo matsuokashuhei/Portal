@@ -149,7 +149,7 @@ private struct MenuItemRow: View {
                     Image(nsImage: nsImage)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 16, height: 16)
+                        .frame(maxWidth: 16, maxHeight: 16)
                 } else {
                     Image(systemName: iconName(for: item.type))
                         .font(.caption)

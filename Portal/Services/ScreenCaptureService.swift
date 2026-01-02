@@ -60,11 +60,17 @@ final class ScreenCaptureService {
         CGPreflightScreenCaptureAccess()
     }
 
-    /// Requests Screen Recording permission.
-    /// Shows the system dialog prompting user to grant permission if not already granted.
+    /// Requests Screen Recording permission asynchronously.
     ///
-    /// To ensure the dialog appears, we also attempt to access shareable content
-    /// via ScreenCaptureKit, which reliably triggers the system permission dialog.
+    /// This method initiates the permission request but returns immediately.
+    /// The actual permission dialog is shown asynchronously, so the caller should not
+    /// expect `isGranted` to return true immediately after calling this method.
+    ///
+    /// To ensure the dialog appears on modern macOS, this method also attempts to access
+    /// shareable content via ScreenCaptureKit in a background task.
+    ///
+    /// - Note: This is designed to be called once at app launch. The permission state
+    ///   should be checked via `isGranted` when actually capturing content.
     static func requestPermission() {
         // Try the standard API first
         _ = CGRequestScreenCaptureAccess()
@@ -145,15 +151,21 @@ final class ScreenCaptureService {
         config.showsCursor = false
 
         // Capture the window
-        let cgImage = try await SCScreenshotManager.captureImage(
-            contentFilter: filter,
-            configuration: config
-        )
+        do {
+            let cgImage = try await SCScreenshotManager.captureImage(
+                contentFilter: filter,
+                configuration: config
+            )
 
-        // Cache the result
-        windowCache = (windowID, cgImage, windowFrame, Date())
+            // Cache the result
+            windowCache = (windowID, cgImage, windowFrame, Date())
 
-        return cgImage
+            return cgImage
+        } catch {
+            // Invalidate cache on capture failure to avoid using stale images
+            windowCache = nil
+            throw error
+        }
     }
 
     /// Extracts an icon-sized region from a window image.
@@ -209,37 +221,16 @@ final class ScreenCaptureService {
 
     /// Resizes an image to the specified size.
     private func resizeImage(_ image: NSImage, to size: CGSize) -> NSImage {
-        let newImage = NSImage(size: size)
-        newImage.cacheMode = .never
-
-        if let bitmapRep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: Int(size.width),
-            pixelsHigh: Int(size.height),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ) {
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmapRep)
+        NSImage(size: size, flipped: false) { rect in
             NSGraphicsContext.current?.imageInterpolation = .high
-
             image.draw(
-                in: NSRect(origin: .zero, size: size),
-                from: NSRect(origin: .zero, size: image.size),
+                in: rect,
+                from: CGRect(origin: .zero, size: image.size),
                 operation: .copy,
                 fraction: 1.0
             )
-
-            NSGraphicsContext.restoreGraphicsState()
-            newImage.addRepresentation(bitmapRep)
+            return true
         }
-
-        return newImage
     }
 
     /// Clears the window cache.

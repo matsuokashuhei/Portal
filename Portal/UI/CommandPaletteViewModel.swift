@@ -296,7 +296,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
         // swiftlint:disable:next force_cast
         let windowElement = mainWindow as! AXUIElement
-        guard let windowID = windowCrawler.getWindowID(from: windowElement),
+        guard let windowID = windowCrawler.getWindowID(from: windowElement, pid: pid),
               let windowFrame = windowCrawler.getFrame(from: windowElement) else {
             return
         }

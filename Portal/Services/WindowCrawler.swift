@@ -453,7 +453,7 @@ final class WindowCrawler {
     ///
     /// - Parameter windowElement: The accessibility element representing a window
     /// - Returns: The CGWindowID if found, nil otherwise
-    func getWindowID(from windowElement: AXUIElement) -> CGWindowID? {
+    func getWindowID(from windowElement: AXUIElement, pid: pid_t) -> CGWindowID? {
         guard let windowFrame = getFrame(from: windowElement) else {
             return nil
         }
@@ -463,12 +463,16 @@ final class WindowCrawler {
             return nil
         }
 
-        // Find window matching the frame (with small tolerance for rounding)
+        // Find window matching the frame and PID (with small tolerance for rounding)
         for windowInfo in windowList {
             guard let bounds = windowInfo[kCGWindowBounds as String] as? [String: CGFloat],
-                  let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID else {
+                  let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID,
+                  let ownerPID = windowInfo[kCGWindowOwnerPID as String] as? pid_t else {
                 continue
             }
+
+            // Skip windows from different processes
+            guard ownerPID == pid else { continue }
 
             let windowBounds = CGRect(
                 x: bounds["X"] ?? 0,
