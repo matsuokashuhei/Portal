@@ -23,9 +23,9 @@ final class CommandExecutor {
     /// Valid accessibility roles for each command type.
     private static let validRoles: [CommandType: Set<String>] = [
         .menu: ["AXMenuItem"],
-        .sidebar: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText"],
-        .button: ["AXButton", "AXCheckBox"],
-        .content: ["AXButton", "AXRow", "AXCell", "AXStaticText", "AXGroup"]
+        .sidebar: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXRadioButton"],
+        .button: ["AXButton", "AXCheckBox", "AXRadioButton"],
+        .content: ["AXButton", "AXRow", "AXCell", "AXStaticText", "AXGroup", "AXRadioButton"]
     ]
 
     /// Actions to try for each command type, in order of preference.

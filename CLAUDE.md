@@ -112,6 +112,8 @@ Portal/
 - [x] メインコンテンツ領域（AXButton/AXGroup）走査（#91）
 - [x] タイプ別アイコン表示（#84）
 - [x] タイプ別フィルタ（Cmd+1/2/3）（#89, #91）
+- [x] `AXSegmentedControl` / `AXRadioButton` 検出（#95）
+- [x] `AXToolbar` 走査（#95）
 
 ## パフォーマンス目標
 

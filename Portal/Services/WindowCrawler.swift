@@ -56,7 +56,9 @@ final class WindowCrawler {
         "AXTable",
         "AXScrollArea",
         "AXSplitGroup",
-        "AXGroup"
+        "AXGroup",
+        "AXToolbar",
+        "AXSegmentedControl"
     ]
 
     /// Accessibility roles that indicate sidebar items we can interact with.
@@ -64,7 +66,8 @@ final class WindowCrawler {
         "AXRow",
         "AXCell",
         "AXOutlineRow",
-        "AXStaticText"
+        "AXStaticText",
+        "AXRadioButton"
     ]
 
     /// Accessibility roles for content container elements.
@@ -73,7 +76,9 @@ final class WindowCrawler {
         "AXScrollArea",
         "AXSplitGroup",
         "AXList",
-        "AXTable"
+        "AXTable",
+        "AXToolbar",
+        "AXSegmentedControl"
     ]
 
     /// Accessibility roles for actionable content items.
@@ -82,7 +87,8 @@ final class WindowCrawler {
         "AXRow",
         "AXCell",
         "AXStaticText",
-        "AXGroup"
+        "AXGroup",
+        "AXRadioButton"
     ]
 
     /// Roles that are known sidebar containers and should be skipped during content crawling.
