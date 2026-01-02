@@ -31,16 +31,10 @@ struct FilterSegmentView: View {
                 action: { onFilterTapped(.menu) }
             )
             FilterButton(
-                title: "Sidebar",
+                title: "Window",
                 shortcut: "⌘2",
-                isSelected: selectedFilter == .sidebar,
-                action: { onFilterTapped(.sidebar) }
-            )
-            FilterButton(
-                title: "Content",
-                shortcut: "⌘3",
-                isSelected: selectedFilter == .content,
-                action: { onFilterTapped(.content) }
+                isSelected: selectedFilter == .window,
+                action: { onFilterTapped(.window) }
             )
             Spacer()
         }

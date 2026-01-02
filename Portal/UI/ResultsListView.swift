@@ -100,12 +100,8 @@ struct ResultsListView: View {
         switch type {
         case .menu:
             return "Menu item"
-        case .sidebar:
-            return "Sidebar item"
-        case .button:
-            return "Button"
-        case .content:
-            return "Content item"
+        case .window:
+            return "Window item"
         }
     }
 
@@ -195,12 +191,8 @@ private struct MenuItemRow: View {
         switch type {
         case .menu:
             return "command"
-        case .sidebar:
-            return "sidebar.left"
-        case .button:
-            return "button.horizontal"
-        case .content:
-            return "rectangle.fill"
+        case .window:
+            return "macwindow"
         }
     }
 
@@ -209,12 +201,8 @@ private struct MenuItemRow: View {
         switch type {
         case .menu:
             return .secondary
-        case .sidebar:
+        case .window:
             return .blue.opacity(0.8)
-        case .button:
-            return .purple.opacity(0.8)
-        case .content:
-            return .green.opacity(0.8)
         }
     }
 }

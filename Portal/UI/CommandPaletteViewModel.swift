@@ -13,8 +13,7 @@ import SwiftUI
 enum CommandTypeFilter: String, CaseIterable {
     case all
     case menu
-    case sidebar
-    case content
+    case window
 }
 
 @MainActor
@@ -54,10 +53,8 @@ final class CommandPaletteViewModel: ObservableObject {
             return searchResults
         case .menu:
             return searchResults.filter { $0.type == .menu }
-        case .sidebar:
-            return searchResults.filter { $0.type == .sidebar }
-        case .content:
-            return searchResults.filter { $0.type == .content }
+        case .window:
+            return searchResults.filter { $0.type == .window }
         }
     }
 
@@ -134,9 +131,9 @@ final class CommandPaletteViewModel: ObservableObject {
         }
     }
 
-    /// Loads command items (menus and sidebar elements) from the specified application.
+    /// Loads command items (menus and window elements) from the specified application.
     ///
-    /// Menu items are loaded first and displayed immediately, then sidebar elements are loaded
+    /// Menu items are loaded first and displayed immediately, then window elements are loaded
     /// and appended to the list. This provides a responsive user experience while still
     /// including all available commands.
     ///
@@ -189,56 +186,28 @@ final class CommandPaletteViewModel: ObservableObject {
                 return
             }
 
-            // Step 2: Load sidebar elements (may take longer, append to existing)
+            // Step 2: Load window elements (sidebar, toolbar, content)
             // Failures are silently ignored - menus alone are sufficient
             do {
-                let sidebarItems: [MenuItem]
+                let windowItems: [MenuItem]
                 if let targetApp = app {
-                    sidebarItems = try await windowCrawler.crawlSidebarElements(targetApp)
+                    windowItems = try await windowCrawler.crawlWindowElements(targetApp)
                 } else {
-                    sidebarItems = try await windowCrawler.crawlActiveApplication()
+                    windowItems = try await windowCrawler.crawlActiveApplicationWindow()
                 }
 
                 // Check for cancellation before updating state
                 guard !Task.isCancelled else { return }
 
-                let enabledSidebarItems = sidebarItems.filter { $0.isEnabled }
-                if !enabledSidebarItems.isEmpty {
-                    allItems.append(contentsOf: enabledSidebarItems)
+                let enabledWindowItems = windowItems.filter { $0.isEnabled }
+                if !enabledWindowItems.isEmpty {
+                    allItems.append(contentsOf: enabledWindowItems)
                     menuItems = allItems
                 }
             } catch {
-                // Sidebar crawling failures are non-fatal; menu items are already displayed
+                // Window crawling failures are non-fatal; menu items are already displayed
                 #if DEBUG
-                print("[CommandPaletteViewModel] Sidebar crawling failed: \(error.localizedDescription)")
-                #endif
-            }
-
-            // Step 3: Load content elements (may take longer, append to existing)
-            // Uses sidebar item IDs for deduplication
-            do {
-                // Collect sidebar item IDs for deduplication
-                let sidebarPaths = Set(allItems.filter { $0.type == .sidebar }.map { $0.id })
-
-                let contentItems: [MenuItem]
-                if let targetApp = app {
-                    contentItems = try await windowCrawler.crawlContentElements(targetApp, excludePaths: sidebarPaths)
-                } else {
-                    contentItems = try await windowCrawler.crawlActiveApplicationContent(excludePaths: sidebarPaths)
-                }
-
-                // Check for cancellation before updating state
-                guard !Task.isCancelled else { return }
-
-                let enabledContentItems = contentItems.filter { $0.isEnabled }
-                if !enabledContentItems.isEmpty {
-                    allItems.append(contentsOf: enabledContentItems)
-                    menuItems = allItems
-                }
-            } catch {
-                // Content crawling failures are non-fatal
-                #if DEBUG
-                print("[CommandPaletteViewModel] Content crawling failed: \(error.localizedDescription)")
+                print("[CommandPaletteViewModel] Window crawling failed: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -333,12 +302,8 @@ final class CommandPaletteViewModel: ObservableObject {
             .sink { [weak self] _ in self?.toggleTypeFilter(.menu) }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: .toggleSidebarFilter)
-            .sink { [weak self] _ in self?.toggleTypeFilter(.sidebar) }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .toggleContentFilter)
-            .sink { [weak self] _ in self?.toggleTypeFilter(.content) }
+        NotificationCenter.default.publisher(for: .toggleWindowFilter)
+            .sink { [weak self] _ in self?.toggleTypeFilter(.window) }
             .store(in: &cancellables)
     }
 }

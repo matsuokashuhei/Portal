@@ -218,26 +218,16 @@ struct MenuItemTests {
     func testExplicitTypeAssignment() {
         let element = createDummyElement()
 
-        let sidebarItem = MenuItem(
+        let windowItem = MenuItem(
             title: "Library",
             path: ["Music", "Library"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .sidebar
+            type: .window
         )
 
-        let buttonItem = MenuItem(
-            title: "OK",
-            path: ["Dialog", "OK"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .button
-        )
-
-        #expect(sidebarItem.type == .sidebar)
-        #expect(buttonItem.type == .button)
+        #expect(windowItem.type == .window)
     }
 
     @Test
@@ -253,19 +243,19 @@ struct MenuItemTests {
             type: .menu
         )
 
-        let sidebarItem = MenuItem(
+        let windowItem = MenuItem(
             title: "Library",
             path: ["App", "Library"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .sidebar
+            type: .window
         )
 
         // Same path but different types should produce different IDs
-        #expect(menuItem.id != sidebarItem.id)
+        #expect(menuItem.id != windowItem.id)
         #expect(menuItem.id.hasPrefix("menu\0"))
-        #expect(sidebarItem.id.hasPrefix("sidebar\0"))
+        #expect(windowItem.id.hasPrefix("window\0"))
     }
 
     @Test
@@ -281,16 +271,16 @@ struct MenuItemTests {
             type: .menu
         )
 
-        let sidebarItem = MenuItem(
+        let windowItem = MenuItem(
             title: "Library",
             path: ["App", "Library"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .sidebar
+            type: .window
         )
 
-        #expect(menuItem != sidebarItem)
+        #expect(menuItem != windowItem)
     }
 
     @Test
@@ -306,17 +296,17 @@ struct MenuItemTests {
             type: .menu
         )
 
-        let sidebarItem = MenuItem(
+        let windowItem = MenuItem(
             title: "Library",
             path: ["App", "Library"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .sidebar
+            type: .window
         )
 
         var set: Set<MenuItem> = [menuItem]
-        set.insert(sidebarItem)
+        set.insert(windowItem)
 
         // Different types means different items, so set should have 2 elements
         #expect(set.count == 2)
@@ -352,10 +342,10 @@ struct MenuItemTests {
         #expect(item.parentPathString == nil)
     }
 
-    // MARK: - Content Type Tests
+    // MARK: - Window Type Tests
 
     @Test
-    func testContentTypeHasUniqueId() {
+    func testWindowTypeHasUniqueId() {
         let element = createDummyElement()
 
         let menuItem = MenuItem(
@@ -367,23 +357,23 @@ struct MenuItemTests {
             type: .menu
         )
 
-        let contentItem = MenuItem(
+        let windowItem = MenuItem(
             title: "About",
             path: ["Settings", "About"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .content
+            type: .window
         )
 
         // Same path but different types should produce different IDs
-        #expect(menuItem.id != contentItem.id)
+        #expect(menuItem.id != windowItem.id)
         #expect(menuItem.id.hasPrefix("menu\0"))
-        #expect(contentItem.id.hasPrefix("content\0"))
+        #expect(windowItem.id.hasPrefix("window\0"))
     }
 
     @Test
-    func testContentTypeSetContainment() {
+    func testWindowTypeSetContainment() {
         let element = createDummyElement()
 
         let menuItem = MenuItem(
@@ -395,29 +385,19 @@ struct MenuItemTests {
             type: .menu
         )
 
-        let sidebarItem = MenuItem(
+        let windowItem = MenuItem(
             title: "About",
             path: ["Settings", "About"],
             keyboardShortcut: nil,
             axElement: element,
             isEnabled: true,
-            type: .sidebar
-        )
-
-        let contentItem = MenuItem(
-            title: "About",
-            path: ["Settings", "About"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .content
+            type: .window
         )
 
         var set: Set<MenuItem> = [menuItem]
-        set.insert(sidebarItem)
-        set.insert(contentItem)
+        set.insert(windowItem)
 
-        // All different types means 3 items
-        #expect(set.count == 3)
+        // Different types means 2 items
+        #expect(set.count == 2)
     }
 }

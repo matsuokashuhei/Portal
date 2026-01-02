@@ -57,12 +57,8 @@ enum MockMenuItemFactory {
         switch type {
         case .menu:
             return "Mock Menu"
-        case .sidebar:
-            return "Mock Sidebar"
-        case .button:
+        case .window:
             return "Mock Window"
-        case .content:
-            return "Mock Content"
         }
     }
 }
