@@ -26,6 +26,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     private static let oneKeyCode: UInt16 = 18
     /// 2 key for Cmd+2 sidebar filter.
     private static let twoKeyCode: UInt16 = 19
+    /// 3 key for Cmd+3 content filter.
+    private static let threeKeyCode: UInt16 = 20
 
     // MARK: - Panel Size Calculation
 
@@ -192,6 +194,12 @@ final class PanelController: NSObject, NSWindowDelegate {
             // Handle Cmd+2 for sidebar items filter
             if modifiers == .command && event.keyCode == Self.twoKeyCode {
                 NotificationCenter.default.post(name: .toggleSidebarFilter, object: nil)
+                return nil
+            }
+
+            // Handle Cmd+3 for content items filter
+            if modifiers == .command && event.keyCode == Self.threeKeyCode {
+                NotificationCenter.default.post(name: .toggleContentFilter, object: nil)
                 return nil
             }
 

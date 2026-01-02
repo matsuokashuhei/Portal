@@ -61,6 +61,8 @@ enum MockMenuItemFactory {
             return "Mock Sidebar"
         case .button:
             return "Mock Window"
+        case .content:
+            return "Mock Content"
         }
     }
 }

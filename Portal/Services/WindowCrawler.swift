@@ -43,8 +43,11 @@ enum WindowCrawlerError: Error, LocalizedError {
 /// more frequently (e.g., when navigating folders).
 @MainActor
 final class WindowCrawler {
-    /// Maximum depth for recursive sidebar traversal to prevent infinite loops.
+    /// Maximum depth for recursive traversal to prevent infinite loops.
     private static let maxDepth = 10
+
+    /// Maximum number of content items to return (performance safeguard).
+    private static let maxContentItems = 100
 
     /// Accessibility roles that indicate sidebar containers.
     private static let sidebarContainerRoles: Set<String> = [
@@ -62,6 +65,30 @@ final class WindowCrawler {
         "AXCell",
         "AXOutlineRow",
         "AXStaticText"
+    ]
+
+    /// Accessibility roles for content container elements.
+    private static let contentContainerRoles: Set<String> = [
+        "AXGroup",
+        "AXScrollArea",
+        "AXSplitGroup",
+        "AXList",
+        "AXTable"
+    ]
+
+    /// Accessibility roles for actionable content items.
+    private static let contentItemRoles: Set<String> = [
+        "AXButton",
+        "AXRow",
+        "AXCell",
+        "AXStaticText",
+        "AXGroup"
+    ]
+
+    /// Roles that are known sidebar containers and should be skipped during content crawling.
+    private static let sidebarSkipRoles: Set<String> = [
+        "AXOutline",
+        "AXSourceList"
     ]
 
     /// Crawls sidebar elements from the main window of the specified application.
@@ -363,5 +390,147 @@ final class WindowCrawler {
             return true  // Default to enabled if we can't determine
         }
         return (enabledRef as? Bool) ?? true
+    }
+
+    // MARK: - Content Crawling
+
+    /// Crawls content elements from the main window of the specified application.
+    ///
+    /// - Parameters:
+    ///   - app: The application to crawl content elements from.
+    ///   - excludePaths: Set of item IDs to exclude (typically sidebar item IDs for deduplication).
+    /// - Returns: Array of menu items representing content elements.
+    /// - Throws: WindowCrawlerError if crawling fails.
+    func crawlContentElements(_ app: NSRunningApplication, excludePaths: Set<String> = []) async throws -> [MenuItem] {
+        guard AccessibilityService.isGranted else {
+            throw WindowCrawlerError.accessibilityNotGranted
+        }
+
+        let pid = app.processIdentifier
+        let axApp = AXUIElementCreateApplication(pid)
+
+        var mainWindowRef: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            axApp,
+            kAXMainWindowAttribute as CFString,
+            &mainWindowRef
+        )
+
+        guard result == .success, let mainWindow = mainWindowRef else {
+            throw WindowCrawlerError.mainWindowNotAccessible
+        }
+
+        // swiftlint:disable:next force_cast
+        let windowElement = mainWindow as! AXUIElement
+        let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
+
+        var itemCount = 0
+        return crawlContentInElement(
+            windowElement,
+            path: [windowTitle],
+            depth: 0,
+            excludePaths: excludePaths,
+            itemCount: &itemCount
+        )
+    }
+
+    /// Crawls content from the currently active application's window.
+    ///
+    /// - Parameter excludePaths: Set of item IDs to exclude (typically sidebar item IDs).
+    /// - Returns: Array of menu items representing content elements.
+    /// - Throws: WindowCrawlerError if crawling fails.
+    func crawlActiveApplicationContent(excludePaths: Set<String> = []) async throws -> [MenuItem] {
+        guard AccessibilityService.isGranted else {
+            throw WindowCrawlerError.accessibilityNotGranted
+        }
+
+        guard let app = getFrontmostApp() else {
+            throw WindowCrawlerError.noActiveApplication
+        }
+
+        return try await crawlContentElements(app, excludePaths: excludePaths)
+    }
+
+    /// Recursively crawls an element for content items, excluding known sidebar elements.
+    private func crawlContentInElement(
+        _ element: AXUIElement,
+        path: [String],
+        depth: Int,
+        excludePaths: Set<String>,
+        itemCount: inout Int
+    ) -> [MenuItem] {
+        // Prevent infinite recursion and enforce item limit
+        guard depth < Self.maxDepth, itemCount < Self.maxContentItems else {
+            return []
+        }
+
+        var items: [MenuItem] = []
+        let children = getChildren(element)
+
+        for child in children {
+            guard itemCount < Self.maxContentItems else { break }
+
+            guard let role = getRole(from: child) else { continue }
+
+            // Skip known sidebar containers to avoid duplication
+            if Self.sidebarSkipRoles.contains(role) {
+                continue
+            }
+
+            let title = getTitle(from: child)
+            let desc = getDescription(from: child)
+            let value = getValue(from: child)
+            var displayTitle = title ?? desc ?? value
+
+            // For row-type elements, look in children for title
+            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
+               (role == "AXRow" || role == "AXCell") {
+                displayTitle = getTitleFromRowChildren(child)
+            }
+
+            var pathForChildren = path
+
+            // Check if this is an actionable content item
+            if Self.contentItemRoles.contains(role) {
+                let canAct = canPerformAction(on: child)
+                if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
+                    let currentPath = path + [itemTitle]
+                    // Update path for children regardless of whether this item is added
+                    // This ensures correct path hierarchy for nested elements
+                    pathForChildren = currentPath
+
+                    // Check if there's a sidebar item with the same path and skip to avoid duplicates
+                    let sidebarId = CommandType.sidebar.rawValue + "\0" + currentPath.joined(separator: "\0")
+                    if !excludePaths.contains(sidebarId) {
+                        let isEnabled = getIsEnabled(from: child)
+
+                        let menuItem = MenuItem(
+                            title: itemTitle,
+                            path: currentPath,
+                            keyboardShortcut: nil,
+                            axElement: child,
+                            isEnabled: isEnabled,
+                            type: .content
+                        )
+                        items.append(menuItem)
+                        itemCount += 1
+                    }
+                }
+            }
+
+            // Recurse into containers
+            if Self.contentContainerRoles.contains(role) || hasChildren(child) {
+                let subItems = crawlContentInElement(
+                    child,
+                    path: pathForChildren,
+                    depth: depth + 1,
+                    excludePaths: excludePaths,
+                    itemCount: &itemCount
+                )
+                items.append(contentsOf: subItems)
+            }
+        }
+
+        return items
     }
 }

@@ -104,11 +104,14 @@ Portal/
 - [x] メニュー実行（#50）
 
 ### ウィンドウ要素サポート
-- [x] `CommandType` enum（menu/sidebar/button）（#84）
+- [x] `CommandType` enum（menu/sidebar/button/content）（#84, #91）
 - [x] `WindowCrawler` サイドバー走査（#84）
+- [x] `WindowCrawler` コンテンツ走査（#91）
 - [x] `kAXMainWindowAttribute` ウィンドウ取得（#84）
 - [x] `AXOutline`/`AXSourceList`/`AXRow` 走査（#84）
+- [x] メインコンテンツ領域（AXButton/AXGroup）走査（#91）
 - [x] タイプ別アイコン表示（#84）
+- [x] タイプ別フィルタ（Cmd+1/2/3）（#89, #91）
 
 ## パフォーマンス目標
 
@@ -132,10 +135,10 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 ```
 PortalTests/
 ├── PortalTests.swift                    # テンプレート
-├── CommandPaletteViewModelTests.swift   # ViewModelテスト（12テスト）
-├── FuzzySearchTests.swift               # 検索アルゴリズムテスト（26テスト）
-├── HotkeyConfigurationTests.swift       # ホットキー設定テスト（12テスト）
-└── MenuItemTests.swift                  # MenuItemテスト（16テスト）
+├── CommandPaletteViewModelTests.swift   # ViewModelテスト
+├── FuzzySearchTests.swift               # 検索アルゴリズムテスト
+├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
+└── MenuItemTests.swift                  # MenuItemテスト
 
 PortalUITests/
 ├── PortalUITests.swift                  # パネルUIテスト（7テスト）

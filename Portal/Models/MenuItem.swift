@@ -24,6 +24,11 @@ enum CommandType: String, Sendable {
     /// Window button (AXButton, AXCheckBox).
     /// Found in dialogs and windows. (Phase 2 - not yet implemented)
     case button
+
+    /// Main content area item (AXGroup, AXButton, AXRow in content region).
+    /// Found in apps like System Settings (About, Storage), Finder (files/folders).
+    /// Crawled via `kAXMainWindowAttribute` using `WindowCrawler`.
+    case content
 }
 
 /// Represents a command item from an application's UI.

@@ -14,6 +14,7 @@ enum CommandTypeFilter: String, CaseIterable {
     case all
     case menu
     case sidebar
+    case content
 }
 
 @MainActor
@@ -55,6 +56,8 @@ final class CommandPaletteViewModel: ObservableObject {
             return searchResults.filter { $0.type == .menu }
         case .sidebar:
             return searchResults.filter { $0.type == .sidebar }
+        case .content:
+            return searchResults.filter { $0.type == .content }
         }
     }
 
@@ -210,6 +213,34 @@ final class CommandPaletteViewModel: ObservableObject {
                 print("[CommandPaletteViewModel] Sidebar crawling failed: \(error.localizedDescription)")
                 #endif
             }
+
+            // Step 3: Load content elements (may take longer, append to existing)
+            // Uses sidebar item IDs for deduplication
+            do {
+                // Collect sidebar item IDs for deduplication
+                let sidebarPaths = Set(allItems.filter { $0.type == .sidebar }.map { $0.id })
+
+                let contentItems: [MenuItem]
+                if let targetApp = app {
+                    contentItems = try await windowCrawler.crawlContentElements(targetApp, excludePaths: sidebarPaths)
+                } else {
+                    contentItems = try await windowCrawler.crawlActiveApplicationContent(excludePaths: sidebarPaths)
+                }
+
+                // Check for cancellation before updating state
+                guard !Task.isCancelled else { return }
+
+                let enabledContentItems = contentItems.filter { $0.isEnabled }
+                if !enabledContentItems.isEmpty {
+                    allItems.append(contentsOf: enabledContentItems)
+                    menuItems = allItems
+                }
+            } catch {
+                // Content crawling failures are non-fatal
+                #if DEBUG
+                print("[CommandPaletteViewModel] Content crawling failed: \(error.localizedDescription)")
+                #endif
+            }
         }
     }
 
@@ -304,6 +335,10 @@ final class CommandPaletteViewModel: ObservableObject {
 
         NotificationCenter.default.publisher(for: .toggleSidebarFilter)
             .sink { [weak self] _ in self?.toggleTypeFilter(.sidebar) }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .toggleContentFilter)
+            .sink { [weak self] _ in self?.toggleTypeFilter(.content) }
             .store(in: &cancellables)
     }
 }

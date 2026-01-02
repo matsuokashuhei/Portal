@@ -104,6 +104,8 @@ struct ResultsListView: View {
             return "Sidebar item"
         case .button:
             return "Button"
+        case .content:
+            return "Content item"
         }
     }
 
@@ -197,6 +199,8 @@ private struct MenuItemRow: View {
             return "sidebar.left"
         case .button:
             return "button.horizontal"
+        case .content:
+            return "rectangle.fill"
         }
     }
 
@@ -209,6 +213,8 @@ private struct MenuItemRow: View {
             return .blue.opacity(0.8)
         case .button:
             return .purple.opacity(0.8)
+        case .content:
+            return .green.opacity(0.8)
         }
     }
 }
