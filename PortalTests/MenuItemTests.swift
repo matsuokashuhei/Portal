@@ -27,8 +27,8 @@ struct MenuItemTests {
             isEnabled: true
         )
 
-        // ID should be path joined with null character
-        #expect(item.id == "File\0New")
+        // ID should be type + null + path joined with null character
+        #expect(item.id == "menu\0File\0New")
     }
 
     @Test
@@ -167,7 +167,8 @@ struct MenuItemTests {
         )
 
         #expect(item.pathString == "")
-        #expect(item.id == "")
+        // ID includes type prefix even with empty path
+        #expect(item.id == "menu\0")
     }
 
     @Test
@@ -195,5 +196,159 @@ struct MenuItemTests {
 
         // Same ID means same item, so set should have only 1 element
         #expect(set.count == 1)
+    }
+
+    // MARK: - CommandType Tests
+
+    @Test
+    func testDefaultTypeIsMenu() {
+        let element = createDummyElement()
+        let item = MenuItem(
+            title: "New",
+            path: ["File", "New"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true
+        )
+
+        #expect(item.type == .menu)
+    }
+
+    @Test
+    func testExplicitTypeAssignment() {
+        let element = createDummyElement()
+
+        let sidebarItem = MenuItem(
+            title: "Library",
+            path: ["Music", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .sidebar
+        )
+
+        let buttonItem = MenuItem(
+            title: "OK",
+            path: ["Dialog", "OK"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .button
+        )
+
+        #expect(sidebarItem.type == .sidebar)
+        #expect(buttonItem.type == .button)
+    }
+
+    @Test
+    func testIdIncludesType() {
+        let element = createDummyElement()
+
+        let menuItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .menu
+        )
+
+        let sidebarItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .sidebar
+        )
+
+        // Same path but different types should produce different IDs
+        #expect(menuItem.id != sidebarItem.id)
+        #expect(menuItem.id.hasPrefix("menu\0"))
+        #expect(sidebarItem.id.hasPrefix("sidebar\0"))
+    }
+
+    @Test
+    func testDifferentTypesAreNotEqual() {
+        let element = createDummyElement()
+
+        let menuItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .menu
+        )
+
+        let sidebarItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .sidebar
+        )
+
+        #expect(menuItem != sidebarItem)
+    }
+
+    @Test
+    func testSetContainmentWithDifferentTypes() {
+        let element = createDummyElement()
+
+        let menuItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .menu
+        )
+
+        let sidebarItem = MenuItem(
+            title: "Library",
+            path: ["App", "Library"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .sidebar
+        )
+
+        var set: Set<MenuItem> = [menuItem]
+        set.insert(sidebarItem)
+
+        // Different types means different items, so set should have 2 elements
+        #expect(set.count == 2)
+    }
+
+    @Test
+    func testParentPathString() {
+        let element = createDummyElement()
+
+        let item = MenuItem(
+            title: "Document",
+            path: ["File", "New", "Document"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true
+        )
+
+        #expect(item.parentPathString == "File → New")
+    }
+
+    @Test
+    func testParentPathStringWithSingleElement() {
+        let element = createDummyElement()
+
+        let item = MenuItem(
+            title: "About",
+            path: ["About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true
+        )
+
+        #expect(item.parentPathString == nil)
     }
 }

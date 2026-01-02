@@ -19,6 +19,7 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published private(set) var filteredResults: [FuzzySearch.Match] = []
 
     private let menuCrawler = MenuCrawler()
+    private let windowCrawler = WindowCrawler()
     private let commandExecutor = CommandExecutor()
     private var cancellables = Set<AnyCancellable>()
     private var loadMenuItemsTask: Task<Void, Never>?
@@ -105,14 +106,18 @@ final class CommandPaletteViewModel: ObservableObject {
         }
     }
 
-    /// Loads menu items from the specified application.
+    /// Loads menu items and sidebar elements from the specified application.
     ///
-    /// - Parameter app: The application to crawl menus from. If `nil`, attempts to crawl the
+    /// Menu items are loaded first and displayed immediately, then sidebar elements are loaded
+    /// and appended to the list. This provides a responsive user experience while still
+    /// including all available commands.
+    ///
+    /// - Parameter app: The application to crawl from. If `nil`, attempts to crawl the
     ///   frontmost non-Portal application as determined by `MenuCrawler.crawlActiveApplication()`.
     ///   If Portal is the only regular running app, this may result in a `noActiveApplication` error.
     ///
     /// - Note: In test mode with `--use-mock-menu-items=<count>`, mock items are used instead of
-    ///   real menu crawling. This enables UI testing of scroll behavior with predictable data.
+    ///   real crawling. This enables UI testing of scroll behavior with predictable data.
     func loadMenuItems(for app: NSRunningApplication?) {
         // In mock mode, use mock items instead of real menu crawling
         if let mockCount = TestConfiguration.mockMenuItemsCount {
@@ -129,18 +134,22 @@ final class CommandPaletteViewModel: ObservableObject {
             errorMessage = nil
             defer { isLoading = false }
 
+            var allItems: [MenuItem] = []
+
+            // Step 1: Load menu items first (fast, commonly used)
             do {
-                let items: [MenuItem]
+                let menuItemsResult: [MenuItem]
                 if let targetApp = app {
-                    items = try await menuCrawler.crawlApplication(targetApp)
+                    menuItemsResult = try await menuCrawler.crawlApplication(targetApp)
                 } else {
-                    items = try await menuCrawler.crawlActiveApplication()
+                    menuItemsResult = try await menuCrawler.crawlActiveApplication()
                 }
 
                 // Check for cancellation before updating state
                 guard !Task.isCancelled else { return }
 
-                menuItems = items.filter { $0.isEnabled }
+                allItems = menuItemsResult.filter { $0.isEnabled }
+                menuItems = allItems
                 selectedIndex = 0
             } catch {
                 // Check for cancellation before updating state
@@ -149,6 +158,29 @@ final class CommandPaletteViewModel: ObservableObject {
                 errorMessage = error.localizedDescription
                 menuItems = []
                 selectedIndex = 0
+                return
+            }
+
+            // Step 2: Load sidebar elements (may take longer, append to existing)
+            // Failures are silently ignored - menus alone are sufficient
+            if let targetApp = app {
+                do {
+                    let sidebarItems = try await windowCrawler.crawlSidebarElements(targetApp)
+
+                    // Check for cancellation before updating state
+                    guard !Task.isCancelled else { return }
+
+                    let enabledSidebarItems = sidebarItems.filter { $0.isEnabled }
+                    if !enabledSidebarItems.isEmpty {
+                        allItems.append(contentsOf: enabledSidebarItems)
+                        menuItems = allItems
+                    }
+                } catch {
+                    // Sidebar crawling failures are non-fatal; menu items are already displayed
+                    #if DEBUG
+                    print("[CommandPaletteViewModel] Sidebar crawling failed: \(error.localizedDescription)")
+                    #endif
+                }
             }
         }
     }

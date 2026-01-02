@@ -69,7 +69,13 @@ struct ResultsListView: View {
     /// Builds a comprehensive accessibility label for VoiceOver users.
     /// Uses pathString instead of title to avoid redundancy (title is the last element of path).
     private func buildAccessibilityLabel(item: MenuItem, index: Int, isSelected: Bool) -> String {
-        var components: [String] = [item.pathString]
+        var components: [String] = []
+
+        // Add type indicator
+        components.append(accessibleTypeName(for: item.type))
+
+        // Add path
+        components.append(item.pathString)
 
         if let shortcut = item.keyboardShortcut {
             let spokenShortcut = convertShortcutToSpokenText(shortcut)
@@ -87,6 +93,18 @@ struct ResultsListView: View {
         }
 
         return components.joined(separator: ", ")
+    }
+
+    /// Returns the accessible name for a command type.
+    private func accessibleTypeName(for type: CommandType) -> String {
+        switch type {
+        case .menu:
+            return "Menu item"
+        case .sidebar:
+            return "Sidebar item"
+        case .button:
+            return "Button"
+        }
     }
 
     /// Converts keyboard shortcut symbols to VoiceOver-friendly spoken text.
@@ -121,7 +139,14 @@ private struct MenuItemRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
+            // Type indicator icon
+            Image(systemName: iconName(for: item.type))
+                .font(.caption)
+                .foregroundColor(iconColor(for: item.type))
+                .frame(width: 16)
+                .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.body)
@@ -160,6 +185,30 @@ private struct MenuItemRow: View {
         .opacity(item.isEnabled ? 1.0 : 0.5)
         .onHover { hovering in
             isHovered = hovering
+        }
+    }
+
+    /// Returns the SF Symbol name for the given command type.
+    private func iconName(for type: CommandType) -> String {
+        switch type {
+        case .menu:
+            return "command"
+        case .sidebar:
+            return "sidebar.left"
+        case .button:
+            return "button.horizontal"
+        }
+    }
+
+    /// Returns the icon color for the given command type.
+    private func iconColor(for type: CommandType) -> Color {
+        switch type {
+        case .menu:
+            return .secondary
+        case .sidebar:
+            return .blue.opacity(0.8)
+        case .button:
+            return .purple.opacity(0.8)
         }
     }
 }
