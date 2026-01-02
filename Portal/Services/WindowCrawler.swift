@@ -190,13 +190,14 @@ final class WindowCrawler {
                 }
             }
 
-            // Check if this is a container we should recurse into
+            // Recurse into containers or elements with children to find nested sidebar items.
+            // Note: An element may be both an actionable item AND contain children (e.g., expandable
+            // sidebar rows). This is intentional - we add the parent as an actionable item above,
+            // then explore its children for additional items. Each discovered item has a unique path.
             if Self.sidebarContainerRoles.contains(role) {
-                // For containers, recurse to find items inside
                 let subItems = crawlSidebarInElement(child, path: path, depth: depth + 1)
                 items.append(contentsOf: subItems)
             } else if hasChildren(child) {
-                // Also recurse into elements with children (might contain sidebar)
                 let subItems = crawlSidebarInElement(child, path: path, depth: depth + 1)
                 items.append(contentsOf: subItems)
             }

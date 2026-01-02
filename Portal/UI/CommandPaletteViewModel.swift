@@ -163,24 +163,27 @@ final class CommandPaletteViewModel: ObservableObject {
 
             // Step 2: Load sidebar elements (may take longer, append to existing)
             // Failures are silently ignored - menus alone are sufficient
-            if let targetApp = app {
-                do {
-                    let sidebarItems = try await windowCrawler.crawlSidebarElements(targetApp)
-
-                    // Check for cancellation before updating state
-                    guard !Task.isCancelled else { return }
-
-                    let enabledSidebarItems = sidebarItems.filter { $0.isEnabled }
-                    if !enabledSidebarItems.isEmpty {
-                        allItems.append(contentsOf: enabledSidebarItems)
-                        menuItems = allItems
-                    }
-                } catch {
-                    // Sidebar crawling failures are non-fatal; menu items are already displayed
-                    #if DEBUG
-                    print("[CommandPaletteViewModel] Sidebar crawling failed: \(error.localizedDescription)")
-                    #endif
+            do {
+                let sidebarItems: [MenuItem]
+                if let targetApp = app {
+                    sidebarItems = try await windowCrawler.crawlSidebarElements(targetApp)
+                } else {
+                    sidebarItems = try await windowCrawler.crawlActiveApplication()
                 }
+
+                // Check for cancellation before updating state
+                guard !Task.isCancelled else { return }
+
+                let enabledSidebarItems = sidebarItems.filter { $0.isEnabled }
+                if !enabledSidebarItems.isEmpty {
+                    allItems.append(contentsOf: enabledSidebarItems)
+                    menuItems = allItems
+                }
+            } catch {
+                // Sidebar crawling failures are non-fatal; menu items are already displayed
+                #if DEBUG
+                print("[CommandPaletteViewModel] Sidebar crawling failed: \(error.localizedDescription)")
+                #endif
             }
         }
     }
