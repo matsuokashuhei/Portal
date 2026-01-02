@@ -172,11 +172,13 @@ final class WindowCrawler {
             }
 
             // Check if this is an actionable sidebar item
+            var pathForChildren = path
             if Self.sidebarItemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     let isEnabled = getIsEnabled(from: child)
                     let currentPath = path + [itemTitle]
+                    pathForChildren = currentPath
 
                     let menuItem = MenuItem(
                         title: itemTitle,
@@ -193,12 +195,13 @@ final class WindowCrawler {
             // Recurse into containers or elements with children to find nested sidebar items.
             // Note: An element may be both an actionable item AND contain children (e.g., expandable
             // sidebar rows). This is intentional - we add the parent as an actionable item above,
-            // then explore its children for additional items. Each discovered item has a unique path.
+            // then explore its children for additional items. If the parent was actionable, children
+            // inherit its path so the hierarchy is correctly reflected (e.g., "Music → Library").
             if Self.sidebarContainerRoles.contains(role) {
-                let subItems = crawlSidebarInElement(child, path: path, depth: depth + 1)
+                let subItems = crawlSidebarInElement(child, path: pathForChildren, depth: depth + 1)
                 items.append(contentsOf: subItems)
             } else if hasChildren(child) {
-                let subItems = crawlSidebarInElement(child, path: path, depth: depth + 1)
+                let subItems = crawlSidebarInElement(child, path: pathForChildren, depth: depth + 1)
                 items.append(contentsOf: subItems)
             }
         }
