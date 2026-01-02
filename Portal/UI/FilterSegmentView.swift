@@ -36,6 +36,12 @@ struct FilterSegmentView: View {
                 isSelected: selectedFilter == .sidebar,
                 action: { onFilterTapped(.sidebar) }
             )
+            FilterButton(
+                title: "Content",
+                shortcut: "⌘3",
+                isSelected: selectedFilter == .content,
+                action: { onFilterTapped(.content) }
+            )
             Spacer()
         }
         .padding(.horizontal, 16)

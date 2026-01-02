@@ -35,6 +35,9 @@ extension Notification.Name {
 
     /// Posted when user presses Cmd+2 to toggle sidebar items filter.
     static let toggleSidebarFilter = Notification.Name("com.matsuokashuhei.Portal.toggleSidebarFilter")
+
+    /// Posted when user presses Cmd+3 to toggle content items filter.
+    static let toggleContentFilter = Notification.Name("com.matsuokashuhei.Portal.toggleContentFilter")
 }
 
 /// Keys for notification userInfo dictionaries.

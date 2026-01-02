@@ -24,14 +24,16 @@ final class CommandExecutor {
     private static let validRoles: [CommandType: Set<String>] = [
         .menu: ["AXMenuItem"],
         .sidebar: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText"],
-        .button: ["AXButton", "AXCheckBox"]
+        .button: ["AXButton", "AXCheckBox"],
+        .content: ["AXButton", "AXRow", "AXCell", "AXStaticText", "AXGroup"]
     ]
 
     /// Actions to try for each command type, in order of preference.
     private static let preferredActions: [CommandType: [String]] = [
         .menu: [kAXPressAction as String],
         .sidebar: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"],
-        .button: [kAXPressAction as String]
+        .button: [kAXPressAction as String],
+        .content: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"]
     ]
 
     /// Executes a command item by performing the appropriate action on its AXUIElement.
@@ -51,9 +53,9 @@ final class CommandExecutor {
             return .failure(.elementInvalid)
         }
 
-        // For sidebar items, try setting AXSelected attribute first
+        // For sidebar and content items, try setting AXSelected attribute first
         // This is more reliable than actions for list/outline rows
-        if menuItem.type == .sidebar {
+        if menuItem.type == .sidebar || menuItem.type == .content {
             let selectResult = AXUIElementSetAttributeValue(
                 menuItem.axElement,
                 kAXSelectedAttribute as CFString,
@@ -123,8 +125,8 @@ final class CommandExecutor {
             title = titleRef as? String
         }
 
-        // For sidebar items, title might be in child elements (AXStaticText)
-        if (title == nil || title?.isEmpty == true) && type == .sidebar {
+        // For sidebar and content items, title might be in child elements (AXStaticText)
+        if (title == nil || title?.isEmpty == true) && (type == .sidebar || type == .content) {
             title = getTitleFromChildren(element)
         }
 

@@ -351,4 +351,73 @@ struct MenuItemTests {
 
         #expect(item.parentPathString == nil)
     }
+
+    // MARK: - Content Type Tests
+
+    @Test
+    func testContentTypeHasUniqueId() {
+        let element = createDummyElement()
+
+        let menuItem = MenuItem(
+            title: "About",
+            path: ["Settings", "About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .menu
+        )
+
+        let contentItem = MenuItem(
+            title: "About",
+            path: ["Settings", "About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .content
+        )
+
+        // Same path but different types should produce different IDs
+        #expect(menuItem.id != contentItem.id)
+        #expect(menuItem.id.hasPrefix("menu\0"))
+        #expect(contentItem.id.hasPrefix("content\0"))
+    }
+
+    @Test
+    func testContentTypeSetContainment() {
+        let element = createDummyElement()
+
+        let menuItem = MenuItem(
+            title: "About",
+            path: ["Settings", "About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .menu
+        )
+
+        let sidebarItem = MenuItem(
+            title: "About",
+            path: ["Settings", "About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .sidebar
+        )
+
+        let contentItem = MenuItem(
+            title: "About",
+            path: ["Settings", "About"],
+            keyboardShortcut: nil,
+            axElement: element,
+            isEnabled: true,
+            type: .content
+        )
+
+        var set: Set<MenuItem> = [menuItem]
+        set.insert(sidebarItem)
+        set.insert(contentItem)
+
+        // All different types means 3 items
+        #expect(set.count == 3)
+    }
 }

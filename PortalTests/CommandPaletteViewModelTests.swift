@@ -301,4 +301,61 @@ struct CommandPaletteViewModelTests {
         #expect(viewModel.results.count == 2)
         #expect(viewModel.results.allSatisfy { $0.type == .sidebar })
     }
+
+    // MARK: - Content Type Filter Tests
+
+    @Test @MainActor
+    func testToggleTypeFilterToContent() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.toggleTypeFilter(.content)
+        #expect(viewModel.typeFilter == .content)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterFromContentToAll() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.typeFilter = .content
+        viewModel.toggleTypeFilter(.content)
+        #expect(viewModel.typeFilter == .all)
+    }
+
+    @Test @MainActor
+    func testResultsFilteredByContentType() {
+        let viewModel = CommandPaletteViewModel()
+        let menuItems = MockMenuItemFactory.createMockItems(count: 3, type: .menu)
+        let contentItems = MockMenuItemFactory.createMockItems(count: 2, type: .content)
+        viewModel.menuItems = menuItems + contentItems
+
+        viewModel.typeFilter = .content
+
+        #expect(viewModel.results.count == 2)
+        #expect(viewModel.results.allSatisfy { $0.type == .content })
+    }
+
+    @Test @MainActor
+    func testMixedFilteringMenuSidebarContent() {
+        let viewModel = CommandPaletteViewModel()
+        let menuItems = MockMenuItemFactory.createMockItems(count: 2, type: .menu)
+        let sidebarItems = MockMenuItemFactory.createMockItems(count: 2, type: .sidebar)
+        let contentItems = MockMenuItemFactory.createMockItems(count: 2, type: .content)
+        viewModel.menuItems = menuItems + sidebarItems + contentItems
+
+        // All filter shows all items
+        #expect(viewModel.results.count == 6)
+
+        // Menu filter
+        viewModel.typeFilter = .menu
+        #expect(viewModel.results.count == 2)
+        #expect(viewModel.results.allSatisfy { $0.type == .menu })
+
+        // Sidebar filter
+        viewModel.typeFilter = .sidebar
+        #expect(viewModel.results.count == 2)
+        #expect(viewModel.results.allSatisfy { $0.type == .sidebar })
+
+        // Content filter
+        viewModel.typeFilter = .content
+        #expect(viewModel.results.count == 2)
+        #expect(viewModel.results.allSatisfy { $0.type == .content })
+    }
 }
