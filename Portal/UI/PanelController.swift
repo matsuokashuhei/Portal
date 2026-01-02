@@ -174,6 +174,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     private func startKeyboardMonitor() {
+        // Capture filter modifier at panel show time (not per-keystroke) for performance.
+        // Setting changes will take effect on next panel show.
+        let filterModifier = HotkeyConfiguration.load().modifier.eventModifier
+
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
@@ -186,7 +190,6 @@ final class PanelController: NSObject, NSWindowDelegate {
             }
 
             // Handle <Modifier>+1 for menu items filter (uses same modifier as hotkey)
-            let filterModifier = HotkeyConfiguration.load().modifier.eventModifier
             if modifiers == filterModifier && event.keyCode == Self.oneKeyCode {
                 NotificationCenter.default.post(name: .toggleMenuFilter, object: nil)
                 return nil
