@@ -30,7 +30,7 @@ final class CommandExecutor {
     /// Actions to try for each command type, in order of preference.
     private static let preferredActions: [CommandType: [String]] = [
         .menu: [kAXPressAction as String],
-        .sidebar: [kAXPressAction as String, "AXSelect", "AXConfirm"],
+        .sidebar: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"],
         .button: [kAXPressAction as String]
     ]
 
@@ -49,6 +49,19 @@ final class CommandExecutor {
         // This prevents executing the wrong item when UI has changed.
         guard isElementValid(menuItem.axElement, expectedTitle: menuItem.title, type: menuItem.type) else {
             return .failure(.elementInvalid)
+        }
+
+        // For sidebar items, try setting AXSelected attribute first
+        // This is more reliable than actions for list/outline rows
+        if menuItem.type == .sidebar {
+            let selectResult = AXUIElementSetAttributeValue(
+                menuItem.axElement,
+                kAXSelectedAttribute as CFString,
+                kCFBooleanTrue
+            )
+            if selectResult == .success {
+                return .success(())
+            }
         }
 
         // Try preferred actions for this command type
@@ -90,15 +103,32 @@ final class CommandExecutor {
     /// 1. Items typically have unique titles within an application
     /// 2. Portal's typical use case is immediate execution after selection
     private func isElementValid(_ element: AXUIElement, expectedTitle: String, type: CommandType) -> Bool {
-        // Verify title (or description for some sidebar items)
-        var titleRef: CFTypeRef?
+        // Verify role matches expected type first
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String else {
+            return false
+        }
+
+        guard let validRoles = Self.validRoles[type], validRoles.contains(role) else {
+            return false
+        }
+
+        // Verify title
         var title: String?
 
+        // Try direct title attribute
+        var titleRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success {
             title = titleRef as? String
         }
 
-        // Some sidebar items use description instead of title
+        // For sidebar items, title might be in child elements (AXStaticText)
+        if (title == nil || title?.isEmpty == true) && type == .sidebar {
+            title = getTitleFromChildren(element)
+        }
+
+        // Fallback to description
         if title == nil || title?.isEmpty == true {
             var descRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descRef) == .success {
@@ -110,17 +140,60 @@ final class CommandExecutor {
             return false
         }
 
-        // Verify role matches expected type
-        var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
-              let role = roleRef as? String else {
-            return false
-        }
-
-        guard let validRoles = Self.validRoles[type], validRoles.contains(role) else {
-            return false
-        }
-
         return true
+    }
+
+    /// Gets title from child elements (for sidebar items like AXRow).
+    /// Sidebar items often have their label in a child AXStaticText element.
+    private func getTitleFromChildren(_ element: AXUIElement) -> String? {
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return nil
+        }
+
+        // Look for AXStaticText elements which contain the actual label
+        for child in children {
+            var roleRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
+               let role = roleRef as? String, role == "AXStaticText" {
+                // Try value first (most common for labels)
+                var valueRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(child, kAXValueAttribute as CFString, &valueRef) == .success,
+                   let value = valueRef as? String, !value.isEmpty {
+                    return value
+                }
+                // Fallback to title
+                var titleRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(child, kAXTitleAttribute as CFString, &titleRef) == .success,
+                   let title = titleRef as? String, !title.isEmpty {
+                    return title
+                }
+            }
+
+            // Check grandchildren
+            var grandchildrenRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(child, kAXChildrenAttribute as CFString, &grandchildrenRef) == .success,
+               let grandchildren = grandchildrenRef as? [AXUIElement] {
+                for grandchild in grandchildren {
+                    var gcRoleRef: CFTypeRef?
+                    if AXUIElementCopyAttributeValue(grandchild, kAXRoleAttribute as CFString, &gcRoleRef) == .success,
+                       let gcRole = gcRoleRef as? String, gcRole == "AXStaticText" {
+                        var valueRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(grandchild, kAXValueAttribute as CFString, &valueRef) == .success,
+                           let value = valueRef as? String, !value.isEmpty {
+                            return value
+                        }
+                        var titleRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(grandchild, kAXTitleAttribute as CFString, &titleRef) == .success,
+                           let title = titleRef as? String, !title.isEmpty {
+                            return title
+                        }
+                    }
+                }
+            }
+        }
+
+        return nil
     }
 }
