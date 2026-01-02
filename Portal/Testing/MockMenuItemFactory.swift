@@ -52,20 +52,6 @@ enum MockMenuItemFactory {
         }
     }
 
-    /// Creates a mixed array of mock items with different types.
-    /// - Parameters:
-    ///   - menuCount: Number of menu items to create.
-    ///   - sidebarCount: Number of sidebar items to create.
-    /// - Returns: Array of MenuItem with mixed types.
-    static func createMixedMockItems(
-        menuCount: Int,
-        sidebarCount: Int
-    ) -> [MenuItem] {
-        var items = createMockItems(count: menuCount, type: .menu)
-        items.append(contentsOf: createMockItems(count: sidebarCount, type: .sidebar))
-        return items
-    }
-
     /// Returns the parent menu/container name for the given command type.
     private static func menuNameForType(_ type: CommandType) -> String {
         switch type {

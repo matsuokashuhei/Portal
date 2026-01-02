@@ -11,22 +11,5 @@
     "document-skills@anthropic-agent-skills": true,
     "example-skills@anthropic-agent-skills": true,
     "deslop@kuu-marketplace": true
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "../.claude/statusline.sh",
-    "padding": 0
-  },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Glass.aiff"
-          }
-        ]
-      }
-    ]
   }
 }
