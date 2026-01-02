@@ -110,12 +110,12 @@ final class WindowCrawler {
         var itemCount = 0
         let allItems = crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount)
 
-        // Deduplicate by title (same element may be reached via different paths)
-        var seenTitles = Set<String>()
+        // Deduplicate by stable identifier (same element may be reached via different paths)
+        var seenIds = Set<String>()
         var uniqueItems: [MenuItem] = []
         for item in allItems {
-            if !seenTitles.contains(item.title) {
-                seenTitles.insert(item.title)
+            if !seenIds.contains(item.id) {
+                seenIds.insert(item.id)
                 uniqueItems.append(item)
             }
         }

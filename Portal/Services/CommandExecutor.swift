@@ -62,7 +62,8 @@ final class CommandExecutor {
             let role = (roleResult == .success) ? (roleRef as? String) : nil
 
             // Skip kAXSelectedAttribute for roles that require AXPress
-            if role == nil || !Self.rolesRequiringPress.contains(role!) {
+            let requiresPress = role.map { Self.rolesRequiringPress.contains($0) } ?? false
+            if !requiresPress {
                 let selectResult = AXUIElementSetAttributeValue(
                     menuItem.axElement,
                     kAXSelectedAttribute as CFString,
