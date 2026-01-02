@@ -495,28 +495,25 @@ final class WindowCrawler {
                 let canAct = canPerformAction(on: child)
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     let currentPath = path + [itemTitle]
-                    // Generate ID using the same format as MenuItem
-                    let itemId = CommandType.content.rawValue + "\0" + currentPath.joined(separator: "\0")
+                    // Update path for children regardless of whether this item is added
+                    // This ensures correct path hierarchy for nested elements
+                    pathForChildren = currentPath
 
-                    // Skip if this ID matches an excluded path (deduplication with sidebar)
-                    if !excludePaths.contains(itemId) {
-                        // Also check if there's a sidebar item with the same path
-                        let sidebarId = CommandType.sidebar.rawValue + "\0" + currentPath.joined(separator: "\0")
-                        if !excludePaths.contains(sidebarId) {
-                            let isEnabled = getIsEnabled(from: child)
-                            pathForChildren = currentPath
+                    // Check if there's a sidebar item with the same path and skip to avoid duplicates
+                    let sidebarId = CommandType.sidebar.rawValue + "\0" + currentPath.joined(separator: "\0")
+                    if !excludePaths.contains(sidebarId) {
+                        let isEnabled = getIsEnabled(from: child)
 
-                            let menuItem = MenuItem(
-                                title: itemTitle,
-                                path: currentPath,
-                                keyboardShortcut: nil,
-                                axElement: child,
-                                isEnabled: isEnabled,
-                                type: .content
-                            )
-                            items.append(menuItem)
-                            itemCount += 1
-                        }
+                        let menuItem = MenuItem(
+                            title: itemTitle,
+                            path: currentPath,
+                            keyboardShortcut: nil,
+                            axElement: child,
+                            isEnabled: isEnabled,
+                            type: .content
+                        )
+                        items.append(menuItem)
+                        itemCount += 1
                     }
                 }
             }
