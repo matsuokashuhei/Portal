@@ -9,7 +9,12 @@ import SwiftUI
 
 /// Spotlight-style segment control for filtering command items by type.
 struct FilterSegmentView: View {
-    @Binding var selectedFilter: CommandTypeFilter
+    /// Currently selected filter, used for rendering selection state.
+    let selectedFilter: CommandTypeFilter
+
+    /// Called when a filter button is tapped.
+    /// The parent view is responsible for applying toggle logic and state updates.
+    let onFilterTapped: (CommandTypeFilter) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -17,19 +22,19 @@ struct FilterSegmentView: View {
                 title: "All",
                 shortcut: nil,
                 isSelected: selectedFilter == .all,
-                action: { selectedFilter = .all }
+                action: { onFilterTapped(.all) }
             )
             FilterButton(
                 title: "Menus",
                 shortcut: "⌘1",
                 isSelected: selectedFilter == .menu,
-                action: { selectedFilter = .menu }
+                action: { onFilterTapped(.menu) }
             )
             FilterButton(
                 title: "Sidebar",
                 shortcut: "⌘2",
                 isSelected: selectedFilter == .sidebar,
-                action: { selectedFilter = .sidebar }
+                action: { onFilterTapped(.sidebar) }
             )
             Spacer()
         }
