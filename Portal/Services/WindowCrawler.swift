@@ -477,11 +477,11 @@ final class WindowCrawler {
                 height: bounds["Height"] ?? 0
             )
 
-            // Check if frames match (with 2px tolerance for rounding differences)
-            if abs(windowFrame.origin.x - windowBounds.origin.x) < 2 &&
-               abs(windowFrame.origin.y - windowBounds.origin.y) < 2 &&
-               abs(windowFrame.width - windowBounds.width) < 2 &&
-               abs(windowFrame.height - windowBounds.height) < 2 {
+            // Check if frames match (with 4px tolerance for rounding differences, including high-DPI displays)
+            if abs(windowFrame.origin.x - windowBounds.origin.x) < 4 &&
+               abs(windowFrame.origin.y - windowBounds.origin.y) < 4 &&
+               abs(windowFrame.width - windowBounds.width) < 4 &&
+               abs(windowFrame.height - windowBounds.height) < 4 {
                 return windowID
             }
         }

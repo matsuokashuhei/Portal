@@ -122,9 +122,10 @@ final class ScreenCaptureService {
 
     /// Gets cached or captures new window image.
     private func getWindowImage(windowID: CGWindowID, windowFrame: CGRect) async throws -> CGImage {
-        // Check cache
+        // Check cache (including frame to handle window resize)
         if let cached = windowCache,
            cached.windowID == windowID,
+           cached.frame == windowFrame,
            Date().timeIntervalSince(cached.timestamp) < Self.cacheExpiry {
             return cached.image
         }
@@ -139,7 +140,8 @@ final class ScreenCaptureService {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let config = SCStreamConfiguration()
 
-        // Capture at 2x for Retina displays
+        // Capture at higher resolution for better quality
+        // Note: Actual scale is calculated dynamically in extractRegion based on image size
         let scale: CGFloat = 2.0
         config.width = Int(windowFrame.width * scale)
         config.height = Int(windowFrame.height * scale)
@@ -167,7 +169,7 @@ final class ScreenCaptureService {
     /// - Returns: The extracted and resized icon, or nil if extraction fails
     private func extractRegion(_ elementFrame: CGRect, from windowImage: CGImage, windowFrame: CGRect) -> NSImage? {
         // Convert from screen coordinates to window-local coordinates
-        // Note: Screen coordinates have origin at top-left, CGImage has origin at top-left
+        // Note: Both screen coordinates (from Accessibility API) and CGImage have origin at top-left
         let localRect = CGRect(
             x: elementFrame.origin.x - windowFrame.origin.x,
             y: elementFrame.origin.y - windowFrame.origin.y,
