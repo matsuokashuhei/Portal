@@ -53,6 +53,7 @@ Portal/
 ├── Services/
 │   ├── HotkeyManager.swift    # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
+│   ├── ScreenCaptureService.swift  # 画像キャプチャ（ScreenCaptureKit）
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
 │   ├── WindowCrawler.swift    # ウィンドウ要素（サイドバー）走査サービス
 │   ├── FuzzySearch.swift      # スコアベース曖昧検索
@@ -112,6 +113,13 @@ Portal/
 - [x] メインコンテンツ領域（AXButton/AXGroup）走査（#91）
 - [x] タイプ別アイコン表示（#84）
 - [x] タイプ別フィルタ（Cmd+1/2/3）（#89, #91）
+
+### 画像キャプチャ
+- [x] ScreenCaptureKit による画像取得（#94）
+- [x] Screen Recording 権限チェック（#94）
+- [x] `kAXPositionAttribute`/`kAXSizeAttribute` 位置・サイズ取得（#94）
+- [x] ウィンドウIDマッチング（CGWindowListCopyWindowInfo）（#94）
+- [x] 画像フォールバック（権限なし時はSF Symbols）（#94）
 
 ## パフォーマンス目標
 

@@ -18,5 +18,7 @@
 	<true/>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Portal needs accessibility access to read menu items from other applications and execute menu commands.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Portal uses screen capture to show icons for sidebar and content items. This is optional - Portal works without this permission.</string>
 </dict>
 </plist>

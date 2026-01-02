@@ -392,6 +392,103 @@ final class WindowCrawler {
         return (enabledRef as? Bool) ?? true
     }
 
+    // MARK: - Position and Size
+
+    /// Gets the position (top-left corner) of an accessibility element in screen coordinates.
+    /// Returns nil if position cannot be determined.
+    func getPosition(from element: AXUIElement) -> CGPoint? {
+        var positionRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXPositionAttribute as CFString,
+            &positionRef
+        ) == .success else {
+            return nil
+        }
+
+        var point = CGPoint.zero
+        guard let value = positionRef,
+              CFGetTypeID(value) == AXValueGetTypeID(),
+              AXValueGetValue(value as! AXValue, .cgPoint, &point) else {
+            return nil
+        }
+        return point
+    }
+
+    /// Gets the size of an accessibility element.
+    /// Returns nil if size cannot be determined.
+    func getSize(from element: AXUIElement) -> CGSize? {
+        var sizeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXSizeAttribute as CFString,
+            &sizeRef
+        ) == .success else {
+            return nil
+        }
+
+        var size = CGSize.zero
+        guard let value = sizeRef,
+              CFGetTypeID(value) == AXValueGetTypeID(),
+              AXValueGetValue(value as! AXValue, .cgSize, &size) else {
+            return nil
+        }
+        return size
+    }
+
+    /// Gets the frame (position + size) of an accessibility element in screen coordinates.
+    /// Returns nil if frame cannot be determined.
+    func getFrame(from element: AXUIElement) -> CGRect? {
+        guard let position = getPosition(from: element),
+              let size = getSize(from: element) else {
+            return nil
+        }
+        return CGRect(origin: position, size: size)
+    }
+
+    /// Gets the window ID from a window element by matching position and size.
+    ///
+    /// Since `_AXUIElementGetWindow` is a private API, we use CGWindowListCopyWindowInfo
+    /// to find the window by matching its frame with the accessibility element's frame.
+    ///
+    /// - Parameter windowElement: The accessibility element representing a window
+    /// - Returns: The CGWindowID if found, nil otherwise
+    func getWindowID(from windowElement: AXUIElement) -> CGWindowID? {
+        guard let windowFrame = getFrame(from: windowElement) else {
+            return nil
+        }
+
+        // Get list of all windows
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+
+        // Find window matching the frame (with small tolerance for rounding)
+        for windowInfo in windowList {
+            guard let bounds = windowInfo[kCGWindowBounds as String] as? [String: CGFloat],
+                  let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID else {
+                continue
+            }
+
+            let windowBounds = CGRect(
+                x: bounds["X"] ?? 0,
+                y: bounds["Y"] ?? 0,
+                width: bounds["Width"] ?? 0,
+                height: bounds["Height"] ?? 0
+            )
+
+            // Check if frames match (with 2px tolerance for rounding differences)
+            if abs(windowFrame.origin.x - windowBounds.origin.x) < 2 &&
+               abs(windowFrame.origin.y - windowBounds.origin.y) < 2 &&
+               abs(windowFrame.width - windowBounds.width) < 2 &&
+               abs(windowFrame.height - windowBounds.height) < 2 {
+                return windowID
+            }
+        }
+
+        return nil
+    }
+
     // MARK: - Content Crawling
 
     /// Crawls content elements from the main window of the specified application.

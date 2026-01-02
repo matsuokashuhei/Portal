@@ -30,8 +30,10 @@ final class CommandPaletteViewModel: ObservableObject {
     private let menuCrawler = MenuCrawler()
     private let windowCrawler = WindowCrawler()
     private let commandExecutor = CommandExecutor()
+    private let screenCaptureService = ScreenCaptureService()
     private var cancellables = Set<AnyCancellable>()
     private var loadItemsTask: Task<Void, Never>?
+    private var loadImagesTask: Task<Void, Never>?
 
     /// Debounce interval for search.
     static let searchDebounceInterval: Int = 50
@@ -44,6 +46,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
     deinit {
         loadItemsTask?.cancel()
+        loadImagesTask?.cancel()
     }
 
     /// Filtered menu items based on search text and type filter.
@@ -241,6 +244,96 @@ final class CommandPaletteViewModel: ObservableObject {
                 print("[CommandPaletteViewModel] Content crawling failed: \(error.localizedDescription)")
                 #endif
             }
+
+            // Step 4: Load icons for sidebar and content items (optional)
+            // Requires Screen Recording permission; falls back to SF Symbols if not granted
+            await self.loadImagesForItems(app: app)
+        }
+    }
+
+    /// Loads icons for sidebar and content items using ScreenCaptureKit.
+    ///
+    /// This method captures the window once and extracts icon regions for each element.
+    /// If Screen Recording permission is not granted, this method does nothing (SF Symbol fallback).
+    ///
+    /// - Parameter app: The target application whose window should be captured
+    private func loadImagesForItems(app: NSRunningApplication?) async {
+        // Skip if Screen Recording permission is not granted
+        guard ScreenCaptureService.isGranted else {
+            #if DEBUG
+            print("[CommandPaletteViewModel] Screen Recording not granted, skipping icon capture")
+            #endif
+            return
+        }
+
+        guard let targetApp = app ?? NSWorkspace.shared.frontmostApplication else {
+            return
+        }
+
+        // Get items that need icons (sidebar and content types only)
+        let itemsNeedingIcons = menuItems.enumerated().compactMap { (index, item) -> (index: Int, item: MenuItem)? in
+            guard item.type == .sidebar || item.type == .content,
+                  item.image == nil else {
+                return nil
+            }
+            return (index, item)
+        }
+
+        guard !itemsNeedingIcons.isEmpty else { return }
+
+        // Get window information
+        let pid = targetApp.processIdentifier
+        let axApp = AXUIElementCreateApplication(pid)
+
+        var mainWindowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXMainWindowAttribute as CFString, &mainWindowRef) == .success,
+              let mainWindow = mainWindowRef else {
+            return
+        }
+
+        // swiftlint:disable:next force_cast
+        let windowElement = mainWindow as! AXUIElement
+        guard let windowID = windowCrawler.getWindowID(from: windowElement),
+              let windowFrame = windowCrawler.getFrame(from: windowElement) else {
+            return
+        }
+
+        // Collect elements with their frames
+        var elementsWithFrames: [(element: AXUIElement, frame: CGRect)] = []
+        var indexMapping: [Int: Int] = [:]  // Maps elementsWithFrames index to menuItems index
+
+        for (_, itemInfo) in itemsNeedingIcons.enumerated() {
+            if let frame = windowCrawler.getFrame(from: itemInfo.item.axElement) {
+                indexMapping[elementsWithFrames.count] = itemInfo.index
+                elementsWithFrames.append((itemInfo.item.axElement, frame))
+            }
+        }
+
+        guard !elementsWithFrames.isEmpty else { return }
+
+        // Capture icons
+        do {
+            let icons = try await screenCaptureService.captureIcons(
+                for: elementsWithFrames,
+                windowID: windowID,
+                windowFrame: windowFrame
+            )
+
+            // Check for cancellation
+            guard !Task.isCancelled else { return }
+
+            // Update menu items with captured icons
+            var updatedItems = menuItems
+            for (captureIndex, icon) in icons {
+                if let menuIndex = indexMapping[captureIndex] {
+                    updatedItems[menuIndex].image = icon
+                }
+            }
+            menuItems = updatedItems
+        } catch {
+            #if DEBUG
+            print("[CommandPaletteViewModel] Icon capture failed: \(error.localizedDescription)")
+            #endif
         }
     }
 

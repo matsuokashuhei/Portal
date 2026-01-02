@@ -6,6 +6,7 @@
 //
 
 import ApplicationServices
+import AppKit
 
 /// Type of command that can be executed from the command palette.
 ///
@@ -80,6 +81,11 @@ struct MenuItem: Identifiable, @unchecked Sendable {
     /// The type of UI element this item represents.
     let type: CommandType
 
+    /// Icon image captured via ScreenCaptureKit.
+    /// Only populated for sidebar and content items when Screen Recording permission is granted.
+    /// Menu items always use SF Symbols instead.
+    var image: NSImage?
+
     /// Formatted path string for display (e.g., "File → New → Document").
     var pathString: String {
         path.joined(separator: " → ")
@@ -98,7 +104,8 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         keyboardShortcut: String?,
         axElement: AXUIElement,
         isEnabled: Bool,
-        type: CommandType = .menu
+        type: CommandType = .menu,
+        image: NSImage? = nil
     ) {
         // Include type in ID to ensure items of different types with the same path are unique.
         // Use null character as separator to avoid collisions with menu titles containing "/"
@@ -109,6 +116,7 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         self.axElement = axElement
         self.isEnabled = isEnabled
         self.type = type
+        self.image = image
     }
 }
 

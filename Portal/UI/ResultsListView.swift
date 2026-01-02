@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct ResultsListView: View {
     var results: [MenuItem]
@@ -142,12 +143,21 @@ private struct MenuItemRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Type indicator icon
-            Image(systemName: iconName(for: item.type))
-                .font(.caption)
-                .foregroundColor(iconColor(for: item.type))
-                .frame(width: 16)
-                .accessibilityHidden(true)
+            // Type indicator icon: use captured image or SF Symbol fallback
+            Group {
+                if let nsImage = item.image {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: iconName(for: item.type))
+                        .font(.caption)
+                        .foregroundColor(iconColor(for: item.type))
+                        .frame(width: 16)
+                }
+            }
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
