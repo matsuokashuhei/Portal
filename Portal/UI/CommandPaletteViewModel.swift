@@ -106,7 +106,7 @@ final class CommandPaletteViewModel: ObservableObject {
         }
     }
 
-    /// Loads menu items and sidebar elements from the specified application.
+    /// Loads command items (menus and sidebar elements) from the specified application.
     ///
     /// Menu items are loaded first and displayed immediately, then sidebar elements are loaded
     /// and appended to the list. This provides a responsive user experience while still
@@ -118,7 +118,7 @@ final class CommandPaletteViewModel: ObservableObject {
     ///
     /// - Note: In test mode with `--use-mock-menu-items=<count>`, mock items are used instead of
     ///   real crawling. This enables UI testing of scroll behavior with predictable data.
-    func loadMenuItems(for app: NSRunningApplication?) {
+    func loadItems(for app: NSRunningApplication?) {
         // In mock mode, use mock items instead of real menu crawling
         if let mockCount = TestConfiguration.mockMenuItemsCount {
             menuItems = MockMenuItemFactory.createMockItems(count: mockCount)
@@ -138,17 +138,17 @@ final class CommandPaletteViewModel: ObservableObject {
 
             // Step 1: Load menu items first (fast, commonly used)
             do {
-                let menuItemsResult: [MenuItem]
+                let crawledMenuItems: [MenuItem]
                 if let targetApp = app {
-                    menuItemsResult = try await menuCrawler.crawlApplication(targetApp)
+                    crawledMenuItems = try await menuCrawler.crawlApplication(targetApp)
                 } else {
-                    menuItemsResult = try await menuCrawler.crawlActiveApplication()
+                    crawledMenuItems = try await menuCrawler.crawlActiveApplication()
                 }
 
                 // Check for cancellation before updating state
                 guard !Task.isCancelled else { return }
 
-                allItems = menuItemsResult.filter { $0.isEnabled }
+                allItems = crawledMenuItems.filter { $0.isEnabled }
                 menuItems = allItems
                 selectedIndex = 0
             } catch {
@@ -204,7 +204,7 @@ final class CommandPaletteViewModel: ObservableObject {
                     self.menuCrawler.invalidateCache()
                 }
 
-                self.loadMenuItems(for: targetApp)
+                self.loadItems(for: targetApp)
             }
             .store(in: &cancellables)
     }

@@ -2,12 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(xcodebuild:*)",
-      "Bash(git -C /Users/matsuokashuhei/Development/personal/Portal log --oneline -10)",
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
       "Bash(wc:*)",
+      "Bash(pgrep:*)",
+      "Bash(grep:*)",
+      "WebSearch",
       "WebFetch(domain:docs.claude.ai)",
-      "Bash(git -C /Users/matsuokashuhei/Development/personal/Portal status)",
-      "Bash(git -C /Users/matsuokashuhei/Development/personal/Portal log --oneline -3)",
-      "Bash(git -C /Users/matsuokashuhei/Development/personal/Portal add:*)"
+      "WebFetch(domain:jano.dev)"
     ]
   }
 }

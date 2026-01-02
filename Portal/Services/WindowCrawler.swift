@@ -340,25 +340,6 @@ final class WindowCrawler {
         return valueRef as? String
     }
 
-    /// Gets the identifier attribute from an accessibility element.
-    private func getIdentifier(from element: AXUIElement) -> String? {
-        var idRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &idRef) == .success else {
-            return nil
-        }
-        return idRef as? String
-    }
-
-    /// Gets the list of actions available on an element.
-    private func getActions(from element: AXUIElement) -> [String] {
-        var actionsRef: CFArray?
-        guard AXUIElementCopyActionNames(element, &actionsRef) == .success,
-              let actions = actionsRef as? [String] else {
-            return []
-        }
-        return actions
-    }
-
     /// Gets the enabled state from an element.
     private func getIsEnabled(from element: AXUIElement) -> Bool {
         var enabledRef: CFTypeRef?

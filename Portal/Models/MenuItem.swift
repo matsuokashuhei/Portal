@@ -35,7 +35,7 @@ enum CommandType: String, Sendable {
 /// - Important: The `axElement` reference can become invalid if the source application
 ///   modifies its UI structure, quits, or crashes. When executing actions (Issue #50),
 ///   the caller should handle `AXError` appropriately when the element is no longer valid.
-///   The short cache duration (0.5s) in `MenuCrawler` helps mitigate stale references.
+///   Crawlers may cache results briefly to improve performance and help mitigate stale references.
 ///
 /// - Note: The `id` property is derived from `type.rawValue + "\0" + path.joined(separator: "\0")`.
 ///   This ensures items of different types with the same path are still unique.
