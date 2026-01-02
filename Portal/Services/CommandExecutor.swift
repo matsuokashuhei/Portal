@@ -138,6 +138,14 @@ final class CommandExecutor {
             }
         }
 
+        // Fallback to value (used by content items like Apple Music "Now Playing")
+        if title == nil || title?.isEmpty == true {
+            var valueRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success {
+                title = valueRef as? String
+            }
+        }
+
         guard let actualTitle = title, actualTitle == expectedTitle else {
             return false
         }
