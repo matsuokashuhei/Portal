@@ -173,6 +173,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             } else {
                 targetApp = nil
             }
+
+            // Ignore hotkey when no active app (targetApp is nil)
+            // This prevents showing the panel when MenuCrawler cannot fetch menus
+            guard targetApp != nil else { return }
+
             panelController.toggle(targetApp: targetApp)
         } else {
             let shouldPrompt: Bool
