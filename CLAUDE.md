@@ -117,6 +117,7 @@ Portal/
 ### 画像キャプチャ
 - [x] ScreenCaptureKit による画像取得（#94）
 - [x] Screen Recording 権限チェック（#94）
+- [x] 起動時に Screen Recording 権限リクエスト（#94）
 - [x] `kAXPositionAttribute`/`kAXSizeAttribute` 位置・サイズ取得（#94）
 - [x] ウィンドウIDマッチング（CGWindowListCopyWindowInfo）（#94）
 - [x] 画像フォールバック（権限なし時はSF Symbols）（#94）

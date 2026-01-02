@@ -62,8 +62,20 @@ final class ScreenCaptureService {
 
     /// Requests Screen Recording permission.
     /// Shows the system dialog prompting user to grant permission if not already granted.
+    ///
+    /// On macOS 15+, `CGRequestScreenCaptureAccess()` may not show a dialog.
+    /// Instead, we attempt to access shareable content via ScreenCaptureKit,
+    /// which reliably triggers the system permission dialog.
     static func requestPermission() {
-        CGRequestScreenCaptureAccess()
+        let result = CGRequestScreenCaptureAccess()
+
+        // If CGRequestScreenCaptureAccess didn't trigger dialog, try ScreenCaptureKit
+        if !result {
+            Task { @MainActor in
+                // This will trigger the permission dialog on macOS 15+
+                _ = try? await SCShareableContent.current
+            }
+        }
     }
 
     /// Opens System Settings directly to the Screen Recording privacy pane.

@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if !AccessibilityService.isGranted {
                 startPermissionCheckTimer()
             }
+            // Request Screen Recording permission for icon capture
+            // This triggers the system permission dialog if not already granted
+            checkScreenRecordingPermission()
         }
 
         wasPermissionGranted = AccessibilityService.isGranted
@@ -116,6 +119,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             lastPermissionRequestTime = Date()
         }
         updatePermissionMenuItemIfNeeded()
+    }
+
+    private func checkScreenRecordingPermission() {
+        // Request Screen Recording permission if not already granted.
+        // This causes Portal to appear in System Settings > Privacy & Security > Screen Recording.
+        // Unlike Accessibility, Screen Recording permission is optional (SF Symbols fallback).
+        if !ScreenCaptureService.isGranted {
+            ScreenCaptureService.requestPermission()
+        }
     }
 
     private func setupHotkeyManager() {
