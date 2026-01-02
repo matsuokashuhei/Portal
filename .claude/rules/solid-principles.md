@@ -163,3 +163,20 @@ class MockMenuCrawler: MenuCrawling {
 - 将来の拡張のために**現時点で必要ない抽象化は避ける**
 - テストが困難な場合に**DIPを適用**する
 - クラスが大きくなってきたら**SRPを検討**する
+
+## 関連原則
+
+### YAGNI (You Aren't Gonna Need It)
+
+**今必要ないものは作らない。**
+
+```swift
+// NG: 将来使うかもしれないヘルパーメソッド
+private func getIdentifier(_ element: AXUIElement) -> String? { ... }  // 未使用
+private func getActions(_ element: AXUIElement) -> [String] { ... }    // 未使用
+
+// OK: 使用されているメソッドのみ残す
+// 必要になった時点で追加する
+```
+
+詳細は `.claude/rules/code-quality.md` を参照。

@@ -150,7 +150,7 @@ struct CommandPaletteViewModelTests {
 
     @Test @MainActor
     func testFilteringDisabledItems() {
-        // Simulate what loadMenuItems does: filter disabled items
+        // Simulate what loadItems does: filter disabled items
         let allItems = MockMenuItemFactory.createMockItems(count: 5, disabledIndices: [1, 3])
         let filteredItems = allItems.filter { $0.isEnabled }
 

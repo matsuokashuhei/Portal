@@ -25,23 +25,42 @@ enum MockMenuItemFactory {
     /// - Parameters:
     ///   - count: Number of items to create.
     ///   - disabledIndices: Set of indices that should be disabled. Defaults to empty (all enabled).
+    ///   - type: The command type for all items. Defaults to `.menu`.
     /// - Returns: Array of MenuItem with sequential titles prefixed with "[Mock] ".
     ///
     /// - Note: All items share the same dummy AXUIElement. These items are suitable
     ///   for UI layout and navigation testing, but not for command execution testing.
     ///   The "[Mock] " prefix makes it immediately obvious these are test items.
-    static func createMockItems(count: Int, disabledIndices: Set<Int> = []) -> [MenuItem] {
+    static func createMockItems(
+        count: Int,
+        disabledIndices: Set<Int> = [],
+        type: CommandType = .menu
+    ) -> [MenuItem] {
         let dummyElement = AXUIElementCreateSystemWide()
+        let menuName = menuNameForType(type)
 
         return (0..<count).map { index in
             let title = "\(mockPrefix)Item \(index)"
             return MenuItem(
                 title: title,
-                path: ["Mock Menu", title],
-                keyboardShortcut: index < 10 ? "⌘\(index)" : nil,
+                path: [menuName, title],
+                keyboardShortcut: type == .menu && index < 10 ? "⌘\(index)" : nil,
                 axElement: dummyElement,
-                isEnabled: !disabledIndices.contains(index)
+                isEnabled: !disabledIndices.contains(index),
+                type: type
             )
+        }
+    }
+
+    /// Returns the parent menu/container name for the given command type.
+    private static func menuNameForType(_ type: CommandType) -> String {
+        switch type {
+        case .menu:
+            return "Mock Menu"
+        case .sidebar:
+            return "Mock Sidebar"
+        case .button:
+            return "Mock Window"
         }
     }
 }
