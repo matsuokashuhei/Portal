@@ -9,6 +9,13 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// Filter for narrowing down command items by type.
+enum CommandTypeFilter: String, CaseIterable {
+    case all
+    case menu
+    case sidebar
+}
+
 @MainActor
 final class CommandPaletteViewModel: ObservableObject {
     @Published var searchText = ""
@@ -17,6 +24,7 @@ final class CommandPaletteViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published private(set) var filteredResults: [FuzzySearch.Match] = []
+    @Published var typeFilter: CommandTypeFilter = .all
 
     private let menuCrawler = MenuCrawler()
     private let windowCrawler = WindowCrawler()
@@ -37,12 +45,17 @@ final class CommandPaletteViewModel: ObservableObject {
         loadItemsTask?.cancel()
     }
 
-    /// Filtered menu items based on search text.
+    /// Filtered menu items based on search text and type filter.
     var results: [MenuItem] {
-        if searchText.isEmpty {
-            return menuItems
+        let searchResults = searchText.isEmpty ? menuItems : filteredResults.map(\.item)
+        switch typeFilter {
+        case .all:
+            return searchResults
+        case .menu:
+            return searchResults.filter { $0.type == .menu }
+        case .sidebar:
+            return searchResults.filter { $0.type == .sidebar }
         }
-        return filteredResults.map(\.item)
     }
 
     func clearSearch() {
@@ -66,6 +79,18 @@ final class CommandPaletteViewModel: ObservableObject {
 
         errorMessage = nil
         selectedIndex += 1
+    }
+
+    // MARK: - Type Filter
+
+    /// Toggles the type filter. If already set to the given type, resets to .all.
+    func toggleTypeFilter(_ type: CommandTypeFilter) {
+        if typeFilter == type {
+            typeFilter = .all
+        } else {
+            typeFilter = type
+        }
+        selectedIndex = 0
     }
 
     // MARK: - Execution
@@ -268,6 +293,14 @@ final class CommandPaletteViewModel: ObservableObject {
 
         NotificationCenter.default.publisher(for: .executeSelectedCommand)
             .sink { [weak self] _ in self?.executeSelectedCommand() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .toggleMenuFilter)
+            .sink { [weak self] _ in self?.toggleTypeFilter(.menu) }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .toggleSidebarFilter)
+            .sink { [weak self] _ in self?.toggleTypeFilter(.sidebar) }
             .store(in: &cancellables)
     }
 }

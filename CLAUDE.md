@@ -66,6 +66,7 @@ Portal/
     ├── PanelController.swift  # NSPanel + パネル管理
     ├── CommandPaletteView.swift    # ルートビュー
     ├── CommandPaletteViewModel.swift # 状態管理
+    ├── FilterSegmentView.swift     # タイプ別絞り込みセグメント
     ├── SearchFieldView.swift       # 検索フィールド
     ├── FocusableTextField.swift    # NSTextField wrapper
     ├── ResultsListView.swift       # 結果リスト

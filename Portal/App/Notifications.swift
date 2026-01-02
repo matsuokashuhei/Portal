@@ -29,6 +29,12 @@ extension Notification.Name {
 
     /// Posted when user requests to open Settings (e.g., Cmd+, from panel).
     static let openSettings = Notification.Name("com.matsuokashuhei.Portal.openSettings")
+
+    /// Posted when user presses Cmd+1 to toggle menu items filter.
+    static let toggleMenuFilter = Notification.Name("com.matsuokashuhei.Portal.toggleMenuFilter")
+
+    /// Posted when user presses Cmd+2 to toggle sidebar items filter.
+    static let toggleSidebarFilter = Notification.Name("com.matsuokashuhei.Portal.toggleSidebarFilter")
 }
 
 /// Keys for notification userInfo dictionaries.

@@ -172,4 +172,99 @@ struct CommandPaletteViewModelTests {
             #expect(item.title == items[index].title)
         }
     }
+
+    // MARK: - Type Filter Tests
+
+    @Test @MainActor
+    func testInitialTypeFilterIsAll() {
+        let viewModel = CommandPaletteViewModel()
+        #expect(viewModel.typeFilter == .all)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterToMenu() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.toggleTypeFilter(.menu)
+        #expect(viewModel.typeFilter == .menu)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterToSidebar() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.toggleTypeFilter(.sidebar)
+        #expect(viewModel.typeFilter == .sidebar)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterFromMenuToAll() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.typeFilter = .menu
+        viewModel.toggleTypeFilter(.menu)
+        #expect(viewModel.typeFilter == .all)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterFromSidebarToAll() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.typeFilter = .sidebar
+        viewModel.toggleTypeFilter(.sidebar)
+        #expect(viewModel.typeFilter == .all)
+    }
+
+    @Test @MainActor
+    func testResultsFilteredByMenuType() {
+        let viewModel = CommandPaletteViewModel()
+        let menuItems = MockMenuItemFactory.createMockItems(count: 3, type: .menu)
+        let sidebarItems = MockMenuItemFactory.createMockItems(count: 2, type: .sidebar)
+        viewModel.menuItems = menuItems + sidebarItems
+
+        viewModel.typeFilter = .menu
+
+        #expect(viewModel.results.count == 3)
+        #expect(viewModel.results.allSatisfy { $0.type == .menu })
+    }
+
+    @Test @MainActor
+    func testResultsFilteredBySidebarType() {
+        let viewModel = CommandPaletteViewModel()
+        let menuItems = MockMenuItemFactory.createMockItems(count: 3, type: .menu)
+        let sidebarItems = MockMenuItemFactory.createMockItems(count: 2, type: .sidebar)
+        viewModel.menuItems = menuItems + sidebarItems
+
+        viewModel.typeFilter = .sidebar
+
+        #expect(viewModel.results.count == 2)
+        #expect(viewModel.results.allSatisfy { $0.type == .sidebar })
+    }
+
+    @Test @MainActor
+    func testResultsShowAllTypesWhenFilterIsAll() {
+        let viewModel = CommandPaletteViewModel()
+        let menuItems = MockMenuItemFactory.createMockItems(count: 3, type: .menu)
+        let sidebarItems = MockMenuItemFactory.createMockItems(count: 2, type: .sidebar)
+        viewModel.menuItems = menuItems + sidebarItems
+
+        viewModel.typeFilter = .all
+
+        #expect(viewModel.results.count == 5)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterResetsSelectedIndex() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.menuItems = MockMenuItemFactory.createMockItems(count: 5)
+        viewModel.selectedIndex = 3
+
+        viewModel.toggleTypeFilter(.menu)
+
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @Test @MainActor
+    func testToggleTypeFilterFromMenuToSidebar() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.typeFilter = .menu
+        viewModel.toggleTypeFilter(.sidebar)
+        #expect(viewModel.typeFilter == .sidebar)
+    }
 }

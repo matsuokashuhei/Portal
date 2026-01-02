@@ -12,6 +12,10 @@ struct CommandPaletteView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            FilterSegmentView(selectedFilter: $viewModel.typeFilter)
+
+            Divider()
+
             SearchFieldView(text: $viewModel.searchText)
                 .padding()
 
