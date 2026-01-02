@@ -229,6 +229,9 @@ final class CommandPaletteViewModel: ObservableObject {
                     self.menuCrawler.invalidateCache()
                 }
 
+                // Reset filter to show all items when panel is shown
+                self.typeFilter = .all
+
                 self.loadItems(for: targetApp)
             }
             .store(in: &cancellables)
