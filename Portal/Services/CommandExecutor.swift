@@ -9,7 +9,7 @@ import ApplicationServices
 
 /// Service responsible for executing commands via Accessibility API.
 ///
-/// This service can execute menu items, sidebar navigation items, and window buttons.
+/// This service can execute menu items and window UI elements.
 /// It must run on the main thread as `AXUIElementPerformAction` requires it.
 /// The `@MainActor` attribute ensures all method calls are dispatched to the main thread.
 ///
@@ -23,18 +23,17 @@ final class CommandExecutor {
     /// Valid accessibility roles for each command type.
     private static let validRoles: [CommandType: Set<String>] = [
         .menu: ["AXMenuItem"],
-        .sidebar: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText"],
-        .button: ["AXButton", "AXCheckBox"],
-        .content: ["AXButton", "AXRow", "AXCell", "AXStaticText", "AXGroup"]
+        .window: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton", "AXGroup"]
     ]
 
     /// Actions to try for each command type, in order of preference.
     private static let preferredActions: [CommandType: [String]] = [
         .menu: [kAXPressAction as String],
-        .sidebar: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"],
-        .button: [kAXPressAction as String],
-        .content: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"]
+        .window: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"]
     ]
+
+    /// Roles that require AXPress action (not kAXSelectedAttribute).
+    private static let rolesRequiringPress: Set<String> = ["AXRadioButton", "AXButton"]
 
     /// Executes a command item by performing the appropriate action on its AXUIElement.
     ///
@@ -53,35 +52,44 @@ final class CommandExecutor {
             return .failure(.elementInvalid)
         }
 
-        // For sidebar items, try setting AXSelected attribute first
+        // For window items (sidebar rows, outline rows, etc.), try setting AXSelected attribute first
         // This is more reliable than actions for list/outline rows
-        // Note: Content items skip this - they need AXPress action instead
-        if menuItem.type == .sidebar {
-            let selectResult = AXUIElementSetAttributeValue(
-                menuItem.axElement,
-                kAXSelectedAttribute as CFString,
-                kCFBooleanTrue
-            )
-            if selectResult == .success {
-                return .success(())
+        // Exception: AXRadioButton and AXButton require AXPress action instead
+        if menuItem.type == .window {
+            // Get role to check if it requires AXPress
+            var roleRef: CFTypeRef?
+            let roleResult = AXUIElementCopyAttributeValue(menuItem.axElement, kAXRoleAttribute as CFString, &roleRef)
+            let role = (roleResult == .success) ? (roleRef as? String) : nil
+
+            // Skip kAXSelectedAttribute for roles that require AXPress
+            let requiresPress = role.map { Self.rolesRequiringPress.contains($0) } ?? false
+            if !requiresPress {
+                let selectResult = AXUIElementSetAttributeValue(
+                    menuItem.axElement,
+                    kAXSelectedAttribute as CFString,
+                    kCFBooleanTrue
+                )
+                if selectResult == .success {
+                    return .success(())
+                }
             }
         }
 
         // Try preferred actions for this command type
         let actions = Self.preferredActions[menuItem.type] ?? [kAXPressAction as String]
 
-        // For content items, check if this is a container element (not AXButton)
+        // For window items, check if this is a container element (not AXButton)
         // If so, we should try child buttons instead of trusting AXPress success
-        let isContentContainer = menuItem.type == .content && !isButtonElement(menuItem.axElement)
+        let isWindowContainer = menuItem.type == .window && !isButtonElement(menuItem.axElement)
 
         for action in actions {
             let result = AXUIElementPerformAction(menuItem.axElement, action as CFString)
 
             switch result {
             case .success:
-                // For content containers, AXPress may return success without doing anything
+                // For window containers, AXPress may return success without doing anything
                 // Try child buttons as fallback
-                if isContentContainer && action == kAXPressAction as String {
+                if isWindowContainer && action == kAXPressAction as String {
                     if tryPressChildButtons(menuItem.axElement) {
                         return .success(())
                     }
@@ -100,8 +108,8 @@ final class CommandExecutor {
             }
         }
 
-        // All actions failed - for content items, try child buttons as last resort
-        if menuItem.type == .content {
+        // All actions failed - for window items, try child buttons as last resort
+        if menuItem.type == .window {
             if tryPressChildButtons(menuItem.axElement) {
                 return .success(())
             }
@@ -161,8 +169,8 @@ final class CommandExecutor {
             possibleTitles.append(v)
         }
 
-        // For sidebar and content items, also check child elements
-        if type == .sidebar || type == .content {
+        // For window items, also check child elements
+        if type == .window {
             if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
                 possibleTitles.append(childTitle)
             }

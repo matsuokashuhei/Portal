@@ -16,24 +16,16 @@ enum CommandType: String, Sendable {
     /// Crawled via `kAXMenuBarAttribute` using `MenuCrawler`.
     case menu
 
-    /// Sidebar navigation item (AXSourceList, AXOutline, AXRow).
-    /// Found in apps like Finder, Apple Music, Notes, Mail.
+    /// Window UI element (sidebar, toolbar, content area buttons, etc.)
+    /// Includes AXSourceList, AXOutline, AXRow, AXButton, AXGroup, etc.
+    /// Found in apps like Finder, Apple Music, Notes, System Settings.
     /// Crawled via `kAXMainWindowAttribute` using `WindowCrawler`.
-    case sidebar
-
-    /// Window button (AXButton, AXCheckBox).
-    /// Found in dialogs and windows. (Phase 2 - not yet implemented)
-    case button
-
-    /// Main content area item (AXGroup, AXButton, AXRow in content region).
-    /// Found in apps like System Settings (About, Storage), Finder (files/folders).
-    /// Crawled via `kAXMainWindowAttribute` using `WindowCrawler`.
-    case content
+    case window
 }
 
 /// Represents a command item from an application's UI.
 ///
-/// This struct can represent menu bar items, sidebar navigation items, or window buttons,
+/// This struct can represent menu bar items or window UI elements,
 /// depending on the `type` property. All types share the same structure for unified handling
 /// in the command palette.
 ///

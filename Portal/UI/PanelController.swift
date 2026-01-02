@@ -191,15 +191,9 @@ final class PanelController: NSObject, NSWindowDelegate {
                 return nil
             }
 
-            // Handle Cmd+2 for sidebar items filter
+            // Handle Cmd+2 for window items filter
             if modifiers == .command && event.keyCode == Self.twoKeyCode {
-                NotificationCenter.default.post(name: .toggleSidebarFilter, object: nil)
-                return nil
-            }
-
-            // Handle Cmd+3 for content items filter
-            if modifiers == .command && event.keyCode == Self.threeKeyCode {
-                NotificationCenter.default.post(name: .toggleContentFilter, object: nil)
+                NotificationCenter.default.post(name: .toggleWindowFilter, object: nil)
                 return nil
             }
 

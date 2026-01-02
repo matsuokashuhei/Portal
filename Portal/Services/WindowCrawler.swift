@@ -26,77 +26,58 @@ enum WindowCrawlerError: Error, LocalizedError {
     }
 }
 
-/// Service for crawling window UI elements (sidebars) using Accessibility API.
+/// Service for crawling window UI elements using Accessibility API.
 ///
-/// This service crawls sidebar navigation items (AXSourceList, AXOutline, AXRow)
-/// from an application's main window.
+/// This service crawls actionable UI elements from an application's main window,
+/// including sidebars, toolbars, and content areas.
 ///
 /// ## Supported Applications
 /// - Apple Music (Library, Playlists)
-/// - Finder (Favorites, Locations)
+/// - Finder (Favorites, Locations, Files)
 /// - Notes (Folders)
 /// - Mail (Mailboxes)
+/// - System Settings (navigation items)
 ///
 /// ## Performance
-/// Window crawling typically takes 50-200ms depending on sidebar depth.
-/// Unlike MenuCrawler, no caching is used because sidebar content can change
+/// Window crawling typically takes 50-200ms depending on UI complexity.
+/// Unlike MenuCrawler, no caching is used because window content can change
 /// more frequently (e.g., when navigating folders).
 @MainActor
 final class WindowCrawler {
     /// Maximum depth for recursive traversal to prevent infinite loops.
     private static let maxDepth = 10
 
-    /// Maximum number of content items to return (performance safeguard).
-    private static let maxContentItems = 100
+    /// Maximum number of items to return (performance safeguard).
+    private static let maxItems = 200
 
-    /// Accessibility roles that indicate sidebar containers.
-    private static let sidebarContainerRoles: Set<String> = [
+    /// Accessibility roles for container elements that should be traversed.
+    private static let containerRoles: Set<String> = [
         "AXOutline",
         "AXList",
         "AXTable",
         "AXScrollArea",
         "AXSplitGroup",
-        "AXGroup"
+        "AXGroup",
+        "AXToolbar",
+        "AXSegmentedControl"
     ]
 
-    /// Accessibility roles that indicate sidebar items we can interact with.
-    private static let sidebarItemRoles: Set<String> = [
+    /// Accessibility roles for actionable items we can interact with.
+    private static let itemRoles: Set<String> = [
         "AXRow",
         "AXCell",
         "AXOutlineRow",
-        "AXStaticText"
-    ]
-
-    /// Accessibility roles for content container elements.
-    private static let contentContainerRoles: Set<String> = [
-        "AXGroup",
-        "AXScrollArea",
-        "AXSplitGroup",
-        "AXList",
-        "AXTable"
-    ]
-
-    /// Accessibility roles for actionable content items.
-    private static let contentItemRoles: Set<String> = [
-        "AXButton",
-        "AXRow",
-        "AXCell",
         "AXStaticText",
-        "AXGroup"
+        "AXButton",
+        "AXRadioButton"
     ]
 
-    /// Roles that are known sidebar containers and should be skipped during content crawling.
-    private static let sidebarSkipRoles: Set<String> = [
-        "AXOutline",
-        "AXSourceList"
-    ]
-
-    /// Crawls sidebar elements from the main window of the specified application.
+    /// Crawls window elements from the main window of the specified application.
     ///
-    /// - Parameter app: The application to crawl sidebar elements from.
-    /// - Returns: Array of menu items representing sidebar elements.
+    /// - Parameter app: The application to crawl window elements from.
+    /// - Returns: Array of menu items representing window UI elements.
     /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlSidebarElements(_ app: NSRunningApplication) async throws -> [MenuItem] {
+    func crawlWindowElements(_ app: NSRunningApplication) async throws -> [MenuItem] {
         guard AccessibilityService.isGranted else {
             throw WindowCrawlerError.accessibilityNotGranted
         }
@@ -125,21 +106,34 @@ final class WindowCrawler {
         // Get window title for path prefix
         let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
 
-        // Crawl sidebar elements
-        return crawlSidebarInElement(windowElement, path: [windowTitle], depth: 0)
+        // Crawl all window elements
+        var itemCount = 0
+        let allItems = crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount)
+
+        // Deduplicate by path-based identifier (elements reached via different paths get different IDs)
+        var seenIds = Set<String>()
+        var uniqueItems: [MenuItem] = []
+        for item in allItems {
+            if !seenIds.contains(item.id) {
+                seenIds.insert(item.id)
+                uniqueItems.append(item)
+            }
+        }
+
+        return uniqueItems
     }
 
-    /// Crawls the currently active application's sidebar.
+    /// Crawls window elements from the currently active application.
     ///
     /// - Important: This method may fail to find a non-Portal application if Portal itself
     ///   is the only regular application running, or if Portal becomes frontmost before
     ///   this method is called. Callers should capture the target application reference
     ///   BEFORE showing the panel (as done in `AppDelegate.handleHotkeyPressed()`) and
-    ///   use `crawlSidebarElements(_:)` instead when possible.
+    ///   use `crawlWindowElements(_:)` instead when possible.
     ///
-    /// - Returns: Array of menu items representing sidebar elements.
+    /// - Returns: Array of menu items representing window UI elements.
     /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlActiveApplication() async throws -> [MenuItem] {
+    func crawlActiveApplicationWindow() async throws -> [MenuItem] {
         guard AccessibilityService.isGranted else {
             throw WindowCrawlerError.accessibilityNotGranted
         }
@@ -148,7 +142,7 @@ final class WindowCrawler {
             throw WindowCrawlerError.noActiveApplication
         }
 
-        return try await crawlSidebarElements(app)
+        return try await crawlWindowElements(app)
     }
 
     // MARK: - Private Methods
@@ -174,10 +168,15 @@ final class WindowCrawler {
         }
     }
 
-    /// Recursively crawls an element for sidebar items.
-    private func crawlSidebarInElement(_ element: AXUIElement, path: [String], depth: Int) -> [MenuItem] {
-        // Prevent infinite recursion
-        guard depth < Self.maxDepth else {
+    /// Recursively crawls an element for actionable window items.
+    private func crawlWindowInElement(
+        _ element: AXUIElement,
+        path: [String],
+        depth: Int,
+        itemCount: inout Int
+    ) -> [MenuItem] {
+        // Prevent infinite recursion and enforce item limit
+        guard depth < Self.maxDepth, itemCount < Self.maxItems else {
             return []
         }
 
@@ -191,6 +190,8 @@ final class WindowCrawler {
         }
 
         for child in children {
+            guard itemCount < Self.maxItems else { break }
+
             // Get role
             var roleRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
@@ -199,7 +200,6 @@ final class WindowCrawler {
             }
 
             // Get title or description
-            // For AXRow elements, the title is often in child elements
             let title = getTitle(from: child)
             let desc = getDescription(from: child)
             let value = getValue(from: child)
@@ -207,13 +207,13 @@ final class WindowCrawler {
 
             // For row-type elements without a direct title, look in children
             if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-               (role == "AXRow" || role == "AXOutlineRow") {
+               (role == "AXRow" || role == "AXOutlineRow" || role == "AXCell") {
                 displayTitle = getTitleFromRowChildren(child)
             }
 
-            // Check if this is an actionable sidebar item
+            // Check if this is an actionable item
             var pathForChildren = path
-            if Self.sidebarItemRoles.contains(role) {
+            if Self.itemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     let isEnabled = getIsEnabled(from: child)
@@ -226,22 +226,16 @@ final class WindowCrawler {
                         keyboardShortcut: nil,
                         axElement: child,
                         isEnabled: isEnabled,
-                        type: .sidebar
+                        type: .window
                     )
                     items.append(menuItem)
+                    itemCount += 1
                 }
             }
 
-            // Recurse into containers or elements with children to find nested sidebar items.
-            // Note: An element may be both an actionable item AND contain children (e.g., expandable
-            // sidebar rows). This is intentional - we add the parent as an actionable item above,
-            // then explore its children for additional items. If the parent was actionable, children
-            // inherit its path so the hierarchy is correctly reflected (e.g., "Music → Library").
-            if Self.sidebarContainerRoles.contains(role) {
-                let subItems = crawlSidebarInElement(child, path: pathForChildren, depth: depth + 1)
-                items.append(contentsOf: subItems)
-            } else if hasChildren(child) {
-                let subItems = crawlSidebarInElement(child, path: pathForChildren, depth: depth + 1)
+            // Recurse into containers or elements with children
+            if Self.containerRoles.contains(role) || hasChildren(child) {
+                let subItems = crawlWindowInElement(child, path: pathForChildren, depth: depth + 1, itemCount: &itemCount)
                 items.append(contentsOf: subItems)
             }
         }
@@ -273,7 +267,6 @@ final class WindowCrawler {
         }
 
         // Check for press, select, or show UI action
-        // AXShowDefaultUI is used by Apple Music sidebar items
         return actions.contains(kAXPressAction as String) ||
                actions.contains("AXSelect") ||
                actions.contains("AXConfirm") ||
@@ -290,8 +283,6 @@ final class WindowCrawler {
     }
 
     /// Gets the title from a row element by searching its children.
-    /// AXRow elements often don't have a title directly; the title is in a child AXStaticText or AXCell.
-    /// Priority: AXStaticText value/title > AXCell title > other attributes
     private func getTitleFromRowChildren(_ element: AXUIElement) -> String? {
         let children = getChildren(element)
 
@@ -333,7 +324,7 @@ final class WindowCrawler {
             }
         }
 
-        // Third pass: Fallback to any title/value (but not description, which is often icon name)
+        // Third pass: Fallback to any title/value
         for child in children {
             if let title = getTitle(from: child), !title.isEmpty {
                 return title
@@ -390,147 +381,5 @@ final class WindowCrawler {
             return true  // Default to enabled if we can't determine
         }
         return (enabledRef as? Bool) ?? true
-    }
-
-    // MARK: - Content Crawling
-
-    /// Crawls content elements from the main window of the specified application.
-    ///
-    /// - Parameters:
-    ///   - app: The application to crawl content elements from.
-    ///   - excludePaths: Set of item IDs to exclude (typically sidebar item IDs for deduplication).
-    /// - Returns: Array of menu items representing content elements.
-    /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlContentElements(_ app: NSRunningApplication, excludePaths: Set<String> = []) async throws -> [MenuItem] {
-        guard AccessibilityService.isGranted else {
-            throw WindowCrawlerError.accessibilityNotGranted
-        }
-
-        let pid = app.processIdentifier
-        let axApp = AXUIElementCreateApplication(pid)
-
-        var mainWindowRef: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(
-            axApp,
-            kAXMainWindowAttribute as CFString,
-            &mainWindowRef
-        )
-
-        guard result == .success, let mainWindow = mainWindowRef else {
-            throw WindowCrawlerError.mainWindowNotAccessible
-        }
-
-        // swiftlint:disable:next force_cast
-        let windowElement = mainWindow as! AXUIElement
-        let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
-
-        var itemCount = 0
-        return crawlContentInElement(
-            windowElement,
-            path: [windowTitle],
-            depth: 0,
-            excludePaths: excludePaths,
-            itemCount: &itemCount
-        )
-    }
-
-    /// Crawls content from the currently active application's window.
-    ///
-    /// - Parameter excludePaths: Set of item IDs to exclude (typically sidebar item IDs).
-    /// - Returns: Array of menu items representing content elements.
-    /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlActiveApplicationContent(excludePaths: Set<String> = []) async throws -> [MenuItem] {
-        guard AccessibilityService.isGranted else {
-            throw WindowCrawlerError.accessibilityNotGranted
-        }
-
-        guard let app = getFrontmostApp() else {
-            throw WindowCrawlerError.noActiveApplication
-        }
-
-        return try await crawlContentElements(app, excludePaths: excludePaths)
-    }
-
-    /// Recursively crawls an element for content items, excluding known sidebar elements.
-    private func crawlContentInElement(
-        _ element: AXUIElement,
-        path: [String],
-        depth: Int,
-        excludePaths: Set<String>,
-        itemCount: inout Int
-    ) -> [MenuItem] {
-        // Prevent infinite recursion and enforce item limit
-        guard depth < Self.maxDepth, itemCount < Self.maxContentItems else {
-            return []
-        }
-
-        var items: [MenuItem] = []
-        let children = getChildren(element)
-
-        for child in children {
-            guard itemCount < Self.maxContentItems else { break }
-
-            guard let role = getRole(from: child) else { continue }
-
-            // Skip known sidebar containers to avoid duplication
-            if Self.sidebarSkipRoles.contains(role) {
-                continue
-            }
-
-            let title = getTitle(from: child)
-            let desc = getDescription(from: child)
-            let value = getValue(from: child)
-            var displayTitle = title ?? desc ?? value
-
-            // For row-type elements, look in children for title
-            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-               (role == "AXRow" || role == "AXCell") {
-                displayTitle = getTitleFromRowChildren(child)
-            }
-
-            var pathForChildren = path
-
-            // Check if this is an actionable content item
-            if Self.contentItemRoles.contains(role) {
-                let canAct = canPerformAction(on: child)
-                if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
-                    let currentPath = path + [itemTitle]
-                    // Update path for children regardless of whether this item is added
-                    // This ensures correct path hierarchy for nested elements
-                    pathForChildren = currentPath
-
-                    // Check if there's a sidebar item with the same path and skip to avoid duplicates
-                    let sidebarId = CommandType.sidebar.rawValue + "\0" + currentPath.joined(separator: "\0")
-                    if !excludePaths.contains(sidebarId) {
-                        let isEnabled = getIsEnabled(from: child)
-
-                        let menuItem = MenuItem(
-                            title: itemTitle,
-                            path: currentPath,
-                            keyboardShortcut: nil,
-                            axElement: child,
-                            isEnabled: isEnabled,
-                            type: .content
-                        )
-                        items.append(menuItem)
-                        itemCount += 1
-                    }
-                }
-            }
-
-            // Recurse into containers
-            if Self.contentContainerRoles.contains(role) || hasChildren(child) {
-                let subItems = crawlContentInElement(
-                    child,
-                    path: pathForChildren,
-                    depth: depth + 1,
-                    excludePaths: excludePaths,
-                    itemCount: &itemCount
-                )
-                items.append(contentsOf: subItems)
-            }
-        }
-
-        return items
     }
 }

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 PortalはmacOS向けUniversal Command Palette。Accessibility APIを使用してアクティブアプリのメニュー項目を検索・実行する。
 
 - **デフォルトホットキー**: Option+Space（設定画面で変更可能）
-- **MVPスコープ**: メニューコマンド検索・実行 + サイドバーナビゲーション
+- **MVPスコープ**: メニューコマンド検索・実行 + ウィンドウ要素ナビゲーション
 
 ## 技術スタック
 
@@ -48,15 +48,15 @@ Portal/
 │   ├── Notifications.swift    # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
 ├── Models/
-│   ├── MenuItem.swift         # コマンド項目のデータモデル（メニュー/サイドバー/ボタン）
+│   ├── MenuItem.swift         # コマンド項目のデータモデル（メニュー/ウィンドウ）
 │   └── CommandExecutionError.swift # 実行エラー型
 ├── Services/
 │   ├── HotkeyManager.swift    # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
-│   ├── WindowCrawler.swift    # ウィンドウ要素（サイドバー）走査サービス
+│   ├── WindowCrawler.swift    # ウィンドウ要素走査サービス（サイドバー/ツールバー/コンテンツ）
 │   ├── FuzzySearch.swift      # スコアベース曖昧検索
-│   └── CommandExecutor.swift  # コマンド実行（メニュー/サイドバー対応）
+│   └── CommandExecutor.swift  # コマンド実行（メニュー/ウィンドウ対応）
 ├── Settings/
 │   ├── HotkeyConfiguration.swift   # ホットキー設定モデル
 │   └── SettingsView.swift          # 設定画面UI
@@ -104,14 +104,14 @@ Portal/
 - [x] メニュー実行（#50）
 
 ### ウィンドウ要素サポート
-- [x] `CommandType` enum（menu/sidebar/button/content）（#84, #91）
-- [x] `WindowCrawler` サイドバー走査（#84）
-- [x] `WindowCrawler` コンテンツ走査（#91）
+- [x] `CommandType` enum（menu/window）（#84, #101）
+- [x] `WindowCrawler` 統合ウィンドウ要素走査（#101）
 - [x] `kAXMainWindowAttribute` ウィンドウ取得（#84）
-- [x] `AXOutline`/`AXSourceList`/`AXRow` 走査（#84）
-- [x] メインコンテンツ領域（AXButton/AXGroup）走査（#91）
+- [x] サイドバー（`AXOutline`/`AXSourceList`/`AXRow`）走査（#84）
+- [x] ツールバー/セグメントコントロール（`AXToolbar`/`AXSegmentedControl`）走査（#95, #101）
+- [x] コンテンツ領域（`AXButton`/`AXGroup`/`AXRadioButton`）走査（#91, #95）
 - [x] タイプ別アイコン表示（#84）
-- [x] タイプ別フィルタ（Cmd+1/2/3）（#89, #91）
+- [x] タイプ別フィルタ（Cmd+1/2）（#89, #101）
 
 ## パフォーマンス目標
 
