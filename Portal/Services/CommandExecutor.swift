@@ -240,11 +240,21 @@ final class CommandExecutor {
         return role == "AXButton"
     }
 
+    /// Maximum depth for child button search to prevent stack overflow.
+    private static let maxChildButtonSearchDepth = 5
+
     /// Tries to press child button elements recursively.
     /// Some content items are containers (AXGroup) with the actual clickable button as a child.
-    /// - Parameter element: The parent element to search for child buttons.
+    /// - Parameters:
+    ///   - element: The parent element to search for child buttons.
+    ///   - depth: Current recursion depth (default 0).
     /// - Returns: `true` if a child button was successfully pressed.
-    private func tryPressChildButtons(_ element: AXUIElement) -> Bool {
+    private func tryPressChildButtons(_ element: AXUIElement, depth: Int = 0) -> Bool {
+        // Limit recursion depth to prevent stack overflow
+        guard depth < Self.maxChildButtonSearchDepth else {
+            return false
+        }
+
         var childrenRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
               let children = childrenRef as? [AXUIElement] else {
@@ -261,8 +271,8 @@ final class CommandExecutor {
                 }
             }
 
-            // Recursively check grandchildren (limit depth to avoid performance issues)
-            if tryPressChildButtons(child) {
+            // Recursively check grandchildren with incremented depth
+            if tryPressChildButtons(child, depth: depth + 1) {
                 return true
             }
         }
