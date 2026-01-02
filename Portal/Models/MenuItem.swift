@@ -55,6 +55,8 @@ enum CommandType: String, Sendable {
 /// - `CommandPaletteViewModel` is `@MainActor`, so all access to `MenuItem` occurs on the main thread
 /// - The `AXUIElement` reference is only used for command execution (Issue #50), which will also
 ///   occur on the main thread via `AXUIElementPerformAction`
+/// - The `NSImage` property (`image`) is a reference type that is not thread-safe, but is only
+///   accessed on the main thread via `@MainActor` constrained code paths
 /// - All other fields are immutable value types
 ///
 /// If `MenuItem` is ever accessed from non-main threads, this assumption must be revisited.

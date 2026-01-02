@@ -63,18 +63,15 @@ final class ScreenCaptureService {
     /// Requests Screen Recording permission.
     /// Shows the system dialog prompting user to grant permission if not already granted.
     ///
-    /// On macOS 15+, `CGRequestScreenCaptureAccess()` may not show a dialog.
-    /// Instead, we attempt to access shareable content via ScreenCaptureKit,
-    /// which reliably triggers the system permission dialog.
+    /// To ensure the dialog appears, we also attempt to access shareable content
+    /// via ScreenCaptureKit, which reliably triggers the system permission dialog.
     static func requestPermission() {
-        let result = CGRequestScreenCaptureAccess()
+        // Try the standard API first
+        _ = CGRequestScreenCaptureAccess()
 
-        // If CGRequestScreenCaptureAccess didn't trigger dialog, try ScreenCaptureKit
-        if !result {
-            Task { @MainActor in
-                // This will trigger the permission dialog on macOS 15+
-                _ = try? await SCShareableContent.current
-            }
+        // On modern macOS, also try ScreenCaptureKit to ensure dialog appears
+        Task { @MainActor in
+            _ = try? await SCShareableContent.current
         }
     }
 
@@ -140,9 +137,8 @@ final class ScreenCaptureService {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let config = SCStreamConfiguration()
 
-        // Capture at higher resolution for better quality
-        // Note: Actual scale is calculated dynamically in extractRegion based on image size
-        let scale: CGFloat = 2.0
+        // Use the main screen's backing scale factor for correct resolution
+        let scale: CGFloat = NSScreen.main?.backingScaleFactor ?? 2.0
         config.width = Int(windowFrame.width * scale)
         config.height = Int(windowFrame.height * scale)
         config.scalesToFit = false
@@ -168,8 +164,10 @@ final class ScreenCaptureService {
     ///   - windowFrame: The frame of the window in screen coordinates
     /// - Returns: The extracted and resized icon, or nil if extraction fails
     private func extractRegion(_ elementFrame: CGRect, from windowImage: CGImage, windowFrame: CGRect) -> NSImage? {
-        // Convert from screen coordinates to window-local coordinates
-        // Note: Both screen coordinates (from Accessibility API) and CGImage have origin at top-left
+        // Convert from element (Accessibility) coordinates to window-local coordinates
+        // Note: Accessibility API returns coordinates with origin at top-left
+        //       (unlike general screen coordinates which use bottom-left), and
+        //       CGImage also uses a top-left origin, so no Y-axis flip is needed.
         let localRect = CGRect(
             x: elementFrame.origin.x - windowFrame.origin.x,
             y: elementFrame.origin.y - windowFrame.origin.y,
@@ -212,15 +210,35 @@ final class ScreenCaptureService {
     /// Resizes an image to the specified size.
     private func resizeImage(_ image: NSImage, to size: CGSize) -> NSImage {
         let newImage = NSImage(size: size)
-        newImage.lockFocus()
-        NSGraphicsContext.current?.imageInterpolation = .high
-        image.draw(
-            in: CGRect(origin: .zero, size: size),
-            from: CGRect(origin: .zero, size: image.size),
-            operation: .copy,
-            fraction: 1.0
-        )
-        newImage.unlockFocus()
+        newImage.cacheMode = .never
+
+        if let bitmapRep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: Int(size.width),
+            pixelsHigh: Int(size.height),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) {
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmapRep)
+            NSGraphicsContext.current?.imageInterpolation = .high
+
+            image.draw(
+                in: NSRect(origin: .zero, size: size),
+                from: NSRect(origin: .zero, size: image.size),
+                operation: .copy,
+                fraction: 1.0
+            )
+
+            NSGraphicsContext.restoreGraphicsState()
+            newImage.addRepresentation(bitmapRep)
+        }
+
         return newImage
     }
 

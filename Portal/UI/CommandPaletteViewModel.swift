@@ -33,6 +33,7 @@ final class CommandPaletteViewModel: ObservableObject {
     private let screenCaptureService = ScreenCaptureService()
     private var cancellables = Set<AnyCancellable>()
     private var loadItemsTask: Task<Void, Never>?
+    private var loadImagesTask: Task<Void, Never>?
 
     /// Debounce interval for search.
     static let searchDebounceInterval: Int = 50
@@ -45,6 +46,7 @@ final class CommandPaletteViewModel: ObservableObject {
 
     deinit {
         loadItemsTask?.cancel()
+        loadImagesTask?.cancel()
     }
 
     /// Filtered menu items based on search text and type filter.
@@ -245,7 +247,10 @@ final class CommandPaletteViewModel: ObservableObject {
 
             // Step 4: Load icons for sidebar and content items (optional)
             // Requires Screen Recording permission; falls back to SF Symbols if not granted
-            await self.loadImagesForItems(app: app)
+            self.loadImagesTask?.cancel()
+            self.loadImagesTask = Task { @MainActor in
+                await self.loadImagesForItems(app: app)
+            }
         }
     }
 
@@ -296,6 +301,9 @@ final class CommandPaletteViewModel: ObservableObject {
             return
         }
 
+        // Check for cancellation before expensive loop
+        guard !Task.isCancelled else { return }
+
         // Collect elements with their frames
         var elementsWithFrames: [(element: AXUIElement, frame: CGRect)] = []
         var indexMapping: [Int: Int] = [:]  // Maps elementsWithFrames index to menuItems index
@@ -308,6 +316,9 @@ final class CommandPaletteViewModel: ObservableObject {
         }
 
         guard !elementsWithFrames.isEmpty else { return }
+
+        // Check for cancellation before capture
+        guard !Task.isCancelled else { return }
 
         // Capture icons
         do {
