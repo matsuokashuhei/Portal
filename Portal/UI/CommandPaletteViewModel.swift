@@ -22,7 +22,7 @@ final class CommandPaletteViewModel: ObservableObject {
     private let windowCrawler = WindowCrawler()
     private let commandExecutor = CommandExecutor()
     private var cancellables = Set<AnyCancellable>()
-    private var loadMenuItemsTask: Task<Void, Never>?
+    private var loadItemsTask: Task<Void, Never>?
 
     /// Debounce interval for search.
     static let searchDebounceInterval: Int = 50
@@ -34,7 +34,7 @@ final class CommandPaletteViewModel: ObservableObject {
     }
 
     deinit {
-        loadMenuItemsTask?.cancel()
+        loadItemsTask?.cancel()
     }
 
     /// Filtered menu items based on search text.
@@ -127,9 +127,9 @@ final class CommandPaletteViewModel: ObservableObject {
         }
 
         // Cancel any in-flight request to prevent race conditions
-        loadMenuItemsTask?.cancel()
+        loadItemsTask?.cancel()
 
-        loadMenuItemsTask = Task { @MainActor in
+        loadItemsTask = Task { @MainActor in
             isLoading = true
             errorMessage = nil
             defer { isLoading = false }

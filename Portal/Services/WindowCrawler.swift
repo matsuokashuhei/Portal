@@ -104,6 +104,12 @@ final class WindowCrawler {
 
     /// Crawls the currently active application's sidebar.
     ///
+    /// - Important: This method may fail to find a non-Portal application if Portal itself
+    ///   is the only regular application running, or if Portal becomes frontmost before
+    ///   this method is called. Callers should capture the target application reference
+    ///   BEFORE showing the panel (as done in `AppDelegate.handleHotkeyPressed()`) and
+    ///   use `crawlSidebarElements(_:)` instead when possible.
+    ///
     /// - Returns: Array of menu items representing sidebar elements.
     /// - Throws: WindowCrawlerError if crawling fails.
     func crawlActiveApplication() async throws -> [MenuItem] {
@@ -123,15 +129,22 @@ final class WindowCrawler {
     /// Gets the frontmost application, excluding Portal.
     private func getFrontmostApp() -> NSRunningApplication? {
         let workspace = NSWorkspace.shared
+        let apps = workspace.runningApplications
         let portalBundleID = Bundle.main.bundleIdentifier
 
+        // First try the frontmost application
         if let frontmost = workspace.frontmostApplication,
            frontmost.bundleIdentifier != portalBundleID,
            frontmost.activationPolicy == .regular {
             return frontmost
         }
 
-        return nil
+        // Fallback: find any regular app that's not Portal
+        return apps.first {
+            $0.bundleIdentifier != portalBundleID &&
+            $0.activationPolicy == .regular &&
+            $0.isActive
+        }
     }
 
     /// Recursively crawls an element for sidebar items.
