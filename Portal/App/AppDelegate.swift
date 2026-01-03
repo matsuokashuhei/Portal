@@ -11,6 +11,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyManager: HotkeyManager?
+    private var hintModeHotkeyManager: HotkeyManager?
     private let panelController = PanelController()
     private var settingsWindow: NSWindow?
     private var settingsWindowObserver: NSObjectProtocol?
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         wasPermissionGranted = AccessibilityService.isGranted
         setupHotkeyManager()
+        setupHintModeHotkeyManager()
         setupPermissionObserver()
         setupHotkeyConfigurationObserver()
         setupOpenSettingsObserver()
@@ -108,6 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // (it adds monitors without checking if they already exist)
         hotkeyManager?.stop()
         hotkeyManager?.start()
+        hintModeHotkeyManager?.stop()
+        hintModeHotkeyManager?.start()
     }
 
     private func checkAccessibilityPermission() {
@@ -124,6 +128,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.handleHotkeyPressed()
         }
         hotkeyManager?.start()
+    }
+
+    private func setupHintModeHotkeyManager() {
+        // Hint mode uses single F key (no modifier)
+        let hintConfig = HotkeyConfiguration(modifier: .none, key: .f)
+        hintModeHotkeyManager = HotkeyManager(configuration: hintConfig) { [weak self] in
+            self?.handleHintModeHotkeyPressed()
+        }
+        hintModeHotkeyManager?.start()
     }
 
     private func setupHotkeyConfigurationObserver() {
@@ -195,6 +208,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 NSSound.beep()
             }
             updatePermissionMenuItemIfNeeded()
+        }
+    }
+
+    private func handleHintModeHotkeyPressed() {
+        // Ignore if command palette is visible
+        guard !panelController.isVisible else { return }
+
+        // Ignore if hint mode is already active
+        guard !HintModeController.shared.isActive else {
+            HintModeController.shared.deactivate()
+            return
+        }
+
+        if AccessibilityService.isGranted {
+            // Capture the frontmost app BEFORE activating hint mode
+            let frontmostApp = NSWorkspace.shared.frontmostApplication
+            let targetApp: NSRunningApplication?
+            if let app = frontmostApp,
+               app.bundleIdentifier != Bundle.main.bundleIdentifier {
+                targetApp = app
+            } else {
+                targetApp = nil
+            }
+
+            // Ignore when no active app
+            guard let targetApp else { return }
+
+            HintModeController.shared.activate(for: targetApp)
+        } else {
+            // Beep if permission not granted
+            NSSound.beep()
         }
     }
 

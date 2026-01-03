@@ -17,7 +17,7 @@ struct MenuItemTests {
     }
 
     @Test
-    func testIdGenerationFromPath() {
+    func testIdIsUUID() {
         let element = createDummyElement()
         let item = MenuItem(
             title: "New",
@@ -27,8 +27,9 @@ struct MenuItemTests {
             isEnabled: true
         )
 
-        // ID should be type + null + path joined with null character
-        #expect(item.id == "menu\0File\0New")
+        // ID should be a valid UUID string (36 characters with hyphens)
+        #expect(item.id.count == 36)
+        #expect(UUID(uuidString: item.id) != nil)
     }
 
     @Test
@@ -99,9 +100,10 @@ struct MenuItemTests {
             isEnabled: true
         )
 
-        // Same ID should produce equal items and same hash
-        #expect(item1 == item2)
-        #expect(item1.hashValue == item2.hashValue)
+        // Each MenuItem has a unique UUID, so they are NOT equal even with same path
+        // This is intentional to support items with the same title (e.g., "Blue" button and "Blue" popup)
+        #expect(item1 != item2)
+        #expect(item1.hashValue != item2.hashValue)
     }
 
     @Test
@@ -167,8 +169,8 @@ struct MenuItemTests {
         )
 
         #expect(item.pathString == "")
-        // ID includes type prefix even with empty path
-        #expect(item.id == "menu\0")
+        // ID is a UUID regardless of path
+        #expect(UUID(uuidString: item.id) != nil)
     }
 
     @Test
@@ -194,8 +196,9 @@ struct MenuItemTests {
         var set: Set<MenuItem> = [item1]
         set.insert(item2)
 
-        // Same ID means same item, so set should have only 1 element
-        #expect(set.count == 1)
+        // Each MenuItem has unique UUID, so set should have 2 elements
+        // This is intentional to support items with the same title
+        #expect(set.count == 2)
     }
 
     // MARK: - CommandType Tests
@@ -231,7 +234,7 @@ struct MenuItemTests {
     }
 
     @Test
-    func testIdIncludesType() {
+    func testIdIsUUIDForDifferentTypes() {
         let element = createDummyElement()
 
         let menuItem = MenuItem(
@@ -252,10 +255,10 @@ struct MenuItemTests {
             type: .window
         )
 
-        // Same path but different types should produce different IDs
+        // Each MenuItem has unique UUID regardless of type
         #expect(menuItem.id != windowItem.id)
-        #expect(menuItem.id.hasPrefix("menu\0"))
-        #expect(windowItem.id.hasPrefix("window\0"))
+        #expect(UUID(uuidString: menuItem.id) != nil)
+        #expect(UUID(uuidString: windowItem.id) != nil)
     }
 
     @Test
@@ -366,10 +369,10 @@ struct MenuItemTests {
             type: .window
         )
 
-        // Same path but different types should produce different IDs
+        // Each MenuItem has unique UUID regardless of type
         #expect(menuItem.id != windowItem.id)
-        #expect(menuItem.id.hasPrefix("menu\0"))
-        #expect(windowItem.id.hasPrefix("window\0"))
+        #expect(UUID(uuidString: menuItem.id) != nil)
+        #expect(UUID(uuidString: windowItem.id) != nil)
     }
 
     @Test

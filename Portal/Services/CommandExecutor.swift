@@ -23,7 +23,7 @@ final class CommandExecutor {
     /// Valid accessibility roles for each command type.
     private static let validRoles: [CommandType: Set<String>] = [
         .menu: ["AXMenuItem"],
-        .window: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton", "AXGroup"]
+        .window: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton", "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton", "AXComboBox", "AXTextField"]
     ]
 
     /// Actions to try for each command type, in order of preference.
@@ -33,7 +33,10 @@ final class CommandExecutor {
     ]
 
     /// Roles that require AXPress action (not kAXSelectedAttribute).
-    private static let rolesRequiringPress: Set<String> = ["AXRadioButton", "AXButton"]
+    private static let rolesRequiringPress: Set<String> = ["AXRadioButton", "AXButton", "AXCheckBox", "AXMenuButton", "AXMenuItem", "AXSwitch", "AXPopUpButton", "AXComboBox"]
+
+    /// Roles that require focus action instead of press.
+    private static let rolesRequiringFocus: Set<String> = ["AXTextField"]
 
     /// Executes a command item by performing the appropriate action on its AXUIElement.
     ///
@@ -42,13 +45,23 @@ final class CommandExecutor {
     ///
     /// - Important: This method must be called on the main thread.
     func execute(_ menuItem: MenuItem) -> Result<Void, CommandExecutionError> {
+        #if DEBUG
+        print("[CommandExecutor] execute: Starting execution for '\(menuItem.title)' (type: \(menuItem.type))")
+        #endif
+
         guard menuItem.isEnabled else {
+            #if DEBUG
+            print("[CommandExecutor] execute: Item is disabled")
+            #endif
             return .failure(.itemDisabled)
         }
 
         // Validate that the axElement still references the expected item.
         // This prevents executing the wrong item when UI has changed.
         guard isElementValid(menuItem.axElement, expectedTitle: menuItem.title, type: menuItem.type) else {
+            #if DEBUG
+            print("[CommandExecutor] execute: Element validation failed")
+            #endif
             return .failure(.elementInvalid)
         }
 
@@ -61,9 +74,64 @@ final class CommandExecutor {
             let roleResult = AXUIElementCopyAttributeValue(menuItem.axElement, kAXRoleAttribute as CFString, &roleRef)
             let role = (roleResult == .success) ? (roleRef as? String) : nil
 
-            // Skip kAXSelectedAttribute for roles that require AXPress
+            // For AXMenuItem with submenu, use AXShowMenu instead of AXPress
+            // AXPress doesn't work for menu items that have submenus
+            let isSubmenuItem = role == "AXMenuItem" && hasSubmenu(menuItem.axElement)
+            if isSubmenuItem {
+                #if DEBUG
+                print("[CommandExecutor] execute: AXMenuItem with submenu detected, trying AXShowMenu")
+                #endif
+                let showMenuResult = AXUIElementPerformAction(menuItem.axElement, "AXShowMenu" as CFString)
+                if showMenuResult == .success {
+                    #if DEBUG
+                    print("[CommandExecutor] execute: AXShowMenu succeeded")
+                    #endif
+                    return .success(())
+                }
+                #if DEBUG
+                print("[CommandExecutor] execute: AXShowMenu failed with result \(showMenuResult.rawValue), trying AXPress")
+                #endif
+                // Try AXPress for submenu items - some apps respond to this
+                let pressResult = AXUIElementPerformAction(menuItem.axElement, kAXPressAction as CFString)
+                if pressResult == .success {
+                    #if DEBUG
+                    print("[CommandExecutor] execute: AXPress succeeded for submenu item")
+                    #endif
+                    return .success(())
+                }
+                #if DEBUG
+                print("[CommandExecutor] execute: AXPress failed with result \(pressResult.rawValue)")
+                #endif
+                // Fall through to other actions if both fail
+            }
+
+            // For text fields, set focus instead of pressing
+            let requiresFocus = role.map { Self.rolesRequiringFocus.contains($0) } ?? false
+            if requiresFocus {
+                #if DEBUG
+                print("[CommandExecutor] execute: Text field detected, setting focus")
+                #endif
+                let focusResult = AXUIElementSetAttributeValue(
+                    menuItem.axElement,
+                    kAXFocusedAttribute as CFString,
+                    kCFBooleanTrue
+                )
+                if focusResult == .success {
+                    #if DEBUG
+                    print("[CommandExecutor] execute: Focus set successfully")
+                    #endif
+                    return .success(())
+                }
+                #if DEBUG
+                print("[CommandExecutor] execute: Failed to set focus with result \(focusResult.rawValue)")
+                #endif
+                // Fall through to try other actions if focus fails
+            }
+
+            // Skip kAXSelectedAttribute for roles that require AXPress or for submenu items
+            // (kAXSelectedAttribute just highlights the item without opening the submenu)
             let requiresPress = role.map { Self.rolesRequiringPress.contains($0) } ?? false
-            if !requiresPress {
+            if !requiresPress && !isSubmenuItem {
                 let selectResult = AXUIElementSetAttributeValue(
                     menuItem.axElement,
                     kAXSelectedAttribute as CFString,
@@ -133,14 +201,29 @@ final class CommandExecutor {
     /// 1. Items typically have unique titles within an application
     /// 2. Portal's typical use case is immediate execution after selection
     private func isElementValid(_ element: AXUIElement, expectedTitle: String, type: CommandType) -> Bool {
+        #if DEBUG
+        print("[CommandExecutor] isElementValid: Checking element for '\(expectedTitle)' (type: \(type))")
+        #endif
+
         // Verify role matches expected type first
         var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
-              let role = roleRef as? String else {
+        let roleResult = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
+        guard roleResult == .success, let role = roleRef as? String else {
+            #if DEBUG
+            print("[CommandExecutor] isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
+            #endif
             return false
         }
 
-        guard let validRoles = Self.validRoles[type], validRoles.contains(role) else {
+        #if DEBUG
+        print("[CommandExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
+        #endif
+
+        guard let validRolesForType = Self.validRoles[type], validRolesForType.contains(role) else {
+            #if DEBUG
+            let expectedRoles = Self.validRoles[type] ?? []
+            print("[CommandExecutor] isElementValid: Role '\(role)' not in validRoles \(expectedRoles) for type \(type)")
+            #endif
             return false
         }
 
@@ -169,6 +252,13 @@ final class CommandExecutor {
             possibleTitles.append(v)
         }
 
+        // Try placeholder value (used by text fields like "Find in Songs")
+        var placeholderRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXPlaceholderValue" as CFString, &placeholderRef) == .success,
+           let p = placeholderRef as? String, !p.isEmpty {
+            possibleTitles.append(p)
+        }
+
         // For window items, also check child elements
         if type == .window {
             if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
@@ -178,6 +268,9 @@ final class CommandExecutor {
 
         // Accept if expected title matches any of the possible titles
         guard possibleTitles.contains(expectedTitle) else {
+            #if DEBUG
+            print("[CommandExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles)")
+            #endif
             return false
         }
 
@@ -250,6 +343,30 @@ final class CommandExecutor {
 
     /// Maximum depth for child button search to prevent stack overflow.
     private static let maxChildButtonSearchDepth = 5
+
+    /// Checks if an AXMenuItem element has a submenu.
+    ///
+    /// Submenu items are detected by checking if the element has children,
+    /// specifically looking for an AXMenu child element.
+    ///
+    /// - Parameter element: The AXUIElement to check.
+    /// - Returns: `true` if the element has a submenu.
+    private func hasSubmenu(_ element: AXUIElement) -> Bool {
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return false
+        }
+
+        return children.contains { child in
+            var roleRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
+               let role = roleRef as? String {
+                return role == "AXMenu"
+            }
+            return false
+        }
+    }
 
     /// Tries to press child button elements recursively.
     /// Some content items are containers (AXGroup) with the actual clickable button as a child.

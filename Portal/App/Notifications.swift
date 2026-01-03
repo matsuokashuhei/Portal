@@ -35,6 +35,12 @@ extension Notification.Name {
 
     /// Posted when user presses Cmd+2 to toggle window items filter.
     static let toggleWindowFilter = Notification.Name("com.matsuokashuhei.Portal.toggleWindowFilter")
+
+    /// Posted when hint mode is activated.
+    static let hintModeDidActivate = Notification.Name("com.matsuokashuhei.Portal.hintModeDidActivate")
+
+    /// Posted when hint mode is deactivated.
+    static let hintModeDidDeactivate = Notification.Name("com.matsuokashuhei.Portal.hintModeDidDeactivate")
 }
 
 /// Keys for notification userInfo dictionaries.

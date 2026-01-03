@@ -45,6 +45,7 @@ struct HotkeyConfigurationTests {
         #expect(ModifierKey.command.eventModifier == .command)
         #expect(ModifierKey.control.eventModifier == .control)
         #expect(ModifierKey.shift.eventModifier == .shift)
+        #expect(ModifierKey.none.eventModifier == [])
     }
 
     @Test
@@ -53,6 +54,7 @@ struct HotkeyConfigurationTests {
         #expect(ModifierKey.command.cgEventMask == .maskCommand)
         #expect(ModifierKey.control.cgEventMask == .maskControl)
         #expect(ModifierKey.shift.cgEventMask == .maskShift)
+        #expect(ModifierKey.none.cgEventMask == [])
     }
 
     @Test
@@ -61,6 +63,7 @@ struct HotkeyConfigurationTests {
         #expect(ModifierKey.command.symbol == "⌘")
         #expect(ModifierKey.control.symbol == "⌃")
         #expect(ModifierKey.shift.symbol == "⇧")
+        #expect(ModifierKey.none.symbol == "")
     }
 
     @Test
@@ -69,17 +72,19 @@ struct HotkeyConfigurationTests {
         #expect(ModifierKey.command.rawValue == "Command")
         #expect(ModifierKey.control.rawValue == "Control")
         #expect(ModifierKey.shift.rawValue == "Shift")
+        #expect(ModifierKey.none.rawValue == "None")
     }
 
     @Test
     func testModifierKeyCaseIterable() {
         let allCases = ModifierKey.allCases
 
-        #expect(allCases.count == 4)
+        #expect(allCases.count == 5)
         #expect(allCases.contains(.option))
         #expect(allCases.contains(.command))
         #expect(allCases.contains(.control))
         #expect(allCases.contains(.shift))
+        #expect(allCases.contains(.none))
     }
 
     // MARK: - HotkeyKey Tests
