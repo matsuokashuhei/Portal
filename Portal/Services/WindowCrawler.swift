@@ -59,7 +59,9 @@ struct WindowCrawlResult {
 @MainActor
 final class WindowCrawler {
     /// Maximum depth for recursive traversal to prevent infinite loops.
-    private static let maxDepth = 10
+    /// Increased to 20 to support Electron apps (Slack, VS Code) where AXWebArea
+    /// content can be nested 15+ levels deep.
+    private static let maxDepth = 20
 
     /// Maximum number of items to return (performance safeguard).
     /// Increased from 200 to 500 to ensure player controls and other UI elements
@@ -77,7 +79,10 @@ final class WindowCrawler {
         "AXToolbar",
         "AXSegmentedControl",
         "AXMenu",
-        "AXMenuBar"
+        "AXMenuBar",
+        // Electron/Chromium web content area
+        "AXWebArea",
+        "AXTabGroup"
     ]
 
     /// Accessibility roles for actionable items we can interact with.
@@ -97,6 +102,15 @@ final class WindowCrawler {
         "AXTextField"
     ]
 
+    #if DEBUG
+    /// Tracks all roles encountered during crawling for analysis.
+    private var roleCounts: [String: Int] = [:]
+    /// Tracks roles that are not in itemRoles or containerRoles.
+    private var unknownRoles: Set<String> = []
+    /// Tracks elements without titles for debugging.
+    private var elementsWithoutTitle: [(role: String, actions: [String])] = []
+    #endif
+
     /// Crawls window elements from the application's windows.
     ///
     /// If AXMenuItem elements are found in the hierarchy (indicating a popup menu is open),
@@ -109,6 +123,15 @@ final class WindowCrawler {
         guard AccessibilityService.isGranted else {
             throw WindowCrawlerError.accessibilityNotGranted
         }
+
+        #if DEBUG
+        // Reset debug tracking
+        roleCounts = [:]
+        unknownRoles = []
+        elementsWithoutTitle = []
+        print("[WindowCrawler] ========== START CRAWL ==========")
+        print("[WindowCrawler] App: \(app.localizedName ?? "Unknown") (Bundle: \(app.bundleIdentifier ?? "unknown"))")
+        #endif
 
         let pid = app.processIdentifier
         let axApp = AXUIElementCreateApplication(pid)
@@ -148,8 +171,83 @@ final class WindowCrawler {
 
         let allItems = crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount)
 
+        #if DEBUG
+        printDebugSummary(totalItems: allItems.count)
+        #endif
+
         return WindowCrawlResult(items: deduplicateItems(allItems), isPopupMenu: false)
     }
+
+    #if DEBUG
+    /// Recursively prints element tree for debugging.
+    private func debugPrintElementTree(_ element: AXUIElement, indent: Int, maxDepth: Int) {
+        guard indent < maxDepth else { return }
+
+        let children = getChildren(element)
+        let prefix = String(repeating: "  ", count: indent)
+
+        for (idx, child) in children.prefix(30).enumerated() {
+            guard let role = getRole(from: child) else { continue }
+            let title = getTitle(from: child) ?? ""
+            let desc = getDescription(from: child) ?? ""
+            let value = getValue(from: child) ?? ""
+            let help = getHelp(from: child) ?? ""
+
+            // Check if actionable
+            var actionsRef: CFArray?
+            var actions: [String] = []
+            if AXUIElementCopyActionNames(child, &actionsRef) == .success,
+               let arr = actionsRef as? [String] {
+                actions = arr
+            }
+            let actionStr = actions.isEmpty ? "" : " actions=[\(actions.joined(separator: ","))]"
+
+            let displayInfo = [title, desc, value, help].filter { !$0.isEmpty }.joined(separator: "|")
+            print("[WindowCrawler] 🌐 \(prefix)[\(idx)] \(role) '\(displayInfo.prefix(60))'\(actionStr)")
+
+            // Recurse into children
+            debugPrintElementTree(child, indent: indent + 1, maxDepth: maxDepth)
+        }
+    }
+
+    /// Prints a summary of the crawl for debugging Electron app compatibility.
+    private func printDebugSummary(totalItems: Int) {
+        print("[WindowCrawler] ========== CRAWL SUMMARY ==========")
+        print("[WindowCrawler] Total items found: \(totalItems)")
+
+        // Print role counts sorted by frequency
+        print("[WindowCrawler] --- Role Counts (sorted by frequency) ---")
+        let sortedRoles = roleCounts.sorted { $0.value > $1.value }
+        for (role, count) in sortedRoles {
+            let isKnown = Self.itemRoles.contains(role) || Self.containerRoles.contains(role)
+            let marker = isKnown ? "✓" : "?"
+            print("[WindowCrawler]   \(marker) \(role): \(count)")
+        }
+
+        // Print unknown roles (potential candidates for Electron support)
+        if !unknownRoles.isEmpty {
+            print("[WindowCrawler] --- Unknown Roles (not in itemRoles/containerRoles) ---")
+            for role in unknownRoles.sorted() {
+                print("[WindowCrawler]   ⚠️ \(role)")
+            }
+        }
+
+        // Print elements without titles
+        if !elementsWithoutTitle.isEmpty {
+            print("[WindowCrawler] --- Elements Without Title (\(elementsWithoutTitle.count) total) ---")
+            // Group by role
+            var byRole: [String: Int] = [:]
+            for elem in elementsWithoutTitle {
+                byRole[elem.role, default: 0] += 1
+            }
+            for (role, count) in byRole.sorted(by: { $0.value > $1.value }) {
+                print("[WindowCrawler]   \(role): \(count) elements without title")
+            }
+        }
+
+        print("[WindowCrawler] ========== END CRAWL ==========")
+    }
+    #endif
 
     /// Collects all AXMenuItem elements from the hierarchy.
     ///
@@ -360,6 +458,22 @@ final class WindowCrawler {
                 continue
             }
 
+            #if DEBUG
+            // Track role counts for analysis
+            roleCounts[role, default: 0] += 1
+
+            // Track unknown roles
+            if !Self.itemRoles.contains(role) && !Self.containerRoles.contains(role) {
+                unknownRoles.insert(role)
+            }
+
+            // Deep debug for AXWebArea - show its children structure recursively
+            if role == "AXWebArea" {
+                print("[WindowCrawler] 🌐 AXWebArea found at depth \(depth), exploring deeply (maxDepth: 12)...")
+                debugPrintElementTree(child, indent: 0, maxDepth: 12)
+            }
+            #endif
+
             // Get title or description - try multiple attributes for buttons
             // Use first non-empty value (empty string is different from nil)
             let title = getTitle(from: child)
@@ -406,6 +520,20 @@ final class WindowCrawler {
             var pathForChildren = path
             if Self.itemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
+
+                #if DEBUG
+                // Track elements without title for debugging
+                if (displayTitle == nil || displayTitle?.isEmpty == true) && canAct {
+                    var actionsRef: CFArray?
+                    var actions: [String] = []
+                    if AXUIElementCopyActionNames(child, &actionsRef) == .success,
+                       let actionsArray = actionsRef as? [String] {
+                        actions = actionsArray
+                    }
+                    elementsWithoutTitle.append((role: role, actions: actions))
+                }
+                #endif
+
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     // Skip section headers (like "Library", "Store", "Playlists" in Music app)
                     // These have AXPress action but don't actually do anything
