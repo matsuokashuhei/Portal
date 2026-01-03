@@ -502,9 +502,7 @@ final class HintModeController {
                 #if DEBUG
                 print("[HintModeController] App switched to \(activatedApp.localizedName ?? "unknown"), deactivating")
                 #endif
-                Task { @MainActor in
-                    self.deactivate()
-                }
+                self.deactivate()
             }
         }
     }
