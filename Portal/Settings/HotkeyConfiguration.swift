@@ -138,10 +138,12 @@ struct HotkeyConfiguration: Equatable {
 /// Centralizing keys here prevents typos and ensures consistency
 /// when accessing settings via UserDefaults or @AppStorage.
 enum SettingsKey {
-    /// Key for storing the hotkey modifier (Option/Command/Control/Shift).
-    static let hotkeyModifier = "hotkeyModifier"
-    /// Key for storing the hotkey key (Space/Tab/A-Z).
-    static let hotkeyKey = "hotkeyKey"
+    /// Key for storing the hint mode hotkey modifier (Option/Command/Control/Shift/None).
+    /// Note: Uses new key name to avoid inheriting old command palette settings.
+    static let hotkeyModifier = "hintModeHotkeyModifier"
+    /// Key for storing the hint mode hotkey key (Space/Tab/A-Z).
+    /// Note: Uses new key name to avoid inheriting old command palette settings.
+    static let hotkeyKey = "hintModeHotkeyKey"
 }
 
 extension HotkeyConfiguration {
