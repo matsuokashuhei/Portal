@@ -20,14 +20,14 @@ struct SettingsView: View {
 }
 
 struct GeneralSettingsView: View {
-    @AppStorage(SettingsKey.hotkeyModifier) private var modifierRaw = ModifierKey.option.rawValue
-    @AppStorage(SettingsKey.hotkeyKey) private var keyRaw = HotkeyKey.space.rawValue
+    @AppStorage(SettingsKey.hotkeyModifier) private var modifierRaw = ModifierKey.none.rawValue
+    @AppStorage(SettingsKey.hotkeyKey) private var keyRaw = HotkeyKey.f.rawValue
 
     @State private var isAccessibilityGranted = AccessibilityService.isGranted
 
     private var selectedModifier: Binding<ModifierKey> {
         Binding(
-            get: { ModifierKey(rawValue: modifierRaw) ?? .option },
+            get: { ModifierKey(rawValue: modifierRaw) ?? .none },
             set: {
                 modifierRaw = $0.rawValue
                 notifyHotkeyChanged()
@@ -37,7 +37,7 @@ struct GeneralSettingsView: View {
 
     private var selectedKey: Binding<HotkeyKey> {
         Binding(
-            get: { HotkeyKey(rawValue: keyRaw) ?? .space },
+            get: { HotkeyKey(rawValue: keyRaw) ?? .f },
             set: {
                 keyRaw = $0.rawValue
                 notifyHotkeyChanged()
@@ -61,8 +61,10 @@ struct GeneralSettingsView: View {
                     .labelsHidden()
                     .frame(width: 140)
 
-                    Text("+")
-                        .foregroundStyle(.secondary)
+                    if selectedModifier.wrappedValue != .none {
+                        Text("+")
+                            .foregroundStyle(.secondary)
+                    }
 
                     Picker("Key", selection: selectedKey) {
                         ForEach(HotkeyKey.allCases) { key in
@@ -74,9 +76,13 @@ struct GeneralSettingsView: View {
                     .frame(width: 100)
                 }
 
-                Text("Current: \(selectedModifier.wrappedValue.symbol) \(selectedKey.wrappedValue.rawValue)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    selectedModifier.wrappedValue == .none
+                    ? "Current: \(selectedKey.wrappedValue.rawValue)"
+                    : "Current: \(selectedModifier.wrappedValue.symbol) \(selectedKey.wrappedValue.rawValue)"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             } header: {
                 Text("Hint Mode")
             }
