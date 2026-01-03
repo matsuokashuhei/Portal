@@ -400,9 +400,19 @@ final class CommandExecutor {
             print("[CommandExecutor] executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
             #endif
 
-            if valueBefore != valueAfter {
+            // Handle different scenarios for value comparison
+            if let before = valueBefore, let after = valueAfter {
+                // Both values available: check if they're different
+                if before != after {
+                    #if DEBUG
+                    print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded and value changed")
+                    #endif
+                    return true
+                }
+            } else if valueBefore == nil, valueAfter != nil {
+                // Value became available after AXPress - consider this a success
                 #if DEBUG
-                print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded and value changed")
+                print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded and value became available")
                 #endif
                 return true
             }
@@ -478,6 +488,8 @@ final class CommandExecutor {
             return nil
         }
         // swiftlint:disable:next force_cast
+        // Note: AXUIElement is a CoreFoundation type alias, conditional cast (as?) doesn't work.
+        // Guard ensures parentRef is non-nil before force cast.
         let parent = parentRef as! AXUIElement
 
         // Get sibling elements (children of parent)
