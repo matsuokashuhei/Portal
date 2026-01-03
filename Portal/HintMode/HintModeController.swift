@@ -228,11 +228,21 @@ final class HintModeController {
             print("[HintModeController] Created \(hints.count) hints")
             #endif
 
-            // Create and show overlay windows
-            guard let screen = NSScreen.main else { return }
-            let overlayWindow = HintOverlayWindow(hints: hints, on: screen)
-            overlayWindow.show()
-            overlayWindows = [overlayWindow]
+            // Create and show overlay windows for all screens
+            overlayWindows = HintOverlayWindow.createForAllScreens(hints: hints)
+            guard !overlayWindows.isEmpty else {
+                #if DEBUG
+                print("[HintModeController] No screens available for overlay")
+                #endif
+                return
+            }
+            for window in overlayWindows {
+                window.show()
+            }
+
+            #if DEBUG
+            print("[HintModeController] Created \(overlayWindows.count) overlay windows for \(NSScreen.screens.count) screens")
+            #endif
 
             // Start keyboard monitoring
             startKeyboardMonitor()
