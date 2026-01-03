@@ -409,21 +409,18 @@ final class CommandExecutor {
                     #endif
                     return true
                 }
-            } else if valueBefore == nil, valueAfter != nil {
-                // Value became available after AXPress - consider this a success
-                #if DEBUG
-                print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded and value became available")
-                #endif
-                return true
             }
+            // Note: When valueBefore is nil but valueAfter is non-nil, we cannot confirm
+            // that AXPress actually toggled the value. Fall through to direct toggle fallback.
 
             #if DEBUG
-            print("[CommandExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged, trying direct toggle")
+            print("[CommandExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged or unverifiable, trying direct toggle")
             #endif
         }
 
         // Try direct value toggle as fallback (required for System Settings on macOS Ventura+)
         if let currentValue = getCheckboxValue(element) {
+            let expectedValue = !currentValue
             let newValue: CFBoolean = currentValue ? kCFBooleanFalse : kCFBooleanTrue
             let setResult = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             #if DEBUG
@@ -431,7 +428,31 @@ final class CommandExecutor {
             #endif
 
             if setResult == .success {
-                return true
+                // Verify the value actually changed
+                let valueAfterToggle = getCheckboxValue(element)
+                #if DEBUG
+                print("[CommandExecutor] executeCheckboxOrSwitch: Value after direct toggle: \(valueAfterToggle?.description ?? "nil")")
+                #endif
+
+                if let actualValue = valueAfterToggle {
+                    if actualValue == expectedValue {
+                        #if DEBUG
+                        print("[CommandExecutor] executeCheckboxOrSwitch: Direct toggle succeeded and value changed as expected")
+                        #endif
+                        return true
+                    } else {
+                        #if DEBUG
+                        print("[CommandExecutor] executeCheckboxOrSwitch: Direct toggle returned success but value did not change")
+                        #endif
+                        // Value didn't change - continue to fail
+                    }
+                } else {
+                    // Cannot verify value after toggle, trust the success result
+                    #if DEBUG
+                    print("[CommandExecutor] executeCheckboxOrSwitch: Direct toggle succeeded but value unavailable; treating as success")
+                    #endif
+                    return true
+                }
             }
         }
 
