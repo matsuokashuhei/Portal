@@ -409,12 +409,18 @@ final class CommandExecutor {
                     #endif
                     return true
                 }
+                // Both values available but unchanged: fall through to direct toggle
+            } else if valueBefore == nil && valueAfter != nil {
+                // AXPress succeeded and we got a value after (but couldn't read before).
+                // Trust that AXPress worked - don't try direct toggle as it would revert the change.
+                #if DEBUG
+                print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded, trusting result (valueBefore was nil)")
+                #endif
+                return true
             }
-            // Note: When valueBefore is nil but valueAfter is non-nil, we cannot confirm
-            // that AXPress actually toggled the value. Fall through to direct toggle fallback.
 
             #if DEBUG
-            print("[CommandExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged or unverifiable, trying direct toggle")
+            print("[CommandExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged, trying direct toggle")
             #endif
         }
 
