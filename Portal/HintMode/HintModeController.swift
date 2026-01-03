@@ -68,6 +68,9 @@ final class HintModeController {
     /// Fallback keyboard monitor when CGEventTap is not available.
     private var keyboardMonitor: Any?
 
+    /// Observer for application activation notifications.
+    private var applicationActivationObserver: NSObjectProtocol?
+
     // MARK: - Dependencies
 
     /// The window crawler for retrieving UI elements.
@@ -122,6 +125,9 @@ final class HintModeController {
 
         // Stop keyboard monitoring
         stopKeyboardMonitor()
+
+        // Stop observing application activation
+        stopApplicationActivationObserver()
 
         // Dismiss overlay windows
         #if DEBUG
@@ -230,6 +236,9 @@ final class HintModeController {
 
             // Start keyboard monitoring
             startKeyboardMonitor()
+
+            // Start observing application activation to auto-deactivate when app switches
+            startApplicationActivationObserver()
 
             isActive = true
 
@@ -464,5 +473,40 @@ final class HintModeController {
 
         // Deactivate after execution (success or failure)
         deactivate()
+    }
+
+    // MARK: - Application Activation Observation
+
+    /// Starts observing application activation to auto-deactivate hint mode when the target app is deactivated.
+    private func startApplicationActivationObserver() {
+        applicationActivationObserver = NotificationCenter.default.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self, self.isActive else { return }
+
+            // Get the newly activated application
+            guard let userInfo = notification.userInfo,
+                  let activatedApp = userInfo[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else {
+                return
+            }
+
+            // If the activated app is different from our target, deactivate hint mode
+            if activatedApp.processIdentifier != self.targetApp?.processIdentifier {
+                #if DEBUG
+                print("[HintModeController] App switched to \(activatedApp.localizedName ?? "unknown"), deactivating")
+                #endif
+                self.deactivate()
+            }
+        }
+    }
+
+    /// Stops observing application activation.
+    private func stopApplicationActivationObserver() {
+        if let observer = applicationActivationObserver {
+            NotificationCenter.default.removeObserver(observer)
+            applicationActivationObserver = nil
+        }
     }
 }
