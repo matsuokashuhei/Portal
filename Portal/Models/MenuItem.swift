@@ -7,15 +7,10 @@
 
 import ApplicationServices
 
-/// Type of command that can be executed from the command palette.
+/// Type of command that can be executed.
 ///
-/// Each type corresponds to a different source of UI elements and may require
-/// different Accessibility API patterns for crawling and execution.
+/// Currently only supports window UI elements for hint mode navigation.
 enum CommandType: String, Sendable {
-    /// Menu bar item (File > New, Edit > Copy, etc.)
-    /// Crawled via `kAXMenuBarAttribute` using `MenuCrawler`.
-    case menu
-
     /// Window UI element (sidebar, toolbar, content area buttons, etc.)
     /// Includes AXSourceList, AXOutline, AXRow, AXButton, AXGroup, etc.
     /// Found in apps like Finder, Apple Music, Notes, System Settings.
@@ -25,14 +20,11 @@ enum CommandType: String, Sendable {
 
 /// Represents a command item from an application's UI.
 ///
-/// This struct can represent menu bar items or window UI elements,
-/// depending on the `type` property. All types share the same structure for unified handling
-/// in the command palette.
+/// This struct represents window UI elements used for hint mode navigation.
 ///
 /// - Important: The `axElement` reference can become invalid if the source application
-///   modifies its UI structure, quits, or crashes. When executing actions (Issue #50),
-///   the caller should handle `AXError` appropriately when the element is no longer valid.
-///   Crawlers may cache results briefly to improve performance and help mitigate stale references.
+///   modifies its UI structure, quits, or crashes. The caller should handle `AXError`
+///   appropriately when the element is no longer valid.
 ///
 /// - Note: The `id` property uses a UUID generated at creation time to ensure uniqueness.
 ///   This prevents issues when multiple elements have the same title and path
@@ -40,9 +32,8 @@ enum CommandType: String, Sendable {
 ///
 /// ## Thread Safety
 /// This type is marked as `@unchecked Sendable` because:
-/// - `MenuCrawler` and `WindowCrawler` are `@MainActor`, so all `MenuItem` instances are created on the main thread
-/// - `CommandPaletteViewModel` is `@MainActor`, so all access to `MenuItem` occurs on the main thread
-/// - The `AXUIElement` reference is only used for command execution (Issue #50), which will also
+/// - `WindowCrawler` is `@MainActor`, so all `MenuItem` instances are created on the main thread
+/// - The `AXUIElement` reference is only used for command execution, which will also
 ///   occur on the main thread via `AXUIElementPerformAction`
 /// - All other fields are immutable value types
 ///
@@ -91,7 +82,7 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         keyboardShortcut: String?,
         axElement: AXUIElement,
         isEnabled: Bool,
-        type: CommandType = .menu
+        type: CommandType = .window
     ) {
         self.title = title
         self.path = path

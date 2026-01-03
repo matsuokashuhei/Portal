@@ -9,7 +9,7 @@ import ApplicationServices
 
 /// Service responsible for executing commands via Accessibility API.
 ///
-/// This service can execute menu items and window UI elements.
+/// This service executes window UI elements for hint mode navigation.
 /// It must run on the main thread as `AXUIElementPerformAction` requires it.
 /// The `@MainActor` attribute ensures all method calls are dispatched to the main thread.
 ///
@@ -20,16 +20,16 @@ import ApplicationServices
 /// consider introducing a protocol abstraction if mock injection becomes necessary.
 @MainActor
 final class CommandExecutor {
-    /// Valid accessibility roles for each command type.
-    private static let validRoles: [CommandType: Set<String>] = [
-        .menu: ["AXMenuItem"],
-        .window: ["AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton", "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton", "AXComboBox", "AXTextField"]
+    /// Valid accessibility roles for window elements.
+    private static let validRoles: Set<String> = [
+        "AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton",
+        "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton",
+        "AXComboBox", "AXTextField"
     ]
 
-    /// Actions to try for each command type, in order of preference.
-    private static let preferredActions: [CommandType: [String]] = [
-        .menu: [kAXPressAction as String],
-        .window: [kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"]
+    /// Actions to try for window elements, in order of preference.
+    private static let preferredActions: [String] = [
+        kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"
     ]
 
     /// Roles that require AXPress action (not kAXSelectedAttribute).
@@ -58,7 +58,7 @@ final class CommandExecutor {
 
         // Validate that the axElement still references the expected item.
         // This prevents executing the wrong item when UI has changed.
-        guard isElementValid(menuItem.axElement, expectedTitle: menuItem.title, type: menuItem.type) else {
+        guard isElementValid(menuItem.axElement, expectedTitle: menuItem.title) else {
             #if DEBUG
             print("[CommandExecutor] execute: Element validation failed")
             #endif
@@ -143,8 +143,8 @@ final class CommandExecutor {
             }
         }
 
-        // Try preferred actions for this command type
-        let actions = Self.preferredActions[menuItem.type] ?? [kAXPressAction as String]
+        // Try preferred actions
+        let actions = Self.preferredActions
 
         // For window items, check if this is a container element (not AXButton)
         // If so, we should try child buttons instead of trusting AXPress success
@@ -191,7 +191,6 @@ final class CommandExecutor {
     /// - Parameters:
     ///   - element: The AXUIElement to validate.
     ///   - expectedTitle: The title the element should have.
-    ///   - type: The command type to validate against.
     /// - Returns: `true` if the element's title and role match expectations.
     ///
     /// ## Limitations
@@ -200,9 +199,9 @@ final class CommandExecutor {
     /// this is rare because:
     /// 1. Items typically have unique titles within an application
     /// 2. Portal's typical use case is immediate execution after selection
-    private func isElementValid(_ element: AXUIElement, expectedTitle: String, type: CommandType) -> Bool {
+    private func isElementValid(_ element: AXUIElement, expectedTitle: String) -> Bool {
         #if DEBUG
-        print("[CommandExecutor] isElementValid: Checking element for '\(expectedTitle)' (type: \(type))")
+        print("[CommandExecutor] isElementValid: Checking element for '\(expectedTitle)'")
         #endif
 
         // Verify role matches expected type first
@@ -219,10 +218,9 @@ final class CommandExecutor {
         print("[CommandExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
         #endif
 
-        guard let validRolesForType = Self.validRoles[type], validRolesForType.contains(role) else {
+        guard Self.validRoles.contains(role) else {
             #if DEBUG
-            let expectedRoles = Self.validRoles[type] ?? []
-            print("[CommandExecutor] isElementValid: Role '\(role)' not in validRoles \(expectedRoles) for type \(type)")
+            print("[CommandExecutor] isElementValid: Role '\(role)' not in validRoles \(Self.validRoles)")
             #endif
             return false
         }
@@ -259,11 +257,9 @@ final class CommandExecutor {
             possibleTitles.append(p)
         }
 
-        // For window items, also check child elements
-        if type == .window {
-            if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
-                possibleTitles.append(childTitle)
-            }
+        // Also check child elements (for sidebar items like AXRow)
+        if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
+            possibleTitles.append(childTitle)
         }
 
         // Accept if expected title matches any of the possible titles

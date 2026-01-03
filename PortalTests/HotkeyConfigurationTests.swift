@@ -33,8 +33,9 @@ struct HotkeyConfigurationTests {
     func testDefaultConfiguration() {
         let config = HotkeyConfiguration.default
 
-        #expect(config.modifier == .option)
-        #expect(config.key == .space)
+        // Default is F key with no modifier for hint mode
+        #expect(config.modifier == .none)
+        #expect(config.key == .f)
     }
 
     // MARK: - ModifierKey Tests
@@ -139,8 +140,9 @@ struct HotkeyConfigurationTests {
         withIsolatedDefaults { defaults in
             // defaults is empty by default, so just load
             let loaded = HotkeyConfiguration.load(from: defaults)
-            #expect(loaded.modifier == .option)
-            #expect(loaded.key == .space)
+            // Default is F key with no modifier for hint mode
+            #expect(loaded.modifier == .none)
+            #expect(loaded.key == .f)
         }
     }
 
@@ -152,9 +154,10 @@ struct HotkeyConfigurationTests {
             defaults.set("InvalidKey", forKey: SettingsKey.hotkeyKey)
 
             // Load and verify defaults are returned
+            // Default is F key with no modifier for hint mode
             let loaded = HotkeyConfiguration.load(from: defaults)
-            #expect(loaded.modifier == .option)
-            #expect(loaded.key == .space)
+            #expect(loaded.modifier == .none)
+            #expect(loaded.key == .f)
         }
     }
 

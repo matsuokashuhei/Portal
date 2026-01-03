@@ -10,9 +10,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
-    private var hotkeyManager: HotkeyManager?
     private var hintModeHotkeyManager: HotkeyManager?
-    private let panelController = PanelController()
     private var settingsWindow: NSWindow?
     private var settingsWindowObserver: NSObjectProtocol?
 
@@ -39,18 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         wasPermissionGranted = AccessibilityService.isGranted
-        setupHotkeyManager()
         setupHintModeHotkeyManager()
         setupPermissionObserver()
         setupHotkeyConfigurationObserver()
         setupOpenSettingsObserver()
-
-        // Auto-show panel for UI testing (XCUITest cannot simulate global hotkeys)
-        if TestConfiguration.shouldShowPanelOnLaunch {
-            DispatchQueue.main.async { [weak self] in
-                self?.panelController.show()
-            }
-        }
     }
 
     private func setupPermissionObserver() {
@@ -108,8 +98,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func restartHotkeyManager() {
         // stop() must be called before start() because start() is not idempotent
         // (it adds monitors without checking if they already exist)
-        hotkeyManager?.stop()
-        hotkeyManager?.start()
         hintModeHotkeyManager?.stop()
         hintModeHotkeyManager?.start()
     }
@@ -122,18 +110,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updatePermissionMenuItemIfNeeded()
     }
 
-    private func setupHotkeyManager() {
-        let config = HotkeyConfiguration.load()
-        hotkeyManager = HotkeyManager(configuration: config) { [weak self] in
-            self?.handleHotkeyPressed()
-        }
-        hotkeyManager?.start()
-    }
-
     private func setupHintModeHotkeyManager() {
-        // Hint mode uses single F key (no modifier)
-        let hintConfig = HotkeyConfiguration(modifier: .none, key: .f)
-        hintModeHotkeyManager = HotkeyManager(configuration: hintConfig) { [weak self] in
+        // Load hint mode hotkey configuration from UserDefaults
+        let config = HotkeyConfiguration.load()
+        hintModeHotkeyManager = HotkeyManager(configuration: config) { [weak self] in
             self?.handleHintModeHotkeyPressed()
         }
         hintModeHotkeyManager?.start()
@@ -158,10 +138,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.isRecreatingHotkeyManager = true
             defer { self.isRecreatingHotkeyManager = false }
 
-            // Recreate HotkeyManager with new configuration
-            self.hotkeyManager?.stop()
-            self.hotkeyManager = nil
-            self.setupHotkeyManager()
+            // Recreate HintModeHotkeyManager with new configuration
+            self.hintModeHotkeyManager?.stop()
+            self.hintModeHotkeyManager = nil
+            self.setupHintModeHotkeyManager()
         }
     }
 
@@ -174,48 +154,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
     }
 
-    private func handleHotkeyPressed() {
-        if AccessibilityService.isGranted {
-            // Capture the frontmost app BEFORE showing the panel (Portal will become frontmost)
-            // Filter out Portal itself to avoid semantically incorrect targetApp when panel is visible
-            let frontmostApp = NSWorkspace.shared.frontmostApplication
-            let targetApp: NSRunningApplication?
-            if let app = frontmostApp,
-               app.bundleIdentifier != Bundle.main.bundleIdentifier {
-                targetApp = app
-            } else {
-                targetApp = nil
-            }
-
-            // Ignore hotkey when no active app (targetApp is nil)
-            // This prevents showing the panel when MenuCrawler cannot fetch menus
-            guard targetApp != nil else { return }
-
-            panelController.toggle(targetApp: targetApp)
-        } else {
-            let shouldPrompt: Bool
-            if let lastRequest = lastPermissionRequestTime {
-                shouldPrompt = Date().timeIntervalSince(lastRequest) >= permissionRequestCooldown
-            } else {
-                shouldPrompt = true
-            }
-
-            if shouldPrompt {
-                AccessibilityService.requestPermission()
-                lastPermissionRequestTime = Date()
-            } else {
-                // Provide feedback that the hotkey was received but waiting for permission
-                NSSound.beep()
-            }
-            updatePermissionMenuItemIfNeeded()
-        }
-    }
-
     private func handleHintModeHotkeyPressed() {
-        // Ignore if command palette is visible
-        guard !panelController.isVisible else { return }
-
-        // Ignore if hint mode is already active
+        // Toggle hint mode if already active
         guard !HintModeController.shared.isActive else {
             HintModeController.shared.deactivate()
             return
@@ -319,9 +259,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
-        // Hide the command palette panel first
-        panelController.hide()
-
         // If window already exists, just bring it to front
         if let window = settingsWindow {
             window.makeKeyAndOrderFront(nil)
