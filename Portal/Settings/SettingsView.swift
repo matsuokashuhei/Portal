@@ -49,7 +49,7 @@ struct GeneralSettingsView: View {
         Form {
             Section {
                 HStack {
-                    Text("Activation Hotkey")
+                    Text("Hint Mode Hotkey")
                     Spacer()
 
                     Picker("Modifier", selection: selectedModifier) {
@@ -78,7 +78,7 @@ struct GeneralSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Hotkey")
+                Text("Hint Mode")
             }
 
             Section {
@@ -96,7 +96,7 @@ struct GeneralSettingsView: View {
                 }
 
                 if !isAccessibilityGranted {
-                    Text("Portal needs accessibility permission to read menu items from other applications.")
+                    Text("Portal needs accessibility permission to navigate window elements in other applications.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

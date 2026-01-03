@@ -129,8 +129,8 @@ struct HotkeyConfiguration: Equatable {
     let modifier: ModifierKey
     let key: HotkeyKey
 
-    /// Default hotkey: Option+Space
-    static let `default` = HotkeyConfiguration(modifier: .option, key: .space)
+    /// Default hotkey: F key (no modifier) for hint mode
+    static let `default` = HotkeyConfiguration(modifier: .none, key: .f)
 }
 
 /// Namespace for UserDefaults keys used throughout the application.
@@ -149,12 +149,12 @@ extension HotkeyConfiguration {
     /// - Parameter defaults: UserDefaults instance to read from. Defaults to `.standard`.
     static func load(from defaults: UserDefaults = .standard) -> HotkeyConfiguration {
         let modifierRaw = defaults.string(forKey: SettingsKey.hotkeyModifier)
-            ?? ModifierKey.option.rawValue
+            ?? ModifierKey.none.rawValue
         let keyRaw = defaults.string(forKey: SettingsKey.hotkeyKey)
-            ?? HotkeyKey.space.rawValue
+            ?? HotkeyKey.f.rawValue
 
-        let modifier = ModifierKey(rawValue: modifierRaw) ?? .option
-        let key = HotkeyKey(rawValue: keyRaw) ?? .space
+        let modifier = ModifierKey(rawValue: modifierRaw) ?? .none
+        let key = HotkeyKey(rawValue: keyRaw) ?? .f
 
         return HotkeyConfiguration(modifier: modifier, key: key)
     }

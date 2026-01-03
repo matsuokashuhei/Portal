@@ -204,7 +204,7 @@ struct MenuItemTests {
     // MARK: - CommandType Tests
 
     @Test
-    func testDefaultTypeIsMenu() {
+    func testDefaultTypeIsWindow() {
         let element = createDummyElement()
         let item = MenuItem(
             title: "New",
@@ -214,7 +214,7 @@ struct MenuItemTests {
             isEnabled: true
         )
 
-        #expect(item.type == .menu)
+        #expect(item.type == .window)
     }
 
     @Test
@@ -231,88 +231,6 @@ struct MenuItemTests {
         )
 
         #expect(windowItem.type == .window)
-    }
-
-    @Test
-    func testIdIsUUIDForDifferentTypes() {
-        let element = createDummyElement()
-
-        let menuItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .menu
-        )
-
-        let windowItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .window
-        )
-
-        // Each MenuItem has unique UUID regardless of type
-        #expect(menuItem.id != windowItem.id)
-        #expect(UUID(uuidString: menuItem.id) != nil)
-        #expect(UUID(uuidString: windowItem.id) != nil)
-    }
-
-    @Test
-    func testDifferentTypesAreNotEqual() {
-        let element = createDummyElement()
-
-        let menuItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .menu
-        )
-
-        let windowItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .window
-        )
-
-        #expect(menuItem != windowItem)
-    }
-
-    @Test
-    func testSetContainmentWithDifferentTypes() {
-        let element = createDummyElement()
-
-        let menuItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .menu
-        )
-
-        let windowItem = MenuItem(
-            title: "Library",
-            path: ["App", "Library"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .window
-        )
-
-        var set: Set<MenuItem> = [menuItem]
-        set.insert(windowItem)
-
-        // Different types means different items, so set should have 2 elements
-        #expect(set.count == 2)
     }
 
     @Test
@@ -343,64 +261,5 @@ struct MenuItemTests {
         )
 
         #expect(item.parentPathString == nil)
-    }
-
-    // MARK: - Window Type Tests
-
-    @Test
-    func testWindowTypeHasUniqueId() {
-        let element = createDummyElement()
-
-        let menuItem = MenuItem(
-            title: "About",
-            path: ["Settings", "About"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .menu
-        )
-
-        let windowItem = MenuItem(
-            title: "About",
-            path: ["Settings", "About"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .window
-        )
-
-        // Each MenuItem has unique UUID regardless of type
-        #expect(menuItem.id != windowItem.id)
-        #expect(UUID(uuidString: menuItem.id) != nil)
-        #expect(UUID(uuidString: windowItem.id) != nil)
-    }
-
-    @Test
-    func testWindowTypeSetContainment() {
-        let element = createDummyElement()
-
-        let menuItem = MenuItem(
-            title: "About",
-            path: ["Settings", "About"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .menu
-        )
-
-        let windowItem = MenuItem(
-            title: "About",
-            path: ["Settings", "About"],
-            keyboardShortcut: nil,
-            axElement: element,
-            isEnabled: true,
-            type: .window
-        )
-
-        var set: Set<MenuItem> = [menuItem]
-        set.insert(windowItem)
-
-        // Different types means 2 items
-        #expect(set.count == 2)
     }
 }
