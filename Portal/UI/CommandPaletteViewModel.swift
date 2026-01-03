@@ -189,12 +189,13 @@ final class CommandPaletteViewModel: ObservableObject {
             // Step 2: Load window elements (sidebar, toolbar, content)
             // Failures are silently ignored - menus alone are sufficient
             do {
-                let windowItems: [MenuItem]
+                let crawlResult: WindowCrawlResult
                 if let targetApp = app {
-                    windowItems = try await windowCrawler.crawlWindowElements(targetApp)
+                    crawlResult = try await windowCrawler.crawlWindowElements(targetApp)
                 } else {
-                    windowItems = try await windowCrawler.crawlActiveApplicationWindow()
+                    crawlResult = try await windowCrawler.crawlActiveApplicationWindow()
                 }
+                let windowItems = crawlResult.items
 
                 // Check for cancellation before updating state
                 guard !Task.isCancelled else { return }

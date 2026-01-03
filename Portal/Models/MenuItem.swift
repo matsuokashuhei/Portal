@@ -34,11 +34,9 @@ enum CommandType: String, Sendable {
 ///   the caller should handle `AXError` appropriately when the element is no longer valid.
 ///   Crawlers may cache results briefly to improve performance and help mitigate stale references.
 ///
-/// - Note: The `id` property is derived from `type.rawValue + "\0" + path.joined(separator: "\0")`.
-///   This ensures items of different types with the same path are still unique.
-///   MenuItems with empty paths will have minimal `id`, which could cause hash collisions if
-///   multiple empty-path items are used in Set or Dictionary collections. In practice, crawlers
-///   never create MenuItems with empty paths, as they only add items with non-empty titles.
+/// - Note: The `id` property uses a UUID generated at creation time to ensure uniqueness.
+///   This prevents issues when multiple elements have the same title and path
+///   (e.g., a "Blue" button and a "Blue" popup in System Settings Appearance).
 ///
 /// ## Thread Safety
 /// This type is marked as `@unchecked Sendable` because:
@@ -50,8 +48,11 @@ enum CommandType: String, Sendable {
 ///
 /// If `MenuItem` is ever accessed from non-main threads, this assumption must be revisited.
 struct MenuItem: Identifiable, @unchecked Sendable {
-    /// Unique identifier based on menu path.
-    let id: String
+    /// Unique identifier using UUID to ensure uniqueness.
+    ///
+    /// Previously used path-based ID which caused issues when multiple elements
+    /// had the same title (e.g., "Blue" button and "Blue" popup in System Settings).
+    let id: String = UUID().uuidString
 
     /// Display title of the menu item.
     let title: String
@@ -92,9 +93,6 @@ struct MenuItem: Identifiable, @unchecked Sendable {
         isEnabled: Bool,
         type: CommandType = .menu
     ) {
-        // Include type in ID to ensure items of different types with the same path are unique.
-        // Use null character as separator to avoid collisions with menu titles containing "/"
-        self.id = type.rawValue + "\0" + path.joined(separator: "\0")
         self.title = title
         self.path = path
         self.keyboardShortcut = keyboardShortcut

@@ -13,6 +13,7 @@ enum ModifierKey: String, CaseIterable, Identifiable {
     case command = "Command"
     case control = "Control"
     case shift = "Shift"
+    case none = "None"
 
     var id: String { rawValue }
 
@@ -23,6 +24,7 @@ enum ModifierKey: String, CaseIterable, Identifiable {
         case .command: return "⌘"
         case .control: return "⌃"
         case .shift: return "⇧"
+        case .none: return ""
         }
     }
 
@@ -33,6 +35,7 @@ enum ModifierKey: String, CaseIterable, Identifiable {
         case .command: return .command
         case .control: return .control
         case .shift: return .shift
+        case .none: return []
         }
     }
 
@@ -43,7 +46,13 @@ enum ModifierKey: String, CaseIterable, Identifiable {
         case .command: return .maskCommand
         case .control: return .maskControl
         case .shift: return .maskShift
+        case .none: return []
         }
+    }
+
+    /// Whether this modifier requires no modifier key to be pressed.
+    var isNone: Bool {
+        self == .none
     }
 }
 

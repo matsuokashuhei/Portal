@@ -75,12 +75,21 @@ final class HotkeyManager {
             // Check for the configured modifier (without other modifiers)
             let targetMask = manager.configuration.modifier.cgEventMask
             let allModifierMasks: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
-            let otherMasks = allModifierMasks.subtracting(targetMask)
 
-            let hasTargetModifier = flags.contains(targetMask)
-            let hasOtherModifiers = !flags.intersection(otherMasks).isEmpty
+            let isMatch: Bool
+            if manager.configuration.modifier.isNone {
+                // No modifier required - check that NO modifiers are pressed
+                let hasAnyModifier = !flags.intersection(allModifierMasks).isEmpty
+                isMatch = !hasAnyModifier && keyCode == manager.configuration.key.keyCode
+            } else {
+                // Standard modifier-based hotkey
+                let otherMasks = allModifierMasks.subtracting(targetMask)
+                let hasTargetModifier = flags.contains(targetMask)
+                let hasOtherModifiers = !flags.intersection(otherMasks).isEmpty
+                isMatch = hasTargetModifier && !hasOtherModifiers && keyCode == manager.configuration.key.keyCode
+            }
 
-            if hasTargetModifier && !hasOtherModifiers && keyCode == manager.configuration.key.keyCode {
+            if isMatch {
                 // Dispatch callback to main thread
                 DispatchQueue.main.async {
                     manager.onHotkeyPressed()
@@ -191,7 +200,14 @@ final class HotkeyManager {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let targetModifier = configuration.modifier.eventModifier
         // Use Int64 for consistency with CGEventTap callback comparison
-        return modifiers == targetModifier && Int64(event.keyCode) == configuration.key.keyCode
+        let keyMatches = Int64(event.keyCode) == configuration.key.keyCode
+
+        if configuration.modifier.isNone {
+            // No modifier required - check that NO modifiers are pressed
+            return modifiers.isEmpty && keyMatches
+        } else {
+            return modifiers == targetModifier && keyMatches
+        }
     }
 
     deinit {

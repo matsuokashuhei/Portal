@@ -50,9 +50,16 @@ Portal/
 ├── Models/
 │   ├── MenuItem.swift         # コマンド項目のデータモデル（メニュー/ウィンドウ）
 │   └── CommandExecutionError.swift # 実行エラー型
+├── HintMode/
+│   ├── HintLabel.swift            # ヒントラベルのデータモデル
+│   ├── HintLabelGenerator.swift   # A-Z, AA-AZ式ラベル生成
+│   ├── HintOverlayView.swift      # SwiftUIラベル描画
+│   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理
+│   └── HintModeController.swift   # ヒントモード全体制御
 ├── Services/
 │   ├── HotkeyManager.swift    # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
+│   ├── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
 │   ├── MenuCrawler.swift      # メニューバー走査サービス
 │   ├── WindowCrawler.swift    # ウィンドウ要素走査サービス（サイドバー/ツールバー/コンテンツ）
 │   ├── FuzzySearch.swift      # スコアベース曖昧検索
@@ -113,6 +120,15 @@ Portal/
 - [x] タイプ別アイコン表示（#84）
 - [x] タイプ別フィルタ（Cmd+1/2）（#89, #101）
 
+### ヒントモード（Vimiumライク）
+- [x] 単独Fキーでヒントモード起動（#104）
+- [x] `WindowCrawler`で操作可能要素取得（#104）
+- [x] `kAXPositionAttribute`/`kAXSizeAttribute`で位置取得（#104）
+- [x] A-Z, AA-AZ式ラベル生成（#104）
+- [x] オーバーレイウィンドウでラベル表示（#104）
+- [x] キー入力で要素選択・実行（#104）
+- [x] ESCで終了、Backspaceで入力クリア（#104）
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
@@ -137,6 +153,7 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── CommandPaletteViewModelTests.swift   # ViewModelテスト
 ├── FuzzySearchTests.swift               # 検索アルゴリズムテスト
+├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
 └── MenuItemTests.swift                  # MenuItemテスト
 
