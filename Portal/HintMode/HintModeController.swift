@@ -494,12 +494,17 @@ final class HintModeController {
                 return
             }
 
+            // Ensure we have a valid target application before comparing
+            guard let targetApp = self.targetApp else { return }
+
             // If the activated app is different from our target, deactivate hint mode
-            if activatedApp.processIdentifier != self.targetApp?.processIdentifier {
+            if activatedApp.processIdentifier != targetApp.processIdentifier {
                 #if DEBUG
                 print("[HintModeController] App switched to \(activatedApp.localizedName ?? "unknown"), deactivating")
                 #endif
-                self.deactivate()
+                Task { @MainActor in
+                    self.deactivate()
+                }
             }
         }
     }
