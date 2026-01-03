@@ -32,8 +32,8 @@ struct HintOverlayView: View {
                 ForEach(filteredHints) { hint in
                     HintLabelView(hint: hint, input: currentInput)
                         .position(
-                            x: hint.frame.minX + 10,
-                            y: geometry.size.height - hint.frame.maxY + 10
+                            x: hint.frame.minX - screenBounds.minX + 10,
+                            y: screenBounds.maxY - hint.frame.maxY + 10
                         )
                 }
             }
