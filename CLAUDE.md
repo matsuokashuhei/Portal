@@ -93,6 +93,17 @@ Portal/
 - [x] ツールバー/セグメントコントロール（`AXToolbar`/`AXSegmentedControl`）走査（#95, #101）
 - [x] コンテンツ領域（`AXButton`/`AXGroup`/`AXRadioButton`）走査（#91, #95）
 - [x] チェックボックス/スイッチ（`AXCheckBox`/`AXSwitch`）実行（#109）
+- [x] Electronアプリ（`AXWebArea`/`AXTabGroup`）走査（#121）
+
+### Electronアプリ対応
+- [x] `AXWebArea`をコンテナロールに追加（#121）
+- [x] `AXTabGroup`をコンテナロールに追加（#121）
+- [x] `maxDepth`を20に増加（深いネスト構造対応）（#121）
+
+| アプリ | バンドルID | 対応状況 |
+|--------|-----------|---------|
+| Slack | com.tinyspeck.slackmacgap | ✅ 対応 |
+| VS Code | com.microsoft.VSCode | ✅ 対応 |
 
 ### ヒントモード（Vimiumライク）
 - [x] ホットキーでヒントモード起動（#104, #107）
