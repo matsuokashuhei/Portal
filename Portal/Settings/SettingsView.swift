@@ -76,15 +76,13 @@ struct GeneralSettingsView: View {
                     .frame(width: 100)
                 }
 
-                if selectedModifier.wrappedValue == .none {
-                    Text("Current: \(selectedKey.wrappedValue.rawValue)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Current: \(selectedModifier.wrappedValue.symbol) \(selectedKey.wrappedValue.rawValue)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(
+                    selectedModifier.wrappedValue == .none
+                    ? "Current: \(selectedKey.wrappedValue.rawValue)"
+                    : "Current: \(selectedModifier.wrappedValue.symbol) \(selectedKey.wrappedValue.rawValue)"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             } header: {
                 Text("Hint Mode")
             }
