@@ -92,6 +92,7 @@ Portal/
 - [x] サイドバー（`AXOutline`/`AXSourceList`/`AXRow`）走査（#84）
 - [x] ツールバー/セグメントコントロール（`AXToolbar`/`AXSegmentedControl`）走査（#95, #101）
 - [x] コンテンツ領域（`AXButton`/`AXGroup`/`AXRadioButton`）走査（#91, #95）
+- [x] チェックボックス/スイッチ（`AXCheckBox`/`AXSwitch`）実行（#109）
 
 ### ヒントモード（Vimiumライク）
 - [x] ホットキーでヒントモード起動（#104, #107）
