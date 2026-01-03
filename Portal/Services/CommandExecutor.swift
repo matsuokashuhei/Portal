@@ -141,6 +141,16 @@ final class CommandExecutor {
                     return .success(())
                 }
             }
+
+            // For AXCheckBox and AXSwitch, use specialized toggle logic
+            // This handles cases where AXPress returns success but doesn't actually toggle the value
+            // (common in System Settings on macOS Ventura+)
+            if let r = role, (r == "AXCheckBox" || r == "AXSwitch") {
+                if executeCheckboxOrSwitch(menuItem.axElement, role: r) {
+                    return .success(())
+                }
+                // Fall through to try other actions if toggle fails
+            }
         }
 
         // Try preferred actions
@@ -262,6 +272,14 @@ final class CommandExecutor {
             possibleTitles.append(childTitle)
         }
 
+        // For AXCheckBox and AXSwitch, also check sibling elements for title
+        // These elements typically have their label in a sibling AXStaticText element
+        if role == "AXCheckBox" || role == "AXSwitch" {
+            if let siblingTitle = getTitleFromSiblings(element), !siblingTitle.isEmpty {
+                possibleTitles.append(siblingTitle)
+            }
+        }
+
         // Accept if expected title matches any of the possible titles
         guard possibleTitles.contains(expectedTitle) else {
             #if DEBUG
@@ -339,6 +357,170 @@ final class CommandExecutor {
 
     /// Maximum depth for child button search to prevent stack overflow.
     private static let maxChildButtonSearchDepth = 5
+
+    // MARK: - Checkbox/Switch Execution
+
+    /// Executes a checkbox or switch element by toggling its value.
+    ///
+    /// This method handles both AXCheckBox and AXSwitch elements, which may require
+    /// different approaches depending on the application:
+    /// 1. First tries AXPress action
+    /// 2. If AXPress succeeds but value doesn't change, directly toggles AXValue
+    /// 3. Returns success if either approach works
+    ///
+    /// Some applications (notably System Settings on macOS Ventura+) use toggle switches
+    /// that return success for AXPress but don't actually change state. In these cases,
+    /// directly setting the AXValue attribute is required.
+    ///
+    /// - Parameters:
+    ///   - element: The checkbox or switch element to toggle.
+    ///   - role: The element's accessibility role ("AXCheckBox" or "AXSwitch").
+    /// - Returns: `true` if the toggle was successful, `false` otherwise.
+    private func executeCheckboxOrSwitch(_ element: AXUIElement, role: String) -> Bool {
+        #if DEBUG
+        print("[CommandExecutor] executeCheckboxOrSwitch: Starting for \(role)")
+        #endif
+
+        // Get current value before trying to toggle
+        let valueBefore = getCheckboxValue(element)
+        #if DEBUG
+        print("[CommandExecutor] executeCheckboxOrSwitch: Value before: \(valueBefore?.description ?? "nil")")
+        #endif
+
+        // Try AXPress first (works for most standard checkboxes)
+        let pressResult = AXUIElementPerformAction(element, kAXPressAction as CFString)
+        #if DEBUG
+        print("[CommandExecutor] executeCheckboxOrSwitch: AXPress result: \(pressResult.rawValue)")
+        #endif
+
+        if pressResult == .success {
+            // Check if value actually changed
+            let valueAfter = getCheckboxValue(element)
+            #if DEBUG
+            print("[CommandExecutor] executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
+            #endif
+
+            if valueBefore != valueAfter {
+                #if DEBUG
+                print("[CommandExecutor] executeCheckboxOrSwitch: AXPress succeeded and value changed")
+                #endif
+                return true
+            }
+
+            #if DEBUG
+            print("[CommandExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged, trying direct toggle")
+            #endif
+        }
+
+        // Try direct value toggle as fallback (required for System Settings on macOS Ventura+)
+        if let currentValue = getCheckboxValue(element) {
+            let newValue: CFBoolean = currentValue ? kCFBooleanFalse : kCFBooleanTrue
+            let setResult = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
+            #if DEBUG
+            print("[CommandExecutor] executeCheckboxOrSwitch: Direct toggle result: \(setResult.rawValue)")
+            #endif
+
+            if setResult == .success {
+                return true
+            }
+        }
+
+        #if DEBUG
+        print("[CommandExecutor] executeCheckboxOrSwitch: Both approaches failed")
+        #endif
+        return false
+    }
+
+    /// Gets the boolean value of a checkbox or switch element.
+    ///
+    /// Handles multiple value formats:
+    /// - Int (0/1): Common for AXCheckBox
+    /// - Bool (true/false): Some applications use this
+    /// - NSNumber: CFBoolean bridges to NSNumber
+    ///
+    /// - Parameter element: The checkbox or switch element.
+    /// - Returns: The current value as a boolean, or `nil` if the value cannot be retrieved.
+    private func getCheckboxValue(_ element: AXUIElement) -> Bool? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success else {
+            return nil
+        }
+
+        // Handle Int (0/1) format
+        if let intValue = valueRef as? Int {
+            return intValue != 0
+        }
+
+        // Handle Bool format
+        if let boolValue = valueRef as? Bool {
+            return boolValue
+        }
+
+        // Handle NSNumber format (CFBoolean bridges to NSNumber)
+        if let numberValue = valueRef as? NSNumber {
+            return numberValue.boolValue
+        }
+
+        return nil
+    }
+
+    /// Gets the title from sibling elements (for toggle switches and checkboxes).
+    ///
+    /// AXSwitch and AXCheckBox elements typically don't have their own title attribute.
+    /// Instead, the label is in a sibling AXStaticText element within the same parent container.
+    ///
+    /// - Parameter element: The AXSwitch or AXCheckBox element.
+    /// - Returns: The title found in a sibling element, or nil if not found.
+    private func getTitleFromSiblings(_ element: AXUIElement) -> String? {
+        // Get the parent element
+        var parentRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success else {
+            return nil
+        }
+        // swiftlint:disable:next force_cast
+        let parent = parentRef as! AXUIElement
+
+        // Get sibling elements (children of parent)
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(parent, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let siblings = childrenRef as? [AXUIElement] else {
+            return nil
+        }
+
+        // Look for AXStaticText siblings that contain the label
+        for sibling in siblings {
+            // Skip the element itself
+            if CFEqual(sibling, element) {
+                continue
+            }
+
+            var roleRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(sibling, kAXRoleAttribute as CFString, &roleRef) == .success,
+               let role = roleRef as? String, role == "AXStaticText" {
+                // Try value first (most common for labels)
+                var valueRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(sibling, kAXValueAttribute as CFString, &valueRef) == .success,
+                   let value = valueRef as? String, !value.isEmpty {
+                    return value
+                }
+                // Fallback to title
+                var titleRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(sibling, kAXTitleAttribute as CFString, &titleRef) == .success,
+                   let title = titleRef as? String, !title.isEmpty {
+                    return title
+                }
+            }
+        }
+
+        // Fallback: try the parent's description
+        var descRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(parent, kAXDescriptionAttribute as CFString, &descRef) == .success,
+           let desc = descRef as? String, !desc.isEmpty {
+            return desc
+        }
+
+        return nil
+    }
 
     /// Checks if an AXMenuItem element has a submenu.
     ///
