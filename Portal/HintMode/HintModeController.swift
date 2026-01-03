@@ -479,7 +479,9 @@ final class HintModeController {
 
     /// Starts observing application activation to auto-deactivate hint mode when the target app is deactivated.
     private func startApplicationActivationObserver() {
-        applicationActivationObserver = NotificationCenter.default.addObserver(
+        // Note: NSWorkspace notifications are posted to NSWorkspace.shared.notificationCenter,
+        // not NotificationCenter.default
+        applicationActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
             queue: .main
@@ -505,7 +507,7 @@ final class HintModeController {
     /// Stops observing application activation.
     private func stopApplicationActivationObserver() {
         if let observer = applicationActivationObserver {
-            NotificationCenter.default.removeObserver(observer)
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
             applicationActivationObserver = nil
         }
     }
