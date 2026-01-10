@@ -23,9 +23,9 @@ struct HintLabel: Identifiable {
     /// This is in AppKit coordinate system (origin at bottom-left).
     let frame: CGRect
 
-    /// The menu item associated with this hint.
-    /// Contains the `axElement` reference for command execution.
-    let menuItem: MenuItem
+    /// The target UI element associated with this hint.
+    /// Contains the `axElement` reference for execution.
+    let target: HintTarget
 
     /// Center point of the frame for label positioning.
     var centerPoint: CGPoint {

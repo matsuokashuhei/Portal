@@ -5,6 +5,7 @@
 //  Created by Claude Code on 2026/01/03.
 //
 
+import ApplicationServices
 import SwiftUI
 
 /// The main overlay view that displays hint labels at element positions.
@@ -128,13 +129,10 @@ struct InputBufferView: View {
         hint: HintLabel(
             label: "AB",
             frame: CGRect(x: 100, y: 100, width: 80, height: 24),
-            menuItem: MenuItem(
+            target: HintTarget(
                 title: "Test",
-                path: ["Test"],
-                keyboardShortcut: nil,
                 axElement: AXUIElementCreateSystemWide(),
-                isEnabled: true,
-                type: .window
+                isEnabled: true
             )
         ),
         input: "A"

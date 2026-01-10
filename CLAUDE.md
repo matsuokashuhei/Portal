@@ -48,8 +48,8 @@ Portal/
 │   ├── Notifications.swift    # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
 ├── Models/
-│   ├── MenuItem.swift         # ウィンドウ要素のデータモデル
-│   └── CommandExecutionError.swift # 実行エラー型
+│   ├── HintTarget.swift         # Hint Mode用ターゲット（HintTarget）モデル
+│   └── HintExecutionError.swift # Hint Mode実行エラー（HintExecutionError）
 ├── HintMode/
 │   ├── HintLabel.swift            # ヒントラベルのデータモデル
 │   ├── HintLabelGenerator.swift   # A-Z, AA-AZ式ラベル生成
@@ -61,7 +61,7 @@ Portal/
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
 │   ├── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
 │   ├── WindowCrawler.swift    # ウィンドウ要素走査サービス（サイドバー/ツールバー/コンテンツ）
-│   └── CommandExecutor.swift  # ウィンドウ要素実行
+│   └── HintActionExecutor.swift  # Hint Modeターゲット実行（HintActionExecutor）
 └── Settings/
     ├── HotkeyConfiguration.swift   # ホットキー設定モデル
     └── SettingsView.swift          # 設定画面UI
@@ -127,7 +127,7 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
-└── MenuItemTests.swift                  # MenuItemテスト
+└── HintTargetTests.swift                # HintTargetテスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト
