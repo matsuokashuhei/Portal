@@ -1,5 +1,5 @@
 //
-//  MenuItemTests.swift
+//  HintTargetTests.swift
 //  PortalTests
 //
 //  Created by Claude Code on 2025/12/31.

@@ -127,7 +127,7 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
-└── MenuItemTests.swift                  # HintTargetテスト
+└── HintTargetTests.swift                # HintTargetテスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト

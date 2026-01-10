@@ -159,11 +159,19 @@ final class HintModeController {
             // Crawl window elements
             var items = try await windowCrawler.crawlWindowElements(app)
 
+            // Cache roles to avoid repeated AX API calls during filtering.
+            // HintTarget.id is UUID-based, so it's safe as a stable key for this activation run.
+            let roleById: [String: String?] = Dictionary(
+                uniqueKeysWithValues: items.map { item in
+                    (item.id, AccessibilityHelper.getRole(item.axElement))
+                }
+            )
+
             // If a popup/select menu is open, prefer showing ONLY its options.
             // This matches the historical behavior: when menu items are present,
             // avoid showing hints for unrelated controls in the underlying window.
             let menuItems = items.filter { item in
-                AccessibilityHelper.getRole(item.axElement) == "AXMenuItem"
+                roleById[item.id] ?? nil == "AXMenuItem"
             }
             if !menuItems.isEmpty {
                 #if DEBUG
@@ -200,7 +208,7 @@ final class HintModeController {
 
                     // Menu items (popup/select menus) may extend beyond the main window bounds.
                     // Keep them as long as they have a valid frame.
-                    if AccessibilityHelper.getRole(item.axElement) == "AXMenuItem" {
+                    if roleById[item.id] ?? nil == "AXMenuItem" {
                         return true
                     }
 
