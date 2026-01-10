@@ -17,6 +17,13 @@ import AppKit
 /// All methods must be called on the main thread due to Accessibility API requirements.
 @MainActor
 protocol ElementCrawler {
+    /// The coordinate system used by this crawler's returned frames.
+    ///
+    /// This determines how the frames should be transformed for display.
+    /// - Native crawlers use macOS Accessibility coordinates (top-left origin).
+    /// - Electron crawlers use screen-local coordinates (no Y-flip needed).
+    var coordinateSystem: HintCoordinateSystem { get }
+
     /// Crawls UI elements from the specified application.
     ///
     /// - Parameter app: The application to crawl elements from.

@@ -27,8 +27,16 @@ import AppKit
 /// - AXWebArea - Web content containers
 @MainActor
 final class ElectronCrawler: ElementCrawler {
+    // MARK: - ElementCrawler Protocol
+
+    /// Electron apps use screen-local coordinates (no Y-flip needed).
+    let coordinateSystem: HintCoordinateSystem = .electron
+
+    // MARK: - Constants
+
     /// Maximum depth for recursive traversal.
-    private static let maxDepth = 20  // Deeper than native due to web DOM structure
+    /// Deeper than native (10) due to web DOM structure, but limited to avoid performance issues.
+    private static let maxDepth = 15
 
     /// Maximum number of items to return.
     private static let maxItems = 500
@@ -150,6 +158,20 @@ final class ElectronCrawler: ElementCrawler {
     ///
     /// This sets AXManualAccessibility and AXEnhancedUserInterface attributes
     /// to expose web content elements through the accessibility API.
+    ///
+    /// ## Design Decision: No Restoration
+    ///
+    /// These settings are intentionally NOT restored when hint mode ends because:
+    /// 1. **User Experience**: Restoring would require re-enabling on every activation,
+    ///    adding latency and potentially causing flickering in Electron apps.
+    /// 2. **No Negative Impact**: These settings only expose MORE accessibility information,
+    ///    which benefits screen readers and other assistive technologies.
+    /// 3. **App Scope**: Settings are per-application and don't affect other apps.
+    /// 4. **Persistence**: macOS may cache these settings anyway, making restoration
+    ///    ineffective in some cases.
+    ///
+    /// If restoration becomes necessary (e.g., conflicts with specific assistive tech),
+    /// implement by storing original values and restoring in HintModeController.deactivate().
     private func enableAccessibility(for axApp: AXUIElement) {
         // Try AXManualAccessibility first (preferred for Electron)
         let manualResult = AXUIElementSetAttributeValue(

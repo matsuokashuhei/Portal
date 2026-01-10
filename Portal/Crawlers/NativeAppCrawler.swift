@@ -45,6 +45,13 @@ enum NativeAppCrawlerError: Error, LocalizedError {
 /// more frequently (e.g., when navigating folders).
 @MainActor
 final class NativeAppCrawler: ElementCrawler {
+    // MARK: - ElementCrawler Protocol
+
+    /// Native macOS apps use Accessibility API coordinates (top-left origin).
+    let coordinateSystem: HintCoordinateSystem = .native
+
+    // MARK: - Constants
+
     /// Maximum depth for recursive traversal to prevent infinite loops.
     private static let maxDepth = 10
 

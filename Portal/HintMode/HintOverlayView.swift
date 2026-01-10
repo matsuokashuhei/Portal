@@ -51,18 +51,33 @@ struct HintOverlayView: View {
 
     /// Calculates the Y position for a hint based on its coordinate system.
     ///
+    /// ## Coordinate Systems
+    ///
+    /// **macOS Accessibility API (native):**
+    /// - Origin: Top-left of the primary screen
+    /// - Y-axis: Increases downward
+    /// - Multi-screen: Each screen has coordinates relative to primary screen's origin
+    ///
+    /// **NSScreen / SwiftUI (this view):**
+    /// - Origin: Bottom-left of the screen
+    /// - Y-axis: Increases upward
+    ///
+    /// **Electron/Chromium:**
+    /// - Tested to provide screen-local coordinates similar to NSScreen
+    /// - No Y-flip transformation needed
+    ///
     /// - Parameter hint: The hint to calculate Y position for.
     /// - Returns: The Y position in window-local coordinates.
     private func calculateY(for hint: HintLabel) -> CGFloat {
         switch hint.coordinateSystem {
         case .native:
-            // Native macOS: Accessibility API uses top-left origin
-            // NSScreen.frame uses bottom-left origin
-            // Need to flip: screenBounds.maxY - hint.frame.maxY
+            // Native macOS: Accessibility API uses top-left origin (Y increases downward)
+            // SwiftUI uses bottom-left origin (Y increases upward)
+            // Formula: screenBounds.maxY - hint.frame.maxY converts top-left to bottom-left
             return screenBounds.maxY - hint.frame.maxY + 10
         case .electron:
-            // Electron apps: coordinates are already in screen-local system
-            // No flip needed, just offset from screen origin
+            // Electron apps: HintLabel frames are already converted to screen-local coordinates
+            // during crawling (see ElectronCrawler.getFrame). No Y-flip needed.
             return hint.frame.minY - screenBounds.minY + 10
         }
     }

@@ -189,8 +189,8 @@ final class HintModeController {
             // Get the appropriate crawler for this application
             let crawler = crawlerFactory.crawler(for: app)
 
-            // Determine coordinate system based on crawler type
-            let coordinateSystem: HintCoordinateSystem = (crawler is ElectronCrawler) ? .electron : .native
+            // Get coordinate system from the crawler (protocol-based, no type checking)
+            let coordinateSystem = crawler.coordinateSystem
 
             // Crawl UI elements
             var items = try await crawler.crawlElements(app)
@@ -279,7 +279,12 @@ final class HintModeController {
                         #endif
                         return false
                     }
-                    // For items with cachedFrame, skip scroll visibility check as AXUIElement may be invalid
+                    // For items with cachedFrame (Electron apps), skip scroll visibility check.
+                    // Reason: Electron's AXUIElement references may become invalid after crawling,
+                    // making AccessibilityHelper.isVisibleInScrollContainers() unreliable.
+                    // Trade-off: Some scrolled-out elements may show hints, but the window bounds
+                    // check above provides a reasonable filter. Future improvement could involve
+                    // capturing scroll container bounds during crawling.
                     if item.cachedFrame != nil {
                         return true
                     }

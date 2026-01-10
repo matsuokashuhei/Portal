@@ -9,14 +9,25 @@ import CoreGraphics
 import Foundation
 
 /// Coordinate system used by the hint's frame.
+///
+/// Different UI frameworks use different coordinate origins, requiring
+/// transformation when displaying hints in SwiftUI.
 enum HintCoordinateSystem {
     /// Native macOS Accessibility API coordinates.
-    /// Origin at top-left of main screen, Y increases downward.
-    /// Requires Y-flip transformation for SwiftUI positioning.
+    ///
+    /// - Origin: Top-left of the primary screen
+    /// - Y-axis: Increases downward
+    /// - Multi-screen: Coordinates are relative to the primary screen's top-left
+    /// - Transformation: Requires Y-flip to convert to SwiftUI's bottom-left origin
     case native
 
     /// Electron/Chromium Accessibility coordinates.
-    /// Already in screen-local coordinates, no Y-flip needed.
+    ///
+    /// Electron apps (Slack, VS Code, Discord, etc.) return coordinates that are
+    /// already compatible with NSScreen's coordinate system after crawling.
+    /// - Origin: Effectively bottom-left of screen (post-crawl)
+    /// - Y-axis: Increases upward
+    /// - Transformation: No Y-flip needed
     case electron
 }
 
