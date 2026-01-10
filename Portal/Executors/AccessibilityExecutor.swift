@@ -1,8 +1,9 @@
 //
-//  HintActionExecutor.swift
+//  AccessibilityExecutor.swift
 //  Portal
 //
 //  Created by Claude Code on 2026/01/01.
+//  Renamed from HintActionExecutor on 2026/01/10.
 //
 
 import ApplicationServices
@@ -11,7 +12,7 @@ import ApplicationServices
 ///
 /// It must run on the main thread as `AXUIElementPerformAction` requires it.
 @MainActor
-final class HintActionExecutor {
+final class AccessibilityExecutor: ActionExecutor {
     /// Valid accessibility roles for window elements.
     private static let validRoles: Set<String> = [
         "AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton",
@@ -42,12 +43,12 @@ final class HintActionExecutor {
     /// - Important: This method must be called on the main thread.
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
         #if DEBUG
-        print("[HintActionExecutor] execute: Starting execution for '\(target.title)'")
+        print("[AccessibilityExecutor] execute: Starting execution for '\(target.title)'")
         #endif
 
         guard target.isEnabled else {
             #if DEBUG
-            print("[HintActionExecutor] execute: Target is disabled")
+            print("[AccessibilityExecutor] execute: Target is disabled")
             #endif
             return .failure(.targetDisabled)
         }
@@ -56,7 +57,7 @@ final class HintActionExecutor {
         // This prevents executing the wrong item when UI has changed.
         guard isElementValid(target.axElement, expectedTitle: target.title) else {
             #if DEBUG
-            print("[HintActionExecutor] execute: Element validation failed")
+            print("[AccessibilityExecutor] execute: Element validation failed")
             #endif
             return .failure(.elementInvalid)
         }
@@ -70,7 +71,7 @@ final class HintActionExecutor {
         let requiresFocus = role.map { Self.rolesRequiringFocus.contains($0) } ?? false
         if requiresFocus {
             #if DEBUG
-            print("[HintActionExecutor] execute: Text field detected, setting focus")
+            print("[AccessibilityExecutor] execute: Text field detected, setting focus")
             #endif
             let focusResult = AXUIElementSetAttributeValue(
                 target.axElement,
@@ -79,12 +80,12 @@ final class HintActionExecutor {
             )
             if focusResult == .success {
                 #if DEBUG
-                print("[HintActionExecutor] execute: Focus set successfully")
+                print("[AccessibilityExecutor] execute: Focus set successfully")
                 #endif
                 return .success(())
             }
             #if DEBUG
-            print("[HintActionExecutor] execute: Failed to set focus with result \(focusResult.rawValue)")
+            print("[AccessibilityExecutor] execute: Failed to set focus with result \(focusResult.rawValue)")
             #endif
             // Fall through to try other actions if focus fails
         }
@@ -154,7 +155,7 @@ final class HintActionExecutor {
     /// Validates that an AXUIElement still points to the expected item.
     private func isElementValid(_ element: AXUIElement, expectedTitle: String) -> Bool {
         #if DEBUG
-        print("[HintActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
+        print("[AccessibilityExecutor] isElementValid: Checking element for '\(expectedTitle)'")
         #endif
 
         // Verify role matches expected type first
@@ -162,23 +163,23 @@ final class HintActionExecutor {
         let roleResult = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
         guard roleResult == .success, let role = roleRef as? String else {
             #if DEBUG
-            print("[HintActionExecutor] isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
+            print("[AccessibilityExecutor] isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
             #endif
             return false
         }
 
         #if DEBUG
-        print("[HintActionExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
+        print("[AccessibilityExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
         #endif
 
         guard Self.validRoles.contains(role) else {
             #if DEBUG
-            print("[HintActionExecutor] isElementValid: Role '\(role)' not in validRoles \(Self.validRoles)")
+            print("[AccessibilityExecutor] isElementValid: Role '\(role)' not in validRoles \(Self.validRoles)")
             #endif
             return false
         }
 
-        // Verify title - check all possible title sources since WindowCrawler uses
+        // Verify title - check all possible title sources since NativeAppCrawler uses
         // title/description/value/help priority and we need to match any of them.
         var possibleTitles: [String] = []
 
@@ -224,7 +225,7 @@ final class HintActionExecutor {
 
         guard possibleTitles.contains(expectedTitle) else {
             #if DEBUG
-            print("[HintActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles)")
+            print("[AccessibilityExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles)")
             #endif
             return false
         }
@@ -302,46 +303,46 @@ final class HintActionExecutor {
 
     private func executeCheckboxOrSwitch(_ element: AXUIElement, role: String) -> Bool {
         #if DEBUG
-        print("[HintActionExecutor] executeCheckboxOrSwitch: Starting for \(role)")
+        print("[AccessibilityExecutor] executeCheckboxOrSwitch: Starting for \(role)")
         #endif
 
         // Get current value before trying to toggle
         let valueBefore = getCheckboxValue(element)
         #if DEBUG
-        print("[HintActionExecutor] executeCheckboxOrSwitch: Value before: \(valueBefore?.description ?? "nil")")
+        print("[AccessibilityExecutor] executeCheckboxOrSwitch: Value before: \(valueBefore?.description ?? "nil")")
         #endif
 
         // Try AXPress first (works for most standard checkboxes)
         let pressResult = AXUIElementPerformAction(element, kAXPressAction as CFString)
         #if DEBUG
-        print("[HintActionExecutor] executeCheckboxOrSwitch: AXPress result: \(pressResult.rawValue)")
+        print("[AccessibilityExecutor] executeCheckboxOrSwitch: AXPress result: \(pressResult.rawValue)")
         #endif
 
         if pressResult == .success {
             // Check if value actually changed
             let valueAfter = getCheckboxValue(element)
             #if DEBUG
-            print("[HintActionExecutor] executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
+            print("[AccessibilityExecutor] executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
             #endif
 
             // Handle different scenarios for value comparison
             if let before = valueBefore, let after = valueAfter {
                 if before != after {
                     #if DEBUG
-                    print("[HintActionExecutor] executeCheckboxOrSwitch: AXPress succeeded and value changed")
+                    print("[AccessibilityExecutor] executeCheckboxOrSwitch: AXPress succeeded and value changed")
                     #endif
                     return true
                 }
             } else if valueBefore == nil && valueAfter != nil {
                 // Trust AXPress when we couldn't read before.
                 #if DEBUG
-                print("[HintActionExecutor] executeCheckboxOrSwitch: AXPress succeeded, trusting result (valueBefore was nil)")
+                print("[AccessibilityExecutor] executeCheckboxOrSwitch: AXPress succeeded, trusting result (valueBefore was nil)")
                 #endif
                 return true
             }
 
             #if DEBUG
-            print("[HintActionExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged, trying direct toggle")
+            print("[AccessibilityExecutor] executeCheckboxOrSwitch: AXPress returned success but value unchanged, trying direct toggle")
             #endif
         }
 
@@ -351,30 +352,30 @@ final class HintActionExecutor {
             let newValue: CFBoolean = currentValue ? kCFBooleanFalse : kCFBooleanTrue
             let setResult = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             #if DEBUG
-            print("[HintActionExecutor] executeCheckboxOrSwitch: Direct toggle result: \(setResult.rawValue)")
+            print("[AccessibilityExecutor] executeCheckboxOrSwitch: Direct toggle result: \(setResult.rawValue)")
             #endif
 
             if setResult == .success {
                 let valueAfterToggle = getCheckboxValue(element)
                 #if DEBUG
-                print("[HintActionExecutor] executeCheckboxOrSwitch: Value after direct toggle: \(valueAfterToggle?.description ?? "nil")")
+                print("[AccessibilityExecutor] executeCheckboxOrSwitch: Value after direct toggle: \(valueAfterToggle?.description ?? "nil")")
                 #endif
 
                 if let actualValue = valueAfterToggle {
                     if actualValue == expectedValue {
                         #if DEBUG
-                        print("[HintActionExecutor] executeCheckboxOrSwitch: Direct toggle succeeded and value changed as expected")
+                        print("[AccessibilityExecutor] executeCheckboxOrSwitch: Direct toggle succeeded and value changed as expected")
                         #endif
                         return true
                     } else {
                         #if DEBUG
-                        print("[HintActionExecutor] executeCheckboxOrSwitch: Direct toggle returned success but value did not change")
+                        print("[AccessibilityExecutor] executeCheckboxOrSwitch: Direct toggle returned success but value did not change")
                         #endif
                     }
                 } else {
                     // Cannot verify; trust success.
                     #if DEBUG
-                    print("[HintActionExecutor] executeCheckboxOrSwitch: Direct toggle succeeded but value unavailable; treating as success")
+                    print("[AccessibilityExecutor] executeCheckboxOrSwitch: Direct toggle succeeded but value unavailable; treating as success")
                     #endif
                     return true
                 }
@@ -382,7 +383,7 @@ final class HintActionExecutor {
         }
 
         #if DEBUG
-        print("[HintActionExecutor] executeCheckboxOrSwitch: Both approaches failed")
+        print("[AccessibilityExecutor] executeCheckboxOrSwitch: Both approaches failed")
         #endif
         return false
     }
@@ -484,3 +485,8 @@ final class HintActionExecutor {
         return false
     }
 }
+
+// MARK: - Backward Compatibility
+
+/// Type alias for backward compatibility with existing code.
+typealias HintActionExecutor = AccessibilityExecutor

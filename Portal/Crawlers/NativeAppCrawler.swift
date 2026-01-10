@@ -1,15 +1,16 @@
 //
-//  WindowCrawler.swift
+//  NativeAppCrawler.swift
 //  Portal
 //
 //  Created by Claude Code on 2026/01/02.
+//  Renamed from WindowCrawler on 2026/01/10.
 //
 
 import ApplicationServices
 import AppKit
 
-/// Error types for window crawling operations.
-enum WindowCrawlerError: Error, LocalizedError {
+/// Error types for native app crawling operations.
+enum NativeAppCrawlerError: Error, LocalizedError {
     case accessibilityNotGranted
     case noActiveApplication
     case mainWindowNotAccessible
@@ -43,7 +44,7 @@ enum WindowCrawlerError: Error, LocalizedError {
 /// No caching is used because window content can change
 /// more frequently (e.g., when navigating folders).
 @MainActor
-final class WindowCrawler {
+final class NativeAppCrawler: ElementCrawler {
     /// Maximum depth for recursive traversal to prevent infinite loops.
     private static let maxDepth = 10
 
@@ -84,14 +85,28 @@ final class WindowCrawler {
         "AXTextField"
     ]
 
-    /// Crawls window elements from the application's windows.
+    // MARK: - ElementCrawler Protocol
+
+    /// Determines whether this crawler can handle the specified application.
     ///
-    /// - Parameter app: The application to crawl window elements from.
-    /// - Returns: An array of crawled Hint Mode targets.
-    /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlWindowElements(_ app: NSRunningApplication) async throws -> [HintTarget] {
+    /// NativeAppCrawler handles all applications by default.
+    /// More specialized crawlers (like ElectronCrawler) can override this
+    /// to claim specific applications.
+    ///
+    /// - Parameter app: The application to check.
+    /// - Returns: Always `true` for NativeAppCrawler.
+    func canHandle(_ app: NSRunningApplication) -> Bool {
+        return true
+    }
+
+    /// Crawls UI elements from the specified application.
+    ///
+    /// - Parameter app: The application to crawl elements from.
+    /// - Returns: An array of discovered hint targets.
+    /// - Throws: NativeAppCrawlerError if crawling fails.
+    func crawlElements(_ app: NSRunningApplication) async throws -> [HintTarget] {
         guard AccessibilityService.isGranted else {
-            throw WindowCrawlerError.accessibilityNotGranted
+            throw NativeAppCrawlerError.accessibilityNotGranted
         }
 
         let pid = app.processIdentifier
@@ -103,14 +118,14 @@ final class WindowCrawler {
         // so that popup/select menu items can also be targeted by Hint Mode.
         let windows = getAllWindows(from: axApp)
         guard !windows.isEmpty else {
-            throw WindowCrawlerError.mainWindowNotAccessible
+            throw NativeAppCrawlerError.mainWindowNotAccessible
         }
 
         var allItems: [HintTarget] = []
         for windowElement in windows {
             let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
-            print("[WindowCrawler] Crawling window: '\(windowTitle)'")
+            print("[NativeAppCrawler] Crawling window: '\(windowTitle)'")
             #endif
             allItems.append(contentsOf: crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount))
         }
@@ -119,16 +134,16 @@ final class WindowCrawler {
         // In that case, detect it via the system-wide focused element and crawl the AXMenu directly.
         if let openMenu = getOpenMenuForApp(pid: pid) {
             #if DEBUG
-            print("[WindowCrawler] Detected open AXMenu via SystemWide for pid=\(pid)")
+            print("[NativeAppCrawler] Detected open AXMenu via SystemWide for pid=\(pid)")
             #endif
             let menuItems = crawlOpenMenu(openMenu, itemCount: &itemCount)
             #if DEBUG
-            print("[WindowCrawler] Crawled \(menuItems.count) menu items from open AXMenu")
+            print("[NativeAppCrawler] Crawled \(menuItems.count) menu items from open AXMenu")
             #endif
             allItems.append(contentsOf: menuItems)
         } else {
             #if DEBUG
-            print("[WindowCrawler] No open AXMenu detected via SystemWide for pid=\(pid)")
+            print("[NativeAppCrawler] No open AXMenu detected via SystemWide for pid=\(pid)")
             #endif
         }
 
@@ -190,20 +205,20 @@ final class WindowCrawler {
     ///   is the only regular application running, or if Portal becomes frontmost before
     ///   this method is called. Callers should capture the target application reference
     ///   BEFORE showing the panel (as done in `AppDelegate.handleHotkeyPressed()`) and
-    ///   use `crawlWindowElements(_:)` instead when possible.
+    ///   use `crawlElements(_:)` instead when possible.
     ///
     /// - Returns: An array of crawled Hint Mode targets.
-    /// - Throws: WindowCrawlerError if crawling fails.
+    /// - Throws: NativeAppCrawlerError if crawling fails.
     func crawlActiveApplicationWindow() async throws -> [HintTarget] {
         guard AccessibilityService.isGranted else {
-            throw WindowCrawlerError.accessibilityNotGranted
+            throw NativeAppCrawlerError.accessibilityNotGranted
         }
 
         guard let app = getFrontmostApp() else {
-            throw WindowCrawlerError.noActiveApplication
+            throw NativeAppCrawlerError.noActiveApplication
         }
 
-        return try await crawlWindowElements(app)
+        return try await crawlElements(app)
     }
 
     // MARK: - Private Methods
@@ -293,7 +308,7 @@ final class WindowCrawler {
             AXUIElementGetPid(element, &elementPid)
             #if DEBUG
             let role = getRole(from: element) ?? "unknown"
-            print("[WindowCrawler] SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
+            print("[NativeAppCrawler] SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
             #endif
 
             if let role = getRole(from: element), role == "AXMenu" {
@@ -302,7 +317,7 @@ final class WindowCrawler {
                 var menuPid: pid_t = 0
                 AXUIElementGetPid(element, &menuPid)
                 #if DEBUG
-                print("[WindowCrawler] Found AXMenu in focus chain (menuPid=\(menuPid), targetPid=\(pid))")
+                print("[NativeAppCrawler] Found AXMenu in focus chain (menuPid=\(menuPid), targetPid=\(pid))")
                 #endif
                 return element
             }
@@ -455,7 +470,7 @@ final class WindowCrawler {
             // Log all elements at depth 1-2 to see contents
             if depth <= 2 {
                 let pathStr = path.joined(separator: " > ")
-                print("[WindowCrawler] depth=\(depth) role=\(role) title='\(title ?? "")' desc='\(desc ?? "")' help='\(help ?? "")' path=\(pathStr)")
+                print("[NativeAppCrawler] depth=\(depth) role=\(role) title='\(title ?? "")' desc='\(desc ?? "")' help='\(help ?? "")' path=\(pathStr)")
             }
             #endif
 
@@ -490,13 +505,13 @@ final class WindowCrawler {
                     // These have AXPress action but don't actually do anything
                     if isSectionHeader(child, role: role) {
                         #if DEBUG
-                        print("[WindowCrawler] Skipping section header: '\(itemTitle)' (role: \(role))")
+                        print("[NativeAppCrawler] Skipping section header: '\(itemTitle)' (role: \(role))")
                         #endif
                         continue
                     }
 
                     #if DEBUG
-                    print("[WindowCrawler] Adding item: '\(itemTitle)' (role: \(role))")
+                    print("[NativeAppCrawler] Adding item: '\(itemTitle)' (role: \(role))")
                     #endif
 
                     let isEnabled = getIsEnabled(from: child)
@@ -524,7 +539,7 @@ final class WindowCrawler {
 
             #if DEBUG
             if (role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox"), hasChildElements {
-                print("[WindowCrawler] Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
+                print("[NativeAppCrawler] Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
             }
             #endif
 
@@ -617,7 +632,7 @@ final class WindowCrawler {
                         &disclosingRef
                     ) == .success, let isDisclosing = disclosingRef as? Bool {
                         #if DEBUG
-                        print("[WindowCrawler] isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
+                        print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
                         #endif
                         // Only skip if actually expanded (showing children)
                         if isDisclosing {
@@ -630,19 +645,19 @@ final class WindowCrawler {
                     // Also check for disclosure triangle child element
                     if hasDisclosureTriangle(element) {
                         #if DEBUG
-                        print("[WindowCrawler] isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle → section header")
+                        print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle → section header")
                         #endif
                         return true
                     }
 
                     #if DEBUG
-                    print("[WindowCrawler] isSectionHeader: '\(elementTitle)' level 0 without disclosure → navigation item")
+                    print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0 without disclosure → navigation item")
                     #endif
                     return false
                 }
 
                 #if DEBUG
-                print("[WindowCrawler] isSectionHeader: '\(elementTitle)' level \(level) → not a section header")
+                print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level \(level) → not a section header")
                 #endif
             }
             return false
@@ -895,3 +910,11 @@ final class WindowCrawler {
         }
     }
 }
+
+// MARK: - Backward Compatibility
+
+/// Type alias for backward compatibility with existing code.
+typealias WindowCrawler = NativeAppCrawler
+
+/// Type alias for backward compatibility with existing error handling.
+typealias WindowCrawlerError = NativeAppCrawlerError

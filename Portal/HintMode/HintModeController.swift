@@ -73,15 +73,29 @@ final class HintModeController {
 
     // MARK: - Dependencies
 
-    /// The window crawler for retrieving UI elements.
-    private let windowCrawler = WindowCrawler()
+    /// Factory for creating crawlers based on application type.
+    private let crawlerFactory: CrawlerFactory
 
-    /// The command executor for performing actions.
-    private let hintActionExecutor = HintActionExecutor()
+    /// Factory for creating action executors.
+    private let executorFactory: ExecutorFactory
 
     // MARK: - Initialization
 
-    private init() {}
+    /// Creates a HintModeController with default factories.
+    private init() {
+        self.crawlerFactory = CrawlerFactory()
+        self.executorFactory = ExecutorFactory()
+    }
+
+    /// Creates a HintModeController with custom factories (for testing).
+    ///
+    /// - Parameters:
+    ///   - crawlerFactory: Factory for creating crawlers.
+    ///   - executorFactory: Factory for creating executors.
+    init(crawlerFactory: CrawlerFactory, executorFactory: ExecutorFactory) {
+        self.crawlerFactory = crawlerFactory
+        self.executorFactory = executorFactory
+    }
 
     // MARK: - Public Methods
 
@@ -156,8 +170,11 @@ final class HintModeController {
     /// Performs the async activation process.
     private func performActivation(for app: NSRunningApplication) async {
         do {
-            // Crawl window elements
-            var items = try await windowCrawler.crawlWindowElements(app)
+            // Get the appropriate crawler for this application
+            let crawler = crawlerFactory.crawler(for: app)
+
+            // Crawl UI elements
+            var items = try await crawler.crawlElements(app)
 
             // Cache roles to avoid repeated AX API calls during filtering.
             // HintTarget.id is UUID-based, so it's safe as a stable key for this activation run.
@@ -490,8 +507,9 @@ final class HintModeController {
         print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.target.title)'")
         #endif
 
-        // Execute the command
-        let result = hintActionExecutor.execute(hint.target)
+        // Get executor and execute the action
+        let executor = executorFactory.executor()
+        let result = executor.execute(hint.target)
 
         switch result {
         case .success:
