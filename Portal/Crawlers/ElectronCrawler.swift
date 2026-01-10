@@ -28,7 +28,7 @@ import AppKit
 @MainActor
 final class ElectronCrawler: ElementCrawler {
     /// Maximum depth for recursive traversal.
-    private static let maxDepth = 15  // Deeper than native due to web DOM structure
+    private static let maxDepth = 20  // Deeper than native due to web DOM structure
 
     /// Maximum number of items to return.
     private static let maxItems = 500
@@ -52,6 +52,9 @@ final class ElectronCrawler: ElementCrawler {
         "AXMenuItemRadio",
         "AXTab",
         "AXStaticText",  // Sometimes used for clickable text
+        "AXRow",  // Sidebar items in Slack/Electron apps
+        "AXPopUpButton",  // Dropdown buttons
+        "AXImage",  // Clickable images/icons
     ]
 
     /// Container roles that should be traversed.
@@ -67,6 +70,9 @@ final class ElectronCrawler: ElementCrawler {
         "AXLandmarkBanner",
         "AXArticle",
         "AXGenericContainer",  // Common in web content
+        "AXToolbar",  // Formatting toolbar, composer actions, etc.
+        "AXTabGroup",  // Tab containers
+        "AXOutline",  // Channel/DM list container
     ]
 
     /// Creates an ElectronCrawler with the default detector.
@@ -179,6 +185,8 @@ final class ElectronCrawler: ElementCrawler {
 
         #if DEBUG
         print("[ElectronCrawler] Found \(webAreas.count) AXWebArea elements")
+        Self.roleCountsForDebug.removeAll()
+        Self.skippedRolesForDebug.removeAll()
         #endif
 
         for webArea in webAreas {
@@ -186,6 +194,17 @@ final class ElectronCrawler: ElementCrawler {
             let items = crawlWebElement(webArea, depth: 0, itemCount: &itemCount)
             results.append(contentsOf: items)
         }
+
+        #if DEBUG
+        // Print role distribution summary
+        print("[ElectronCrawler] === Role Distribution Summary ===")
+        for (role, count) in Self.roleCountsForDebug.sorted(by: { $0.value > $1.value }) {
+            let skipped = Self.skippedRolesForDebug[role]
+            let skippedInfo = skipped != nil ? " (skipped: noTitle=\(skipped!.noTitle), noAction=\(skipped!.noAction))" : ""
+            print("[ElectronCrawler]   \(role): \(count)\(skippedInfo)")
+        }
+        print("[ElectronCrawler] ================================")
+        #endif
 
         return results
     }
@@ -215,6 +234,12 @@ final class ElectronCrawler: ElementCrawler {
         return webAreas
     }
 
+    #if DEBUG
+    /// Tracks role counts for debugging
+    private static var roleCountsForDebug: [String: Int] = [:]
+    private static var skippedRolesForDebug: [String: (noTitle: Int, noAction: Int)] = [:]
+    #endif
+
     /// Crawls web elements within a web area.
     private func crawlWebElement(_ element: AXUIElement, depth: Int, itemCount: inout Int) -> [HintTarget] {
         guard depth < Self.maxDepth, itemCount < Self.maxItems else {
@@ -238,21 +263,40 @@ final class ElectronCrawler: ElementCrawler {
             // Get display title
             let displayTitle = getDisplayTitle(from: child)
 
+            #if DEBUG
+            Self.roleCountsForDebug[role, default: 0] += 1
+            #endif
+
             // Check if this is an actionable web element
             if Self.webItemRoles.contains(role) {
-                if let title = displayTitle, !title.isEmpty, canPerformAction(on: child) {
+                let hasAction = canPerformAction(on: child)
+                let hasTitle = displayTitle != nil && !displayTitle!.isEmpty
+
+                #if DEBUG
+                // Track why webItemRoles elements are skipped
+                if !hasTitle || !hasAction {
+                    var current = Self.skippedRolesForDebug[role] ?? (noTitle: 0, noAction: 0)
+                    if !hasTitle { current.noTitle += 1 }
+                    if !hasAction { current.noAction += 1 }
+                    Self.skippedRolesForDebug[role] = current
+                }
+                #endif
+
+                if hasTitle && hasAction {
                     let isEnabled = getIsEnabled(from: child)
+                    let frame = getFrame(from: child)
                     let target = HintTarget(
-                        title: title,
+                        title: displayTitle!,
                         axElement: child,
-                        isEnabled: isEnabled
+                        isEnabled: isEnabled,
+                        cachedFrame: frame
                     )
                     items.append(target)
                     itemCount += 1
 
                     #if DEBUG
                     if depth <= 3 {
-                        print("[ElectronCrawler] Adding web item: '\(title)' (role: \(role))")
+                        print("[ElectronCrawler] Adding web item: '\(displayTitle!)' (role: \(role)) frame=\(frame?.debugDescription ?? "nil")")
                     }
                     #endif
                 }
@@ -297,16 +341,18 @@ final class ElectronCrawler: ElementCrawler {
             if isNativeActionableRole(role) {
                 if let title = getDisplayTitle(from: child), !title.isEmpty, canPerformAction(on: child) {
                     let isEnabled = getIsEnabled(from: child)
+                    let frame = getFrame(from: child)
                     let target = HintTarget(
                         title: title,
                         axElement: child,
-                        isEnabled: isEnabled
+                        isEnabled: isEnabled,
+                        cachedFrame: frame
                     )
                     items.append(target)
                     itemCount += 1
 
                     #if DEBUG
-                    print("[ElectronCrawler] Adding native item: '\(title)' (role: \(role))")
+                    print("[ElectronCrawler] Adding native item: '\(title)' (role: \(role)) frame=\(frame?.debugDescription ?? "nil")")
                     #endif
                 }
             }
@@ -481,7 +527,29 @@ final class ElectronCrawler: ElementCrawler {
                actions.contains("AXSelect") ||
                actions.contains("AXConfirm") ||
                actions.contains("AXShowDefaultUI") ||
-               actions.contains("AXPick")
+               actions.contains("AXPick") ||
+               actions.contains("AXShowMenu")  // Electron/Web elements often use this
+    }
+
+    /// Gets the frame (position + size) of an element.
+    private func getFrame(from element: AXUIElement) -> CGRect? {
+        var positionRef: CFTypeRef?
+        var sizeRef: CFTypeRef?
+
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success else {
+            return nil
+        }
+
+        var position = CGPoint.zero
+        var size = CGSize.zero
+
+        // swiftlint:disable force_cast
+        AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
+        AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+        // swiftlint:enable force_cast
+
+        return CGRect(origin: position, size: size)
     }
 
     /// Gets the enabled state.
@@ -509,6 +577,58 @@ final class ElectronCrawler: ElementCrawler {
             }
         }
 
-        return uniqueItems
+        // Also deduplicate based on overlapping frames
+        // This handles cases where icon and text label are separate elements
+        return deduplicateByFrame(uniqueItems)
+    }
+
+    /// Removes items with overlapping frames, keeping the first one encountered.
+    ///
+    /// In Electron apps, a single UI element (like a sidebar item) may contain
+    /// multiple accessible elements (icon, text label) that each have their own
+    /// hint. This method removes duplicates based on frame overlap.
+    private func deduplicateByFrame(_ items: [HintTarget]) -> [HintTarget] {
+        var result: [HintTarget] = []
+
+        for item in items {
+            guard let itemFrame = item.cachedFrame, itemFrame != .zero else {
+                // No frame - keep it
+                result.append(item)
+                continue
+            }
+
+            // Check if this item's frame significantly overlaps with any existing item
+            let hasOverlap = result.contains { existing in
+                guard let existingFrame = existing.cachedFrame, existingFrame != .zero else {
+                    return false
+                }
+
+                // Calculate intersection
+                let intersection = itemFrame.intersection(existingFrame)
+                guard !intersection.isNull else {
+                    return false
+                }
+
+                // Calculate overlap ratio (relative to smaller frame)
+                let itemArea = itemFrame.width * itemFrame.height
+                let existingArea = existingFrame.width * existingFrame.height
+                let intersectionArea = intersection.width * intersection.height
+                let smallerArea = min(itemArea, existingArea)
+
+                // If overlap is more than 50% of smaller frame, consider duplicate
+                let overlapRatio = smallerArea > 0 ? intersectionArea / smallerArea : 0
+                return overlapRatio > 0.5
+            }
+
+            if !hasOverlap {
+                result.append(item)
+            } else {
+                #if DEBUG
+                print("[ElectronCrawler] Dedup by frame: Skipping '\(item.title)' (overlaps with existing)")
+                #endif
+            }
+        }
+
+        return result
     }
 }

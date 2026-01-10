@@ -30,11 +30,14 @@ struct HintOverlayView: View {
                     .allowsHitTesting(false)
 
                 // Hint labels positioned at element locations
+                // Coordinate transformation depends on the source:
+                // - Native apps: Accessibility API uses top-left origin, needs Y-flip
+                // - Electron apps: Already in screen-local coordinates, no Y-flip
                 ForEach(filteredHints) { hint in
                     HintLabelView(hint: hint, input: currentInput)
                         .position(
                             x: hint.frame.minX - screenBounds.minX + 10,
-                            y: screenBounds.maxY - hint.frame.maxY + 10
+                            y: calculateY(for: hint)
                         )
                 }
             }
@@ -44,6 +47,24 @@ struct HintOverlayView: View {
     /// Hints filtered by the current user input.
     private var filteredHints: [HintLabel] {
         HintLabelGenerator.filterHints(hints, by: currentInput)
+    }
+
+    /// Calculates the Y position for a hint based on its coordinate system.
+    ///
+    /// - Parameter hint: The hint to calculate Y position for.
+    /// - Returns: The Y position in window-local coordinates.
+    private func calculateY(for hint: HintLabel) -> CGFloat {
+        switch hint.coordinateSystem {
+        case .native:
+            // Native macOS: Accessibility API uses top-left origin
+            // NSScreen.frame uses bottom-left origin
+            // Need to flip: screenBounds.maxY - hint.frame.maxY
+            return screenBounds.maxY - hint.frame.maxY + 10
+        case .electron:
+            // Electron apps: coordinates are already in screen-local system
+            // No flip needed, just offset from screen origin
+            return hint.frame.minY - screenBounds.minY + 10
+        }
     }
 }
 
@@ -133,7 +154,8 @@ struct InputBufferView: View {
                 title: "Test",
                 axElement: AXUIElementCreateSystemWide(),
                 isEnabled: true
-            )
+            ),
+            coordinateSystem: .native
         ),
         input: "A"
     )

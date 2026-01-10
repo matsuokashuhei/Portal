@@ -173,6 +173,9 @@ final class HintModeController {
             // Get the appropriate crawler for this application
             let crawler = crawlerFactory.crawler(for: app)
 
+            // Determine coordinate system based on crawler type
+            let coordinateSystem: HintCoordinateSystem = (crawler is ElectronCrawler) ? .electron : .native
+
             // Crawl UI elements
             var items = try await crawler.crawlElements(app)
 
@@ -218,8 +221,29 @@ final class HintModeController {
             #endif
 
             if !windowFrames.isEmpty {
+                #if DEBUG
+                let beforeFilterCount = items.count
+                #endif
                 items = items.filter { item in
-                    guard let frame = AccessibilityHelper.getFrame(item.axElement) else {
+                    // Use cachedFrame if available (for Electron apps)
+                    let frame: CGRect
+                    if let cached = item.cachedFrame {
+                        frame = cached
+                    } else if let f = AccessibilityHelper.getFrame(item.axElement) {
+                        frame = f
+                    } else {
+                        #if DEBUG
+                        // Get role for debugging
+                        var roleRef: CFTypeRef?
+                        let role: String
+                        if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
+                           let r = roleRef as? String {
+                            role = r
+                        } else {
+                            role = "unknown"
+                        }
+                        print("[HintModeController] SKIP (no frame): '\(item.title)' role=\(role)")
+                        #endif
                         return false
                     }
 
@@ -234,13 +258,26 @@ final class HintModeController {
                         windowFrame.contains(frame) || windowFrame.intersects(frame)
                     }
                     guard isInAnyWindow else {
+                        #if DEBUG
+                        print("[HintModeController] SKIP (out of window): '\(item.title)' frame=\(frame)")
+                        #endif
                         return false
                     }
+                    // For items with cachedFrame, skip scroll visibility check as AXUIElement may be invalid
+                    if item.cachedFrame != nil {
+                        return true
+                    }
                     // Check visibility in scroll containers (filters out scrolled-out elements)
-                    return AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
+                    let isVisible = AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
+                    #if DEBUG
+                    if !isVisible {
+                        print("[HintModeController] SKIP (scroll hidden): '\(item.title)'")
+                    }
+                    #endif
+                    return isVisible
                 }
                 #if DEBUG
-                print("[HintModeController] Filtered to \(items.count) items within window bounds and visible in scroll containers")
+                print("[HintModeController] Filter result: \(beforeFilterCount) -> \(items.count) items")
                 #endif
             }
 
@@ -252,10 +289,56 @@ final class HintModeController {
             }
 
             // Get frames for filtered elements
-            let frames = items.map { AccessibilityHelper.getFrame($0.axElement) ?? .zero }
+            // Use cachedFrame if available (for Electron apps where AXUIElement may become invalid)
+            let frames = items.map { item -> CGRect in
+                if let cached = item.cachedFrame {
+                    return cached
+                }
+                return AccessibilityHelper.getFrame(item.axElement) ?? .zero
+            }
+
+            #if DEBUG
+            // Debug: Analyze frame distribution
+            var invalidItems: [(item: HintTarget, frame: CGRect)] = []
+            var validItems: [(item: HintTarget, frame: CGRect)] = []
+            for (item, frame) in zip(items, frames) {
+                if frame == .zero || frame.width <= 0 || frame.height <= 0 {
+                    invalidItems.append((item, frame))
+                } else {
+                    validItems.append((item, frame))
+                }
+            }
+            print("[HintModeController] Frame analysis: total=\(frames.count), valid=\(validItems.count), invalid=\(invalidItems.count)")
+
+            // Show sample of invalid items to understand why frames are invalid
+            if !invalidItems.isEmpty {
+                let sampleInvalid = invalidItems.prefix(10)
+                print("[HintModeController] Sample INVALID items (no frame):")
+                for (item, frame) in sampleInvalid {
+                    var roleRef: CFTypeRef?
+                    let role: String
+                    if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
+                       let r = roleRef as? String {
+                        role = r
+                    } else {
+                        role = "unknown"
+                    }
+                    print("[HintModeController]   role=\(role) title='\(item.title)' frame=\(frame)")
+                }
+            }
+
+            // Show sample of valid frames to check positions
+            if !validItems.isEmpty {
+                let sampleValid = validItems.prefix(5)
+                print("[HintModeController] Sample VALID items:")
+                for (item, frame) in sampleValid {
+                    print("[HintModeController]   '\(item.title)' at \(frame)")
+                }
+            }
+            #endif
 
             // Create hint labels for filtered items only
-            hints = HintLabelGenerator.createHintLabels(from: items, frames: frames)
+            hints = HintLabelGenerator.createHintLabels(from: items, frames: frames, coordinateSystem: coordinateSystem)
 
             guard !hints.isEmpty else {
                 #if DEBUG
@@ -266,6 +349,13 @@ final class HintModeController {
 
             #if DEBUG
             print("[HintModeController] Created \(hints.count) hints")
+
+            // Debug: Show sample hints with their screen positions
+            let sampleHints = hints.prefix(5)
+            print("[HintModeController] Sample hints:")
+            for hint in sampleHints {
+                print("[HintModeController]   '\(hint.label)' at \(hint.frame) -> '\(hint.target.title)'")
+            }
             #endif
 
             // Create and show overlay windows for all screens

@@ -17,7 +17,7 @@ final class AccessibilityExecutor: ActionExecutor {
     private static let validRoles: Set<String> = [
         "AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton",
         "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton",
-        "AXComboBox", "AXTextField"
+        "AXComboBox", "AXTextField", "AXTextArea", "AXLink", "AXImage"
     ]
 
     /// Actions to try for window elements, in order of preference.
@@ -55,10 +55,27 @@ final class AccessibilityExecutor: ActionExecutor {
 
         // Validate that the axElement still references the expected item.
         // This prevents executing the wrong item when UI has changed.
-        guard isElementValid(target.axElement, expectedTitle: target.title) else {
+        let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title)
+        if !elementIsValid {
             #if DEBUG
             print("[AccessibilityExecutor] execute: Element validation failed")
             #endif
+            // For Electron apps, AXUIElement may become invalid but we have cachedFrame.
+            // Try mouse click as fallback when we have a cached frame.
+            if let cachedFrame = target.cachedFrame {
+                #if DEBUG
+                print("[AccessibilityExecutor] execute: Trying mouse click with cachedFrame: \(cachedFrame)")
+                #endif
+                if performMouseClickAtFrame(cachedFrame) {
+                    #if DEBUG
+                    print("[AccessibilityExecutor] execute: Mouse click with cachedFrame succeeded")
+                    #endif
+                    return .success(())
+                }
+                #if DEBUG
+                print("[AccessibilityExecutor] execute: Mouse click with cachedFrame failed")
+                #endif
+            }
             return .failure(.elementInvalid)
         }
 
@@ -93,12 +110,33 @@ final class AccessibilityExecutor: ActionExecutor {
         // Try setting AXSelected attribute first for list/outline rows.
         // Avoid doing this for container roles where a successful set may not imply a real action.
         if let r = role, Self.rolesSupportingSelectedAttribute.contains(r) {
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: Trying AXSelected for role '\(r)'")
+            #endif
             let selectResult = AXUIElementSetAttributeValue(
                 target.axElement,
                 kAXSelectedAttribute as CFString,
                 kCFBooleanTrue
             )
-            if selectResult == .success {
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: AXSelected result: \(selectResult.rawValue)")
+            #endif
+            // AXSelected may return success but not actually work (e.g., Electron apps)
+            // Try mouse click as more reliable fallback
+            if performMouseClick(on: target.axElement) {
+                #if DEBUG
+                print("[AccessibilityExecutor] execute: Mouse click succeeded")
+                #endif
+                return .success(())
+            }
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: Mouse click failed, trying AXPress")
+            #endif
+            let pressResult = AXUIElementPerformAction(target.axElement, kAXPressAction as CFString)
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: AXPress result: \(pressResult.rawValue)")
+            #endif
+            if pressResult == .success {
                 return .success(())
             }
         }
@@ -454,6 +492,84 @@ final class AccessibilityExecutor: ActionExecutor {
         }
 
         return nil
+    }
+
+    /// Performs a mouse click at the center of the specified frame.
+    /// This is used for Electron apps where AXUIElement may become invalid but we have cached frame.
+    private func performMouseClickAtFrame(_ frame: CGRect) -> Bool {
+        // Calculate center point of the frame
+        let clickPoint = CGPoint(
+            x: frame.minX + frame.width / 2,
+            y: frame.minY + frame.height / 2
+        )
+
+        #if DEBUG
+        print("[AccessibilityExecutor] performMouseClickAtFrame: Clicking at \(clickPoint) for frame \(frame)")
+        #endif
+
+        // Create mouse down and up events
+        guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
+              let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
+            #if DEBUG
+            print("[AccessibilityExecutor] performMouseClickAtFrame: Failed to create mouse events")
+            #endif
+            return false
+        }
+
+        // Post the events
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
+
+        return true
+    }
+
+    /// Performs a mouse click at the center of the element's frame.
+    /// This is more reliable for Electron apps where accessibility actions may not work.
+    private func performMouseClick(on element: AXUIElement) -> Bool {
+        // Get the element's position and size
+        var positionRef: CFTypeRef?
+        var sizeRef: CFTypeRef?
+
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success else {
+            #if DEBUG
+            print("[AccessibilityExecutor] performMouseClick: Failed to get position/size")
+            #endif
+            return false
+        }
+
+        var position = CGPoint.zero
+        var size = CGSize.zero
+
+        // swiftlint:disable force_cast
+        AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
+        AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+        // swiftlint:enable force_cast
+
+        // Calculate center point of the element
+        let clickPoint = CGPoint(
+            x: position.x + size.width / 2,
+            y: position.y + size.height / 2
+        )
+
+        #if DEBUG
+        print("[AccessibilityExecutor] performMouseClick: Clicking at \(clickPoint)")
+        #endif
+
+        // Create mouse down and up events
+        guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
+              let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
+            #if DEBUG
+            print("[AccessibilityExecutor] performMouseClick: Failed to create mouse events")
+            #endif
+            return false
+        }
+
+        // Post the events
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
+
+        return true
     }
 
     private func tryPressChildButtons(_ element: AXUIElement, depth: Int = 0) -> Bool {

@@ -52,18 +52,47 @@ enum HintLabelGenerator {
         return labels
     }
 
+    /// Minimum height for hint labels when the element reports zero height.
+    /// This is common in Electron apps where AXRow elements have height=0.
+    private static let minimumHintHeight: CGFloat = 20.0
+
     /// Creates hint labels from menu items and their corresponding frames.
     ///
     /// - Parameters:
     ///   - items: The menu items to create labels for.
     ///   - frames: The screen frames for each item (must match items count).
+    ///   - coordinateSystem: The coordinate system used by the frames.
     /// - Returns: An array of `HintLabel` objects.
     ///
     /// - Note: Items with `.zero` frames are filtered out as they cannot be displayed.
-    static func createHintLabels(from items: [HintTarget], frames: [CGRect]) -> [HintLabel] {
-        // Pair items with frames and filter out invalid frames
-        let validPairs = zip(items, frames).filter { _, frame in
-            frame != .zero && frame.width > 0 && frame.height > 0
+    ///   Items with valid position but zero height get a minimum height assigned.
+    static func createHintLabels(
+        from items: [HintTarget],
+        frames: [CGRect],
+        coordinateSystem: HintCoordinateSystem = .native
+    ) -> [HintLabel] {
+        // Pair items with frames and filter out completely invalid frames
+        // Allow frames with zero height if they have valid position and width
+        let validPairs: [(HintTarget, CGRect)] = zip(items, frames).compactMap { item, frame in
+            // Completely invalid frame
+            if frame == .zero {
+                return nil
+            }
+            // Must have valid position (non-negative) and width
+            guard frame.width > 0 else {
+                return nil
+            }
+            // If height is zero or negative, assign minimum height
+            if frame.height <= 0 {
+                let adjustedFrame = CGRect(
+                    x: frame.origin.x,
+                    y: frame.origin.y,
+                    width: frame.width,
+                    height: minimumHintHeight
+                )
+                return (item, adjustedFrame)
+            }
+            return (item, frame)
         }
 
         let labels = generateLabels(count: validPairs.count)
@@ -72,7 +101,8 @@ enum HintLabelGenerator {
             HintLabel(
                 label: label,
                 frame: pair.1,
-                target: pair.0
+                target: pair.0,
+                coordinateSystem: coordinateSystem
             )
         }
     }

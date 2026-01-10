@@ -166,7 +166,8 @@ struct HintLabelGeneratorTests {
             return HintLabel(
                 label: label,
                 frame: CGRect(x: CGFloat(index * 100), y: 0, width: 100, height: 20),
-                target: target
+                target: target,
+                coordinateSystem: .native
             )
         }
     }

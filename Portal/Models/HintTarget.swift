@@ -6,6 +6,7 @@
 //
 
 import ApplicationServices
+import CoreGraphics
 
 /// Represents an interactive UI element target for Hint Mode.
 ///
@@ -13,6 +14,7 @@ import ApplicationServices
 /// - A stable display title for label selection
 /// - An `AXUIElement` reference for execution
 /// - Enabled state
+/// - Cached frame (optional) for Electron apps where AXUIElement may become invalid
 ///
 /// - Important: The `axElement` reference can become invalid if the source application
 ///   modifies its UI structure, quits, or crashes. The executor should handle failures.
@@ -33,10 +35,14 @@ struct HintTarget: Identifiable, @unchecked Sendable {
     /// Whether the target is currently enabled.
     let isEnabled: Bool
 
-    init(title: String, axElement: AXUIElement, isEnabled: Bool) {
+    /// Cached frame from crawl time. Used when AXUIElement becomes invalid (common in Electron apps).
+    let cachedFrame: CGRect?
+
+    init(title: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil) {
         self.title = title
         self.axElement = axElement
         self.isEnabled = isEnabled
+        self.cachedFrame = cachedFrame
     }
 }
 
