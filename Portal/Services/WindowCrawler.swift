@@ -26,20 +26,6 @@ enum WindowCrawlerError: Error, LocalizedError {
     }
 }
 
-/// Result of window crawling operation.
-///
-/// Contains the crawled items and metadata about the crawl context.
-struct WindowCrawlResult {
-    /// The crawled menu items.
-    let items: [MenuItem]
-
-    /// Whether a popup menu was detected.
-    ///
-    /// When `true`, the items are popup menu items (AXMenuItem) and should not
-    /// be filtered by window bounds, as popup menus can extend beyond the main window.
-    let isPopupMenu: Bool
-}
-
 /// Service for crawling window UI elements using Accessibility API.
 ///
 /// This service crawls actionable UI elements from an application's main window,
@@ -54,7 +40,7 @@ struct WindowCrawlResult {
 ///
 /// ## Performance
 /// Window crawling typically takes 50-200ms depending on UI complexity.
-/// Unlike MenuCrawler, no caching is used because window content can change
+/// No caching is used because window content can change
 /// more frequently (e.g., when navigating folders).
 @MainActor
 final class WindowCrawler {
@@ -76,8 +62,8 @@ final class WindowCrawler {
         "AXGroup",
         "AXToolbar",
         "AXSegmentedControl",
-        "AXMenu",
-        "AXMenuBar"
+        // Needed to crawl popup/select menus (e.g., System Settings select boxes)
+        "AXMenu"
     ]
 
     /// Accessibility roles for actionable items we can interact with.
@@ -88,6 +74,7 @@ final class WindowCrawler {
         "AXStaticText",
         "AXButton",
         "AXRadioButton",
+        // Needed to support popup/select menus
         "AXMenuItem",
         "AXCheckBox",
         "AXMenuButton",
@@ -99,13 +86,10 @@ final class WindowCrawler {
 
     /// Crawls window elements from the application's windows.
     ///
-    /// If AXMenuItem elements are found in the hierarchy (indicating a popup menu is open),
-    /// only those menu items are returned. Otherwise, crawls the main window normally.
-    ///
     /// - Parameter app: The application to crawl window elements from.
-    /// - Returns: A `WindowCrawlResult` containing the items and whether a popup menu was detected.
+    /// - Returns: An array of crawled Hint Mode targets.
     /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlWindowElements(_ app: NSRunningApplication) async throws -> WindowCrawlResult {
+    func crawlWindowElements(_ app: NSRunningApplication) async throws -> [HintTarget] {
         guard AccessibilityService.isGranted else {
             throw WindowCrawlerError.accessibilityNotGranted
         }
@@ -115,134 +99,50 @@ final class WindowCrawler {
 
         var itemCount = 0
 
-        // Get main window
-        var mainWindowRef: CFTypeRef?
-        let mainWindowResult = AXUIElementCopyAttributeValue(
-            axApp,
-            kAXMainWindowAttribute as CFString,
-            &mainWindowRef
-        )
-
-        guard mainWindowResult == .success, let mainWindow = mainWindowRef else {
+        // Crawl all windows (main window + popup windows like select menus)
+        // so that popup/select menu items can also be targeted by Hint Mode.
+        let windows = getAllWindows(from: axApp)
+        guard !windows.isEmpty else {
             throw WindowCrawlerError.mainWindowNotAccessible
         }
 
-        // swiftlint:disable:next force_cast
-        let windowElement = mainWindow as! AXUIElement
-        let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
-
-        // First, check for AXMenuItem elements in the hierarchy
-        // If found, a popup menu is open - return only those items
-        let menuItems = collectMenuItems(in: windowElement, path: [windowTitle, "Menu"], itemCount: &itemCount)
-        if !menuItems.isEmpty {
+        var allItems: [HintTarget] = []
+        for windowElement in windows {
+            let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
-            print("[WindowCrawler] Popup menu detected - returning \(menuItems.count) menu items only")
+            print("[WindowCrawler] Crawling window: '\(windowTitle)'")
             #endif
-            return WindowCrawlResult(items: deduplicateItems(menuItems), isPopupMenu: true)
+            allItems.append(contentsOf: crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount))
         }
 
-        // No popup menu - crawl main window normally
-        #if DEBUG
-        print("[WindowCrawler] Crawling main window: '\(windowTitle)'")
-        #endif
-
-        let allItems = crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount)
-
-        return WindowCrawlResult(items: deduplicateItems(allItems), isPopupMenu: false)
-    }
-
-    /// Collects all AXMenuItem elements from the hierarchy.
-    ///
-    /// This method recursively searches for AXMenuItem elements, which indicate
-    /// that a popup/context menu is currently open. Some apps (like Music) don't
-    /// wrap popup menus in an AXMenu element, so we detect by finding AXMenuItem directly.
-    ///
-    /// - Parameters:
-    ///   - element: The root element to search from.
-    ///   - path: The current path for item identification.
-    ///   - itemCount: Counter for total items found.
-    ///   - depth: Current recursion depth (default 0).
-    /// - Returns: Array of MenuItem objects representing popup menu items.
-    private func collectMenuItems(
-        in element: AXUIElement,
-        path: [String],
-        itemCount: inout Int,
-        depth: Int = 0
-    ) -> [MenuItem] {
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else {
-            return []
+        // If a popup/select menu is open, it may not appear under the app's window tree.
+        // In that case, detect it via the system-wide focused element and crawl the AXMenu directly.
+        if let openMenu = getOpenMenuForApp(pid: pid) {
+            #if DEBUG
+            print("[WindowCrawler] Detected open AXMenu via SystemWide for pid=\(pid)")
+            #endif
+            let menuItems = crawlOpenMenu(openMenu, itemCount: &itemCount)
+            #if DEBUG
+            print("[WindowCrawler] Crawled \(menuItems.count) menu items from open AXMenu")
+            #endif
+            allItems.append(contentsOf: menuItems)
+        } else {
+            #if DEBUG
+            print("[WindowCrawler] No open AXMenu detected via SystemWide for pid=\(pid)")
+            #endif
         }
 
-        var items: [MenuItem] = []
-
-        var childrenRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-              let children = childrenRef as? [AXUIElement] else {
-            return items
-        }
-
-        for child in children {
-            guard itemCount < Self.maxItems else { break }
-
-            guard let role = getRole(from: child) else { continue }
-
-            // Found an AXMenuItem - check if it's inside a proper AXMenu context
-            // This distinguishes real popup menus from AXMenuItem elements used elsewhere in the UI
-            // (e.g., sidebar navigation items that may have AXMenuItem role)
-            if role == "AXMenuItem" {
-                // Only treat as popup menu item if parent is AXMenu
-                var parentRef: CFTypeRef?
-                if AXUIElementCopyAttributeValue(child, kAXParentAttribute as CFString, &parentRef) == .success {
-                    // swiftlint:disable:next force_cast
-                    let parent = parentRef as! AXUIElement
-                    if let parentRole = getRole(from: parent), parentRole == "AXMenu" {
-                        let title = getTitle(from: child)
-                        let desc = getDescription(from: child)
-                        var displayTitle: String? = nil
-                        if let t = title, !t.isEmpty { displayTitle = t }
-                        else if let d = desc, !d.isEmpty { displayTitle = d }
-
-                        if let itemTitle = displayTitle, !itemTitle.isEmpty {
-                            let isEnabled = getIsEnabled(from: child)
-                            let currentPath = path + [itemTitle]
-
-                            #if DEBUG
-                            print("[WindowCrawler] Found popup menu item: '\(itemTitle)'")
-                            #endif
-
-                            let menuItem = MenuItem(
-                                title: itemTitle,
-                                path: currentPath,
-                                keyboardShortcut: nil,
-                                axElement: child,
-                                isEnabled: isEnabled,
-                                type: .window
-                            )
-                            items.append(menuItem)
-                            itemCount += 1
-                        }
-                    }
-                }
-            }
-
-            // Recursively search in all containers
-            if Self.containerRoles.contains(role) || hasChildren(child) {
-                let subItems = collectMenuItems(in: child, path: path, itemCount: &itemCount, depth: depth + 1)
-                items.append(contentsOf: subItems)
-            }
-        }
-
-        return items
+        return deduplicateItems(allItems)
     }
 
     /// Removes duplicate items based on their AXUIElement reference.
     ///
-    /// Since MenuItem.id is now UUID-based (to support items with the same title),
+    /// Since `HintTarget.id` is UUID-based (to support elements with the same title),
     /// we need to compare AXUIElement references to detect true duplicates.
-    /// Two MenuItems pointing to the same AXUIElement are considered duplicates.
-    private func deduplicateItems(_ items: [MenuItem]) -> [MenuItem] {
+    /// Two targets pointing to the same AXUIElement are considered duplicates.
+    private func deduplicateItems(_ items: [HintTarget]) -> [HintTarget] {
         var seenElements: [AXUIElement] = []
-        var uniqueItems: [MenuItem] = []
+        var uniqueItems: [HintTarget] = []
 
         for item in items {
             // Check if we've already seen this AXUIElement
@@ -292,9 +192,9 @@ final class WindowCrawler {
     ///   BEFORE showing the panel (as done in `AppDelegate.handleHotkeyPressed()`) and
     ///   use `crawlWindowElements(_:)` instead when possible.
     ///
-    /// - Returns: A `WindowCrawlResult` containing the items and whether a popup menu was detected.
+    /// - Returns: An array of crawled Hint Mode targets.
     /// - Throws: WindowCrawlerError if crawling fails.
-    func crawlActiveApplicationWindow() async throws -> WindowCrawlResult {
+    func crawlActiveApplicationWindow() async throws -> [HintTarget] {
         guard AccessibilityService.isGranted else {
             throw WindowCrawlerError.accessibilityNotGranted
         }
@@ -329,19 +229,198 @@ final class WindowCrawler {
         }
     }
 
+    /// Gets all windows of the app, including focused/popup windows.
+    ///
+    /// Popup/select menus may appear as separate windows (sometimes focused),
+    /// so we crawl both `kAXWindowsAttribute` and `kAXFocusedWindowAttribute`.
+    private func getAllWindows(from axApp: AXUIElement) -> [AXUIElement] {
+        var windows: [AXUIElement] = []
+
+        // kAXWindowsAttribute
+        var windowsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let ws = windowsRef as? [AXUIElement] {
+            windows.append(contentsOf: ws)
+        }
+
+        // kAXFocusedWindowAttribute (can include popups not present in kAXWindows)
+        var focusedWindowRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focusedWindowRef) == .success,
+           let fw = focusedWindowRef {
+            // swiftlint:disable:next force_cast
+            let focused = fw as! AXUIElement
+            if !windows.contains(where: { CFEqual($0, focused) }) {
+                windows.append(focused)
+            }
+        }
+
+        // Fallback to main window if nothing else is available
+        if windows.isEmpty {
+            var mainWindowRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axApp, kAXMainWindowAttribute as CFString, &mainWindowRef) == .success,
+               let mw = mainWindowRef {
+                // swiftlint:disable:next force_cast
+                windows.append(mw as! AXUIElement)
+            }
+        }
+
+        return windows
+    }
+
+    /// Detects an open AXMenu for the given app pid using the SystemWide focused element.
+    ///
+    /// Some popup/select menus are not exposed under `kAXWindowsAttribute` of the app.
+    /// This fallback finds the focused UI element and walks up parents to locate an AXMenu.
+    private func getOpenMenuForApp(pid: pid_t) -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focused = focusedRef else {
+            return nil
+        }
+
+        // swiftlint:disable:next force_cast
+        var current: AXUIElement? = focused as! AXUIElement
+        var depth = 0
+
+        while let element = current, depth < Self.maxDepth {
+            depth += 1
+
+            // Note: For some system popups (e.g., System Settings select menus),
+            // the focused UI element may not have the same pid as the target app.
+            // We still traverse parents to find an AXMenu, but we'll validate at the end.
+            var elementPid: pid_t = 0
+            AXUIElementGetPid(element, &elementPid)
+            #if DEBUG
+            let role = getRole(from: element) ?? "unknown"
+            print("[WindowCrawler] SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
+            #endif
+
+            if let role = getRole(from: element), role == "AXMenu" {
+                // Prefer menus that belong to the target pid, but allow mismatches when
+                // the popup is hosted by a helper/system process.
+                var menuPid: pid_t = 0
+                AXUIElementGetPid(element, &menuPid)
+                #if DEBUG
+                print("[WindowCrawler] Found AXMenu in focus chain (menuPid=\(menuPid), targetPid=\(pid))")
+                #endif
+                return element
+            }
+
+            // Walk up to parent
+            var parentRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success,
+                  let parent = parentRef else {
+                return nil
+            }
+            // swiftlint:disable:next force_cast
+            current = parent as! AXUIElement
+        }
+
+        return nil
+    }
+
+    /// Crawls menu items from an already detected open AXMenu element.
+    ///
+    /// This intentionally treats AXMenuItem as actionable even if action names are not readable.
+    private func crawlOpenMenu(_ menu: AXUIElement, itemCount: inout Int) -> [HintTarget] {
+        var results: [HintTarget] = []
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(menu, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return results
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+
+            guard let role = getRole(from: child) else { continue }
+
+            if role == "AXMenuItem" {
+                let title = getTitle(from: child)
+                let desc = getDescription(from: child)
+                let value = getValue(from: child)
+                let help = getHelp(from: child)
+
+                var displayTitle: String? = nil
+                if let t = title, !t.isEmpty { displayTitle = t }
+                else if let d = desc, !d.isEmpty { displayTitle = d }
+                else if let v = value, !v.isEmpty { displayTitle = v }
+                else if let h = help, !h.isEmpty { displayTitle = h }
+
+                if let itemTitle = displayTitle, !itemTitle.isEmpty {
+                    let isEnabled = getIsEnabled(from: child)
+                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled))
+                    itemCount += 1
+                }
+
+                // Some menus can be nested; recurse into children to find deeper AXMenuItem.
+                if hasChildren(child) {
+                    results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: 1))
+                }
+            } else if role == "AXMenu" {
+                results.append(contentsOf: crawlOpenMenu(child, itemCount: &itemCount))
+            } else if hasChildren(child) {
+                results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: 1))
+            }
+        }
+
+        return results
+    }
+
+    private func crawlNestedMenuItems(in element: AXUIElement, itemCount: inout Int, depth: Int) -> [HintTarget] {
+        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return [] }
+        var results: [HintTarget] = []
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return results
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if let role = getRole(from: child), role == "AXMenuItem" {
+                let title = getTitle(from: child)
+                let desc = getDescription(from: child)
+                let value = getValue(from: child)
+                let help = getHelp(from: child)
+
+                var displayTitle: String? = nil
+                if let t = title, !t.isEmpty { displayTitle = t }
+                else if let d = desc, !d.isEmpty { displayTitle = d }
+                else if let v = value, !v.isEmpty { displayTitle = v }
+                else if let h = help, !h.isEmpty { displayTitle = h }
+
+                if let itemTitle = displayTitle, !itemTitle.isEmpty {
+                    let isEnabled = getIsEnabled(from: child)
+                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled))
+                    itemCount += 1
+                }
+            }
+
+            if hasChildren(child) {
+                results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: depth + 1))
+            }
+        }
+
+        return results
+    }
+
     /// Recursively crawls an element for actionable window items.
     private func crawlWindowInElement(
         _ element: AXUIElement,
         path: [String],
         depth: Int,
         itemCount: inout Int
-    ) -> [MenuItem] {
+    ) -> [HintTarget] {
         // Prevent infinite recursion and enforce item limit
         guard depth < Self.maxDepth, itemCount < Self.maxItems else {
             return []
         }
 
-        var items: [MenuItem] = []
+        var items: [HintTarget] = []
 
         // Get children
         var childrenRef: CFTypeRef?
@@ -424,25 +503,32 @@ final class WindowCrawler {
                     let currentPath = path + [itemTitle]
                     pathForChildren = currentPath
 
-                    let menuItem = MenuItem(
+                    let target = HintTarget(
                         title: itemTitle,
-                        path: currentPath,
-                        keyboardShortcut: nil,
                         axElement: child,
-                        isEnabled: isEnabled,
-                        type: .window
+                        isEnabled: isEnabled
                     )
-                    items.append(menuItem)
+                    items.append(target)
                     itemCount += 1
                 }
             }
 
-            // Recurse into containers or elements with children
-            // Skip recursion for actionable leaf items (they shouldn't have crawlable children)
-            let isLeafItem = role == "AXMenuButton" || role == "AXCheckBox" ||
-                             role == "AXSwitch" || role == "AXPopUpButton" ||
-                             role == "AXComboBox" || role == "AXTextField"
-            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildren(child)) {
+            // Recurse into containers or elements with children.
+            //
+            // Most actionable controls are "leaf" items, but some (notably AXPopUpButton / AXMenuButton / AXComboBox)
+            // can expose their opened menu as child elements. If they have children, we MUST crawl them to capture
+            // popup/select menu options as Hint Targets.
+            let hasChildElements = hasChildren(child)
+            let isLeafItem = (role == "AXCheckBox" || role == "AXSwitch" || role == "AXTextField") ||
+                             ((role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox") && !hasChildElements)
+
+            #if DEBUG
+            if (role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox"), hasChildElements {
+                print("[WindowCrawler] Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
+            }
+            #endif
+
+            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildElements) {
                 // For containers, include the container name in the path to differentiate
                 // items with the same title in different locations (e.g., "iTunes Store" in
                 // both sidebar and toolbar)
@@ -487,7 +573,9 @@ final class WindowCrawler {
         return actions.contains(kAXPressAction as String) ||
                actions.contains("AXSelect") ||
                actions.contains("AXConfirm") ||
-               actions.contains("AXShowDefaultUI")
+               actions.contains("AXShowDefaultUI") ||
+               // Common for popup/select menus
+               actions.contains("AXPick")
     }
 
     /// Checks if an element is a section header that should be excluded.

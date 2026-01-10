@@ -60,7 +60,7 @@ enum HintLabelGenerator {
     /// - Returns: An array of `HintLabel` objects.
     ///
     /// - Note: Items with `.zero` frames are filtered out as they cannot be displayed.
-    static func createHintLabels(from items: [MenuItem], frames: [CGRect]) -> [HintLabel] {
+    static func createHintLabels(from items: [HintTarget], frames: [CGRect]) -> [HintLabel] {
         // Pair items with frames and filter out invalid frames
         let validPairs = zip(items, frames).filter { _, frame in
             frame != .zero && frame.width > 0 && frame.height > 0
@@ -72,7 +72,7 @@ enum HintLabelGenerator {
             HintLabel(
                 label: label,
                 frame: pair.1,
-                menuItem: pair.0
+                target: pair.0
             )
         }
     }

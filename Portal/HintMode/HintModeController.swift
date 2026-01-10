@@ -77,7 +77,7 @@ final class HintModeController {
     private let windowCrawler = WindowCrawler()
 
     /// The command executor for performing actions.
-    private let commandExecutor = CommandExecutor()
+    private let hintActionExecutor = HintActionExecutor()
 
     // MARK: - Initialization
 
@@ -157,8 +157,20 @@ final class HintModeController {
     private func performActivation(for app: NSRunningApplication) async {
         do {
             // Crawl window elements
-            let crawlResult = try await windowCrawler.crawlWindowElements(app)
-            var items = crawlResult.items
+            var items = try await windowCrawler.crawlWindowElements(app)
+
+            // If a popup/select menu is open, prefer showing ONLY its options.
+            // This matches the historical behavior: when menu items are present,
+            // avoid showing hints for unrelated controls in the underlying window.
+            let menuItems = items.filter { item in
+                AccessibilityHelper.getRole(item.axElement) == "AXMenuItem"
+            }
+            if !menuItems.isEmpty {
+                #if DEBUG
+                print("[HintModeController] Detected open menu (\(menuItems.count) items) — showing menu options only")
+                #endif
+                items = menuItems
+            }
 
             guard !items.isEmpty else {
                 #if DEBUG
@@ -168,47 +180,50 @@ final class HintModeController {
             }
 
             #if DEBUG
-            print("[HintModeController] Crawled \(items.count) items (isPopupMenu: \(crawlResult.isPopupMenu))")
+            print("[HintModeController] Crawled \(items.count) items")
             #endif
 
-            // Filter items by window bounds ONLY for normal window crawling
-            // Skip filtering for popup menus since they can extend beyond window bounds
-            if !crawlResult.isPopupMenu {
-                // Get all window frames for filtering (includes main window, popups, dialogs)
-                let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
-                #if DEBUG
-                print("[HintModeController] Found \(windowFrames.count) window frames")
-                for (index, frame) in windowFrames.enumerated() {
-                    print("[HintModeController] Window \(index): \(frame.debugDescription)")
-                }
-                #endif
+            // Filter items by window bounds (includes main window, popups, dialogs)
+            let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
+            #if DEBUG
+            print("[HintModeController] Found \(windowFrames.count) window frames")
+            for (index, frame) in windowFrames.enumerated() {
+                print("[HintModeController] Window \(index): \(frame.debugDescription)")
+            }
+            #endif
 
-                if !windowFrames.isEmpty {
-                    items = items.filter { item in
-                        guard let frame = AccessibilityHelper.getFrame(item.axElement) else {
-                            return false
-                        }
-                        // Check if element is within ANY of the window bounds
-                        let isInAnyWindow = windowFrames.contains { windowFrame in
-                            windowFrame.contains(frame) || windowFrame.intersects(frame)
-                        }
-                        guard isInAnyWindow else {
-                            return false
-                        }
-                        // Check visibility in scroll containers (filters out scrolled-out elements)
-                        return AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
+            if !windowFrames.isEmpty {
+                items = items.filter { item in
+                    guard let frame = AccessibilityHelper.getFrame(item.axElement) else {
+                        return false
                     }
-                    #if DEBUG
-                    print("[HintModeController] Filtered to \(items.count) items within window bounds and visible in scroll containers")
-                    #endif
-                }
 
-                guard !items.isEmpty else {
-                    #if DEBUG
-                    print("[HintModeController] No items within window bounds")
-                    #endif
-                    return
+                    // Menu items (popup/select menus) may extend beyond the main window bounds.
+                    // Keep them as long as they have a valid frame.
+                    if AccessibilityHelper.getRole(item.axElement) == "AXMenuItem" {
+                        return true
+                    }
+
+                    // Check if element is within ANY of the window bounds
+                    let isInAnyWindow = windowFrames.contains { windowFrame in
+                        windowFrame.contains(frame) || windowFrame.intersects(frame)
+                    }
+                    guard isInAnyWindow else {
+                        return false
+                    }
+                    // Check visibility in scroll containers (filters out scrolled-out elements)
+                    return AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
                 }
+                #if DEBUG
+                print("[HintModeController] Filtered to \(items.count) items within window bounds and visible in scroll containers")
+                #endif
+            }
+
+            guard !items.isEmpty else {
+                #if DEBUG
+                print("[HintModeController] No items within window bounds")
+                #endif
+                return
             }
 
             // Get frames for filtered elements
@@ -464,11 +479,11 @@ final class HintModeController {
     /// - Parameter hint: The hint to execute.
     private func executeHint(_ hint: HintLabel) {
         #if DEBUG
-        print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.menuItem.title)'")
+        print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.target.title)'")
         #endif
 
         // Execute the command
-        let result = commandExecutor.execute(hint.menuItem)
+        let result = hintActionExecutor.execute(hint.target)
 
         switch result {
         case .success:

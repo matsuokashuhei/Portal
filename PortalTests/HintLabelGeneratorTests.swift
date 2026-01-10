@@ -158,18 +158,15 @@ struct HintLabelGeneratorTests {
     private func createTestHints(_ labels: [String]) -> [HintLabel] {
         let dummyElement = AXUIElementCreateSystemWide()
         return labels.enumerated().map { index, label in
-            let menuItem = MenuItem(
+            let target = HintTarget(
                 title: "Test \(label)",
-                path: ["Test", "Test \(label)"],
-                keyboardShortcut: nil,
                 axElement: dummyElement,
-                isEnabled: true,
-                type: .window
+                isEnabled: true
             )
             return HintLabel(
                 label: label,
                 frame: CGRect(x: CGFloat(index * 100), y: 0, width: 100, height: 20),
-                menuItem: menuItem
+                target: target
             )
         }
     }
