@@ -400,6 +400,8 @@ final class ElectronCrawler: ElementCrawler {
         var focusedWindowRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focusedWindowRef) == .success,
            let fw = focusedWindowRef {
+            // Note: CoreFoundation types require force cast as conditional cast (as?) always succeeds.
+            // The cast is safe because AXUIElementCopyAttributeValue guarantees the correct type on success.
             // swiftlint:disable:next force_cast
             let focused = fw as! AXUIElement
             if !windows.contains(where: { CFEqual($0, focused) }) {
@@ -411,6 +413,8 @@ final class ElectronCrawler: ElementCrawler {
             var mainWindowRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(axApp, kAXMainWindowAttribute as CFString, &mainWindowRef) == .success,
                let mw = mainWindowRef {
+                // Note: CoreFoundation types require force cast as conditional cast (as?) always succeeds.
+                // The cast is safe because AXUIElementCopyAttributeValue guarantees the correct type on success.
                 // swiftlint:disable:next force_cast
                 windows.append(mw as! AXUIElement)
             }
@@ -544,6 +548,8 @@ final class ElectronCrawler: ElementCrawler {
         var position = CGPoint.zero
         var size = CGSize.zero
 
+        // Note: CoreFoundation types require force cast as conditional cast (as?) always succeeds.
+        // The cast is safe because AXUIElementCopyAttributeValue guarantees the correct type on success.
         // swiftlint:disable force_cast
         AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
         AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)

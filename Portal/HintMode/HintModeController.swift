@@ -38,6 +38,11 @@ final class HintModeController {
     // MARK: - Singleton
 
     /// The shared instance of the hint mode controller.
+    ///
+    /// This instance is used in production and is initialized with default factories.
+    /// For testing purposes, use the public `init(crawlerFactory:executorFactory:)` initializer
+    /// to create a separate instance with custom (mock) factories. Test instances are independent
+    /// of this shared instance and do not affect its state.
     static let shared = HintModeController()
 
     // MARK: - State
@@ -88,6 +93,17 @@ final class HintModeController {
     }
 
     /// Creates a HintModeController with custom factories (for testing).
+    ///
+    /// Use this initializer to create a test instance with mock dependencies.
+    /// The test instance is completely independent of `shared` and allows
+    /// full control over the crawler and executor behavior.
+    ///
+    /// Example:
+    /// ```swift
+    /// let mockCrawlerFactory = CrawlerFactory(crawlers: [mockCrawler], defaultCrawler: mockDefault)
+    /// let mockExecutorFactory = ExecutorFactory(executor: mockExecutor)
+    /// let controller = HintModeController(crawlerFactory: mockCrawlerFactory, executorFactory: mockExecutorFactory)
+    /// ```
     ///
     /// - Parameters:
     ///   - crawlerFactory: Factory for creating crawlers.
