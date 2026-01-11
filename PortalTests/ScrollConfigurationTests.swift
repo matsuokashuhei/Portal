@@ -62,9 +62,9 @@ struct ScrollConfigurationTests {
 
     @Test
     func testScrollAmount() {
-        // Scroll amount should be a small positive value for smooth scrolling
+        // Scroll amount should be a reasonable value for noticeable scrolling
         #expect(ScrollConfiguration.scrollAmount > 0)
-        #expect(ScrollConfiguration.scrollAmount == 3)
+        #expect(ScrollConfiguration.scrollAmount == 60)
     }
 
     @Test

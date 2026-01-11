@@ -42,9 +42,9 @@ enum ScrollDirection {
 nonisolated enum ScrollConfiguration: Sendable {
     /// Scroll amount per key press (in pixels).
     ///
-    /// A value of 3 provides smooth, Vimium-like scrolling that's
-    /// responsive without being too jumpy.
-    static let scrollAmount: Int32 = 3
+    /// A value of 60 provides Vimium-like scrolling that's
+    /// responsive and noticeable per key press.
+    static let scrollAmount: Int32 = 60
 
     /// Scroll amount for jump-to-top/bottom operations (in pixels).
     ///
