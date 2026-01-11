@@ -30,11 +30,14 @@ struct HintOverlayView: View {
                     .allowsHitTesting(false)
 
                 // Hint labels positioned at element locations
+                // Coordinate transformation depends on the source:
+                // - Native apps: Accessibility API uses top-left origin, needs Y-flip
+                // - Electron apps: Already in screen-local coordinates, no Y-flip
                 ForEach(filteredHints) { hint in
                     HintLabelView(hint: hint, input: currentInput)
                         .position(
                             x: hint.frame.minX - screenBounds.minX + 10,
-                            y: screenBounds.maxY - hint.frame.maxY + 10
+                            y: calculateY(for: hint)
                         )
                 }
             }
@@ -44,6 +47,39 @@ struct HintOverlayView: View {
     /// Hints filtered by the current user input.
     private var filteredHints: [HintLabel] {
         HintLabelGenerator.filterHints(hints, by: currentInput)
+    }
+
+    /// Calculates the Y position for a hint based on its coordinate system.
+    ///
+    /// ## Coordinate Systems
+    ///
+    /// **macOS Accessibility API (native):**
+    /// - Origin: Top-left of the primary screen
+    /// - Y-axis: Increases downward
+    /// - Multi-screen: Each screen has coordinates relative to primary screen's origin
+    ///
+    /// **NSScreen / SwiftUI (this view):**
+    /// - Origin: Bottom-left of the screen
+    /// - Y-axis: Increases upward
+    ///
+    /// **Electron/Chromium:**
+    /// - Tested to provide screen-local coordinates similar to NSScreen
+    /// - No Y-flip transformation needed
+    ///
+    /// - Parameter hint: The hint to calculate Y position for.
+    /// - Returns: The Y position in window-local coordinates.
+    private func calculateY(for hint: HintLabel) -> CGFloat {
+        switch hint.coordinateSystem {
+        case .native:
+            // Native macOS: Accessibility API uses top-left origin (Y increases downward)
+            // SwiftUI uses bottom-left origin (Y increases upward)
+            // Formula: screenBounds.maxY - hint.frame.maxY converts top-left to bottom-left
+            return screenBounds.maxY - hint.frame.maxY + 10
+        case .electron:
+            // Electron apps: HintLabel frames are already converted to screen-local coordinates
+            // during crawling (see ElectronCrawler.getFrame). No Y-flip needed.
+            return hint.frame.minY - screenBounds.minY + 10
+        }
     }
 }
 
@@ -133,7 +169,8 @@ struct InputBufferView: View {
                 title: "Test",
                 axElement: AXUIElementCreateSystemWide(),
                 isEnabled: true
-            )
+            ),
+            coordinateSystem: .native
         ),
         input: "A"
     )

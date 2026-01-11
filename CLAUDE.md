@@ -36,7 +36,7 @@ xcodebuild -project Portal.xcodeproj -scheme Portal clean build
 
 ## アーキテクチャ
 
-### 現在の実装
+### ディレクトリ構造
 
 ```
 Portal/
@@ -47,9 +47,19 @@ Portal/
 │   ├── AppDelegate.swift      # ステータスバー、ホットキー管理
 │   ├── Notifications.swift    # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
+├── Protocols/                 # プロトコル定義（DIP準拠）
+│   ├── ElementCrawler.swift   # Crawlerプロトコル
+│   └── ActionExecutor.swift   # Executorプロトコル
+├── Crawlers/                  # 要素走査実装
+│   ├── CrawlerFactory.swift   # Crawler生成ファクトリ
+│   ├── NativeAppCrawler.swift # ネイティブアプリ用Crawler
+│   └── ElectronCrawler.swift  # Electronアプリ用Crawler
+├── Executors/                 # アクション実行実装
+│   ├── ExecutorFactory.swift  # Executor生成ファクトリ
+│   └── AccessibilityExecutor.swift # Accessibility API実行
 ├── Models/
-│   ├── HintTarget.swift         # Hint Mode用ターゲット（HintTarget）モデル
-│   └── HintExecutionError.swift # Hint Mode実行エラー（HintExecutionError）
+│   ├── HintTarget.swift         # Hint Mode用ターゲットモデル
+│   └── HintExecutionError.swift # Hint Mode実行エラー
 ├── HintMode/
 │   ├── HintLabel.swift            # ヒントラベルのデータモデル
 │   ├── HintLabelGenerator.swift   # A-Z, AA-AZ式ラベル生成
@@ -57,14 +67,24 @@ Portal/
 │   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理
 │   └── HintModeController.swift   # ヒントモード全体制御
 ├── Services/
-│   ├── HotkeyManager.swift    # 設定可能なホットキー検出
+│   ├── HotkeyManager.swift         # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
 │   ├── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
-│   ├── WindowCrawler.swift    # ウィンドウ要素走査サービス（サイドバー/ツールバー/コンテンツ）
-│   └── HintActionExecutor.swift  # Hint Modeターゲット実行（HintActionExecutor）
+│   └── ElectronAppDetector.swift   # Electronアプリ検出
 └── Settings/
     ├── HotkeyConfiguration.swift   # ホットキー設定モデル
     └── SettingsView.swift          # 設定画面UI
+```
+
+### Crawler/Executorアーキテクチャ
+
+```
+HintModeController
+    ├── CrawlerFactory → ElementCrawler protocol
+    │                     ├── NativeAppCrawler（ネイティブmacOSアプリ）
+    │                     └── ElectronCrawler（Slack, VS Code等）
+    └── ExecutorFactory → ActionExecutor protocol
+                          └── AccessibilityExecutor（Accessibility API実行）
 ```
 
 ## 実装の要点
@@ -96,12 +116,20 @@ Portal/
 
 ### ヒントモード（Vimiumライク）
 - [x] ホットキーでヒントモード起動（#104, #107）
-- [x] `WindowCrawler`で操作可能要素取得（#104）
+- [x] `NativeAppCrawler`で操作可能要素取得（#104）
 - [x] `kAXPositionAttribute`/`kAXSizeAttribute`で位置取得（#104）
 - [x] A-Z, AA-AZ式ラベル生成（#104）
 - [x] オーバーレイウィンドウでラベル表示（#104）
 - [x] キー入力で要素選択・実行（#104）
 - [x] ESCで終了、Backspaceで入力クリア（#104）
+
+### Electronアプリ対応（#124）
+- [x] プロトコルベースのCrawler/Executorアーキテクチャ
+- [x] `ElectronAppDetector`によるElectronアプリ検出
+- [x] `ElectronCrawler`によるAXWebArea走査
+- [x] `AXManualAccessibility`/`AXEnhancedUserInterface`有効化
+
+**対応Electronアプリ**: Slack, VS Code, Discord, Notion, Figma, 1Password, Obsidian, Postman等
 
 ## パフォーマンス目標
 
@@ -127,7 +155,8 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
-└── HintTargetTests.swift                # HintTargetテスト
+├── HintTargetTests.swift                # HintTargetテスト
+└── ElectronAppDetectorTests.swift       # Electronアプリ検出テスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト

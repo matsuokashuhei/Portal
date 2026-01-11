@@ -8,6 +8,29 @@
 import CoreGraphics
 import Foundation
 
+/// Coordinate system used by the hint's frame.
+///
+/// Different UI frameworks use different coordinate origins, requiring
+/// transformation when displaying hints in SwiftUI.
+enum HintCoordinateSystem {
+    /// Native macOS Accessibility API coordinates.
+    ///
+    /// - Origin: Top-left of the primary screen
+    /// - Y-axis: Increases downward
+    /// - Multi-screen: Coordinates are relative to the primary screen's top-left
+    /// - Transformation: Requires Y-flip to convert to SwiftUI's bottom-left origin
+    case native
+
+    /// Electron/Chromium Accessibility coordinates.
+    ///
+    /// Electron apps (Slack, VS Code, Discord, etc.) return coordinates that are
+    /// already compatible with NSScreen's coordinate system after crawling.
+    /// - Origin: Effectively bottom-left of screen (post-crawl)
+    /// - Y-axis: Increases upward
+    /// - Transformation: No Y-flip needed
+    case electron
+}
+
 /// Represents a hint label displayed on the overlay for keyboard navigation.
 ///
 /// Each `HintLabel` corresponds to an interactive UI element in the target application.
@@ -20,12 +43,15 @@ struct HintLabel: Identifiable {
     let label: String
 
     /// Screen coordinates where the label should be displayed.
-    /// This is in AppKit coordinate system (origin at bottom-left).
     let frame: CGRect
 
     /// The target UI element associated with this hint.
     /// Contains the `axElement` reference for execution.
     let target: HintTarget
+
+    /// The coordinate system used by this hint's frame.
+    /// Determines how to transform coordinates for display.
+    let coordinateSystem: HintCoordinateSystem
 
     /// Center point of the frame for label positioning.
     var centerPoint: CGPoint {

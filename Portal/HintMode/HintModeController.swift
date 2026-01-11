@@ -38,6 +38,11 @@ final class HintModeController {
     // MARK: - Singleton
 
     /// The shared instance of the hint mode controller.
+    ///
+    /// This instance is used in production and is initialized with default factories.
+    /// For testing purposes, use the public `init(crawlerFactory:executorFactory:)` initializer
+    /// to create a separate instance with custom (mock) factories. Test instances are independent
+    /// of this shared instance and do not affect its state.
     static let shared = HintModeController()
 
     // MARK: - State
@@ -73,15 +78,40 @@ final class HintModeController {
 
     // MARK: - Dependencies
 
-    /// The window crawler for retrieving UI elements.
-    private let windowCrawler = WindowCrawler()
+    /// Factory for creating crawlers based on application type.
+    private let crawlerFactory: CrawlerFactory
 
-    /// The command executor for performing actions.
-    private let hintActionExecutor = HintActionExecutor()
+    /// Factory for creating action executors.
+    private let executorFactory: ExecutorFactory
 
     // MARK: - Initialization
 
-    private init() {}
+    /// Creates a HintModeController with default factories.
+    private init() {
+        self.crawlerFactory = CrawlerFactory()
+        self.executorFactory = ExecutorFactory()
+    }
+
+    /// Creates a HintModeController with custom factories (for testing).
+    ///
+    /// Use this initializer to create a test instance with mock dependencies.
+    /// The test instance is completely independent of `shared` and allows
+    /// full control over the crawler and executor behavior.
+    ///
+    /// Example:
+    /// ```swift
+    /// let mockCrawlerFactory = CrawlerFactory(crawlers: [mockCrawler], defaultCrawler: mockDefault)
+    /// let mockExecutorFactory = ExecutorFactory(executor: mockExecutor)
+    /// let controller = HintModeController(crawlerFactory: mockCrawlerFactory, executorFactory: mockExecutorFactory)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - crawlerFactory: Factory for creating crawlers.
+    ///   - executorFactory: Factory for creating executors.
+    init(crawlerFactory: CrawlerFactory, executorFactory: ExecutorFactory) {
+        self.crawlerFactory = crawlerFactory
+        self.executorFactory = executorFactory
+    }
 
     // MARK: - Public Methods
 
@@ -156,8 +186,14 @@ final class HintModeController {
     /// Performs the async activation process.
     private func performActivation(for app: NSRunningApplication) async {
         do {
-            // Crawl window elements
-            var items = try await windowCrawler.crawlWindowElements(app)
+            // Get the appropriate crawler for this application
+            let crawler = crawlerFactory.crawler(for: app)
+
+            // Get coordinate system from the crawler (protocol-based, no type checking)
+            let coordinateSystem = crawler.coordinateSystem
+
+            // Crawl UI elements
+            var items = try await crawler.crawlElements(app)
 
             // Cache roles to avoid repeated AX API calls during filtering.
             // HintTarget.id is UUID-based, so it's safe as a stable key for this activation run.
@@ -201,8 +237,29 @@ final class HintModeController {
             #endif
 
             if !windowFrames.isEmpty {
+                #if DEBUG
+                let beforeFilterCount = items.count
+                #endif
                 items = items.filter { item in
-                    guard let frame = AccessibilityHelper.getFrame(item.axElement) else {
+                    // Use cachedFrame if available (for Electron apps)
+                    let frame: CGRect
+                    if let cached = item.cachedFrame {
+                        frame = cached
+                    } else if let f = AccessibilityHelper.getFrame(item.axElement) {
+                        frame = f
+                    } else {
+                        #if DEBUG
+                        // Get role for debugging
+                        var roleRef: CFTypeRef?
+                        let role: String
+                        if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
+                           let r = roleRef as? String {
+                            role = r
+                        } else {
+                            role = "unknown"
+                        }
+                        print("[HintModeController] SKIP (no frame): '\(item.title)' role=\(role)")
+                        #endif
                         return false
                     }
 
@@ -217,13 +274,31 @@ final class HintModeController {
                         windowFrame.contains(frame) || windowFrame.intersects(frame)
                     }
                     guard isInAnyWindow else {
+                        #if DEBUG
+                        print("[HintModeController] SKIP (out of window): '\(item.title)' frame=\(frame)")
+                        #endif
                         return false
                     }
+                    // For items with cachedFrame (Electron apps), skip scroll visibility check.
+                    // Reason: Electron's AXUIElement references may become invalid after crawling,
+                    // making AccessibilityHelper.isVisibleInScrollContainers() unreliable.
+                    // Trade-off: Some scrolled-out elements may show hints, but the window bounds
+                    // check above provides a reasonable filter. Future improvement could involve
+                    // capturing scroll container bounds during crawling.
+                    if item.cachedFrame != nil {
+                        return true
+                    }
                     // Check visibility in scroll containers (filters out scrolled-out elements)
-                    return AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
+                    let isVisible = AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
+                    #if DEBUG
+                    if !isVisible {
+                        print("[HintModeController] SKIP (scroll hidden): '\(item.title)'")
+                    }
+                    #endif
+                    return isVisible
                 }
                 #if DEBUG
-                print("[HintModeController] Filtered to \(items.count) items within window bounds and visible in scroll containers")
+                print("[HintModeController] Filter result: \(beforeFilterCount) -> \(items.count) items")
                 #endif
             }
 
@@ -235,10 +310,56 @@ final class HintModeController {
             }
 
             // Get frames for filtered elements
-            let frames = items.map { AccessibilityHelper.getFrame($0.axElement) ?? .zero }
+            // Use cachedFrame if available (for Electron apps where AXUIElement may become invalid)
+            let frames = items.map { item -> CGRect in
+                if let cached = item.cachedFrame {
+                    return cached
+                }
+                return AccessibilityHelper.getFrame(item.axElement) ?? .zero
+            }
+
+            #if DEBUG
+            // Debug: Analyze frame distribution
+            var invalidItems: [(item: HintTarget, frame: CGRect)] = []
+            var validItems: [(item: HintTarget, frame: CGRect)] = []
+            for (item, frame) in zip(items, frames) {
+                if frame == .zero || frame.width <= 0 || frame.height <= 0 {
+                    invalidItems.append((item, frame))
+                } else {
+                    validItems.append((item, frame))
+                }
+            }
+            print("[HintModeController] Frame analysis: total=\(frames.count), valid=\(validItems.count), invalid=\(invalidItems.count)")
+
+            // Show sample of invalid items to understand why frames are invalid
+            if !invalidItems.isEmpty {
+                let sampleInvalid = invalidItems.prefix(10)
+                print("[HintModeController] Sample INVALID items (no frame):")
+                for (item, frame) in sampleInvalid {
+                    var roleRef: CFTypeRef?
+                    let role: String
+                    if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
+                       let r = roleRef as? String {
+                        role = r
+                    } else {
+                        role = "unknown"
+                    }
+                    print("[HintModeController]   role=\(role) title='\(item.title)' frame=\(frame)")
+                }
+            }
+
+            // Show sample of valid frames to check positions
+            if !validItems.isEmpty {
+                let sampleValid = validItems.prefix(5)
+                print("[HintModeController] Sample VALID items:")
+                for (item, frame) in sampleValid {
+                    print("[HintModeController]   '\(item.title)' at \(frame)")
+                }
+            }
+            #endif
 
             // Create hint labels for filtered items only
-            hints = HintLabelGenerator.createHintLabels(from: items, frames: frames)
+            hints = HintLabelGenerator.createHintLabels(from: items, frames: frames, coordinateSystem: coordinateSystem)
 
             guard !hints.isEmpty else {
                 #if DEBUG
@@ -249,6 +370,13 @@ final class HintModeController {
 
             #if DEBUG
             print("[HintModeController] Created \(hints.count) hints")
+
+            // Debug: Show sample hints with their screen positions
+            let sampleHints = hints.prefix(5)
+            print("[HintModeController] Sample hints:")
+            for hint in sampleHints {
+                print("[HintModeController]   '\(hint.label)' at \(hint.frame) -> '\(hint.target.title)'")
+            }
             #endif
 
             // Create and show overlay windows for all screens
@@ -490,8 +618,9 @@ final class HintModeController {
         print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.target.title)'")
         #endif
 
-        // Execute the command
-        let result = hintActionExecutor.execute(hint.target)
+        // Get executor and execute the action
+        let executor = executorFactory.executor()
+        let result = executor.execute(hint.target)
 
         switch result {
         case .success:
