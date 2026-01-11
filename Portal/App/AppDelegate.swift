@@ -38,9 +38,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         wasPermissionGranted = AccessibilityService.isGranted
         setupHintModeHotkeyManager()
+        setupScrollMode()
         setupPermissionObserver()
         setupHotkeyConfigurationObserver()
         setupOpenSettingsObserver()
+    }
+
+    private func setupScrollMode() {
+        // Start scroll mode if accessibility permission is granted
+        // If not granted, it will be started when permission is granted
+        if AccessibilityService.isGranted {
+            ScrollModeController.shared.start()
+        }
     }
 
     private func setupPermissionObserver() {
@@ -85,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             stopPermissionCheckTimer()
             if !wasPermissionGranted {
                 restartHotkeyManager()
+                ScrollModeController.shared.start()
                 updatePermissionMenuItemIfNeeded()
             }
         }
@@ -317,6 +327,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NotificationCenter.default.removeObserver(observer)
         }
         stopPermissionCheckTimer()
+        // Note: ScrollModeController.shared.stop() is not called here because:
+        // 1. deinit is nonisolated and cannot call MainActor-isolated methods synchronously
+        // 2. App termination will clean up all resources anyway
     }
 }
 

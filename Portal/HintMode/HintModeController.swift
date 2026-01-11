@@ -48,7 +48,10 @@ final class HintModeController {
     // MARK: - State
 
     /// Whether hint mode is currently active.
-    private(set) var isActive: Bool = false
+    /// Using nonisolated(unsafe) to allow read access from CGEventTap callbacks
+    /// in other controllers (e.g., ScrollModeController). Write access is always
+    /// performed on MainActor.
+    nonisolated(unsafe) private(set) var isActive: Bool = false
 
     /// The overlay windows displaying hint labels.
     private var overlayWindows: [HintOverlayWindow] = []

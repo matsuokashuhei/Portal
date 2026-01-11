@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 PortalはmacOS向けVimiumライクなキーボードナビゲーションツール。Accessibility APIを使用してアクティブアプリのウィンドウ要素をヒントラベルで操作する。
 
 - **デフォルトホットキー**: Fキー（修飾キーなし、設定画面で変更可能）
-- **機能**: ウィンドウ要素のヒント表示とクリック
+- **機能**: ウィンドウ要素のヒント表示とクリック、h/j/k/lキーによるスクロール
 
 ## 技術スタック
 
@@ -66,6 +66,10 @@ Portal/
 │   ├── HintOverlayView.swift      # SwiftUIラベル描画
 │   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理
 │   └── HintModeController.swift   # ヒントモード全体制御
+├── ScrollMode/
+│   ├── ScrollConfiguration.swift  # スクロールキー・設定定義
+│   ├── ScrollExecutor.swift       # スクロールイベント生成・実行
+│   └── ScrollModeController.swift # スクロールモード全体制御
 ├── Services/
 │   ├── HotkeyManager.swift         # 設定可能なホットキー検出
 │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
@@ -131,6 +135,12 @@ HintModeController
 
 **対応Electronアプリ**: Slack, VS Code, Discord, Notion, Figma, 1Password, Obsidian, Postman等
 
+### スクロールモード（#128）
+- [x] h/j/k/lキーでスクロール（左/下/上/右）
+- [x] CGEventTapによるグローバルキー監視
+- [x] テキスト入力中は自動無効化
+- [x] ヒントモードとの共存
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
@@ -156,7 +166,8 @@ PortalTests/
 ├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
 ├── HintTargetTests.swift                # HintTargetテスト
-└── ElectronAppDetectorTests.swift       # Electronアプリ検出テスト
+├── ElectronAppDetectorTests.swift       # Electronアプリ検出テスト
+└── ScrollConfigurationTests.swift       # スクロール設定テスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト
