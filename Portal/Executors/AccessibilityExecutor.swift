@@ -299,6 +299,13 @@ final class AccessibilityExecutor: ActionExecutor {
             possibleTitles.append(p)
         }
 
+        // Try help attribute (used by some buttons like Xcode's toolbar buttons)
+        var helpRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXHelpAttribute as CFString, &helpRef) == .success,
+           let h = helpRef as? String, !h.isEmpty {
+            possibleTitles.append(h)
+        }
+
         // Also check child elements (for sidebar items like AXRow)
         if let childTitle = getTitleFromChildren(element), !childTitle.isEmpty {
             possibleTitles.append(childTitle)
