@@ -17,7 +17,9 @@ final class AccessibilityExecutor: ActionExecutor {
     private static let validRoles: Set<String> = [
         "AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton",
         "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton",
-        "AXComboBox", "AXTextField", "AXTextArea", "AXLink", "AXImage"
+        "AXComboBox", "AXTextField", "AXTextArea", "AXLink", "AXImage",
+        // Additional controls (#132)
+        "AXSlider", "AXIncrementor", "AXDisclosureTriangle", "AXTab", "AXSegment"
     ]
 
     /// Actions to try for window elements, in order of preference.
@@ -26,7 +28,12 @@ final class AccessibilityExecutor: ActionExecutor {
     ]
 
     /// Roles that require AXPress action (not kAXSelectedAttribute).
-    private static let rolesRequiringPress: Set<String> = ["AXRadioButton", "AXButton", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton", "AXComboBox"]
+    private static let rolesRequiringPress: Set<String> = [
+        "AXRadioButton", "AXButton", "AXMenuItem", "AXCheckBox", "AXMenuButton",
+        "AXSwitch", "AXPopUpButton", "AXComboBox",
+        // Additional controls (#132)
+        "AXDisclosureTriangle", "AXTab", "AXSegment"
+    ]
 
     /// Roles that require focus action instead of press.
     private static let rolesRequiringFocus: Set<String> = ["AXTextField"]
@@ -105,6 +112,49 @@ final class AccessibilityExecutor: ActionExecutor {
             print("[AccessibilityExecutor] execute: Failed to set focus with result \(focusResult.rawValue)")
             #endif
             // Fall through to try other actions if focus fails
+        }
+
+        // For sliders, set focus to allow arrow key control (#132)
+        if role == "AXSlider" {
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: Slider detected, setting focus")
+            #endif
+            let focusResult = AXUIElementSetAttributeValue(
+                target.axElement,
+                kAXFocusedAttribute as CFString,
+                kCFBooleanTrue
+            )
+            if focusResult == .success {
+                #if DEBUG
+                print("[AccessibilityExecutor] execute: Slider focus set successfully")
+                #endif
+                return .success(())
+            }
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: Slider focus failed, trying other actions")
+            #endif
+            // Fall through to try other actions if focus fails
+        }
+
+        // For incrementors, perform AXIncrement action (#132)
+        if role == "AXIncrementor" {
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: Incrementor detected, performing AXIncrement")
+            #endif
+            let incrementResult = AXUIElementPerformAction(
+                target.axElement,
+                "AXIncrement" as CFString
+            )
+            if incrementResult == .success {
+                #if DEBUG
+                print("[AccessibilityExecutor] execute: AXIncrement succeeded")
+                #endif
+                return .success(())
+            }
+            #if DEBUG
+            print("[AccessibilityExecutor] execute: AXIncrement failed, trying other actions")
+            #endif
+            // Fall through to try other actions if increment fails
         }
 
         // Try setting AXSelected attribute first for list/outline rows.
@@ -247,6 +297,13 @@ final class AccessibilityExecutor: ActionExecutor {
         if AXUIElementCopyAttributeValue(element, "AXPlaceholderValue" as CFString, &placeholderRef) == .success,
            let p = placeholderRef as? String, !p.isEmpty {
             possibleTitles.append(p)
+        }
+
+        // Try help attribute (used by some buttons like Xcode's toolbar buttons)
+        var helpRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXHelpAttribute as CFString, &helpRef) == .success,
+           let h = helpRef as? String, !h.isEmpty {
+            possibleTitles.append(h)
         }
 
         // Also check child elements (for sidebar items like AXRow)
