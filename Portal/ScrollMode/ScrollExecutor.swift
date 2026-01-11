@@ -100,12 +100,12 @@ final class ScrollExecutor {
         }
 
         #if DEBUG
-        print("[ScrollExecutor] Main window frame (Accessibility coords, bottom-left origin): \(frame)")
+        print("[ScrollExecutor] Main window frame (AppKit coords, bottom-left origin): \(frame)")
         #endif
 
-        // Convert from Accessibility coordinates (bottom-left origin) to
+        // Convert from AppKit coordinates (bottom-left origin) to
         // CGEvent coordinates (top-left origin).
-        // Formula: cgEventY = screenHeight - accessibilityY
+        // Formula: cgEventY = screenHeight - appKitY
         guard let screenHeight = NSScreen.main?.frame.height else {
             #if DEBUG
             print("[ScrollExecutor] Could not get screen height")
