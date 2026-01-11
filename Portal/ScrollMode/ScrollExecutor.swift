@@ -80,21 +80,48 @@ final class ScrollExecutor {
 
     /// Gets the center point of the active (frontmost) application's main window.
     ///
-    /// - Returns: The center point in screen coordinates, or nil if unavailable.
+    /// - Returns: The center point in CGEvent screen coordinates (top-left origin), or nil if unavailable.
     private func getActiveWindowCenter() -> CGPoint? {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
               frontmostApp.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            #if DEBUG
+            print("[ScrollExecutor] No frontmost app or frontmost is Portal")
+            #endif
             return nil
         }
+
+        #if DEBUG
+        print("[ScrollExecutor] Frontmost app: \(frontmostApp.localizedName ?? "unknown") (bundleID: \(frontmostApp.bundleIdentifier ?? "unknown"))")
+        #endif
 
         guard let frame = AccessibilityHelper.getMainWindowFrame(frontmostApp) else {
+            #if DEBUG
+            print("[ScrollExecutor] Could not get main window frame for \(frontmostApp.localizedName ?? "unknown")")
+            #endif
             return nil
         }
 
-        // Calculate center of the window
-        return CGPoint(
-            x: frame.midX,
-            y: frame.midY
-        )
+        #if DEBUG
+        print("[ScrollExecutor] Main window frame (Accessibility coords, bottom-left origin): \(frame)")
+        #endif
+
+        // Convert from Accessibility coordinates (bottom-left origin) to
+        // CGEvent coordinates (top-left origin).
+        // Formula: cgEventY = screenHeight - accessibilityY
+        guard let screenHeight = NSScreen.main?.frame.height else {
+            #if DEBUG
+            print("[ScrollExecutor] Could not get screen height")
+            #endif
+            return nil
+        }
+
+        let centerX = frame.midX
+        let centerY = screenHeight - frame.midY
+
+        #if DEBUG
+        print("[ScrollExecutor] Screen height: \(screenHeight), Converted center: (\(centerX), \(centerY))")
+        #endif
+
+        return CGPoint(x: centerX, y: centerY)
     }
 }
