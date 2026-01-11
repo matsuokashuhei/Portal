@@ -5,6 +5,7 @@
 //  Created by Claude Code on 2026/01/11.
 //
 
+import AppKit
 import CoreGraphics
 
 /// Executes scroll actions by generating CGEvent scroll wheel events.
@@ -39,7 +40,17 @@ final class ScrollExecutor {
             return
         }
 
-        // Post the event to the HID event tap (applies to active window)
+        // Set the event location to the center of the active window.
+        // Without this, scroll events are sent to the window under the mouse cursor,
+        // which may be a different app than the frontmost one.
+        if let location = getActiveWindowCenter() {
+            scrollEvent.location = location
+            #if DEBUG
+            print("[ScrollExecutor] Scroll location set to \(location)")
+            #endif
+        }
+
+        // Post the event to the HID event tap
         scrollEvent.post(tap: .cghidEventTap)
 
         #if DEBUG
@@ -65,5 +76,25 @@ final class ScrollExecutor {
         case .toTop:    return (0, ScrollConfiguration.jumpScrollAmount)
         case .toBottom: return (0, -ScrollConfiguration.jumpScrollAmount)
         }
+    }
+
+    /// Gets the center point of the active (frontmost) application's main window.
+    ///
+    /// - Returns: The center point in screen coordinates, or nil if unavailable.
+    private func getActiveWindowCenter() -> CGPoint? {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
+              frontmostApp.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return nil
+        }
+
+        guard let frame = AccessibilityHelper.getMainWindowFrame(frontmostApp) else {
+            return nil
+        }
+
+        // Calculate center of the window
+        return CGPoint(
+            x: frame.midX,
+            y: frame.midY
+        )
     }
 }
