@@ -11,7 +11,7 @@ import CoreGraphics
 
 /// Controls Vimium-style keyboard scrolling.
 ///
-/// This controller intercepts h/j/k/l/g/G key presses globally and translates them
+/// This controller intercepts h/j/k/l key presses globally and translates them
 /// into scroll events for the active window. It operates independently of hint mode
 /// and is always active when accessibility permission is granted.
 ///
@@ -20,8 +20,6 @@ import CoreGraphics
 /// - j: scroll down
 /// - k: scroll up
 /// - l: scroll right
-/// - gg: scroll to top
-/// - G (Shift+G): scroll to bottom
 @MainActor
 final class ScrollModeController {
     // MARK: - Singleton
@@ -33,12 +31,6 @@ final class ScrollModeController {
 
     /// Whether scroll mode is currently running.
     private(set) var isRunning: Bool = false
-
-    /// Input buffer for detecting key sequences (e.g., "gg").
-    private var inputBuffer: String = ""
-
-    /// Timestamp of the last key press for sequence timeout.
-    private var lastKeyTime: Date?
 
     /// The CGEventTap for intercepting keyboard events.
     /// Using nonisolated(unsafe) because this is accessed from the event tap callback
@@ -86,8 +78,6 @@ final class ScrollModeController {
         guard isRunning else { return }
 
         stopEventTap()
-        inputBuffer = ""
-        lastKeyTime = nil
         isRunning = false
 
         #if DEBUG
@@ -135,9 +125,8 @@ final class ScrollModeController {
 
                 if shouldConsume {
                     // Dispatch the actual scroll action to MainActor
-                    let isShiftPressed = flags.contains(.maskShift)
                     Task { @MainActor in
-                        controller.handleKeyEvent(keyCode: keyCode, isShiftPressed: isShiftPressed)
+                        controller.handleKeyEvent(keyCode: keyCode)
                     }
                     // Consume the event (return nil)
                     return nil
@@ -223,20 +212,9 @@ final class ScrollModeController {
 
     /// Handles a scroll key event.
     ///
-    /// - Parameters:
-    ///   - keyCode: The Carbon key code of the pressed key.
-    ///   - isShiftPressed: Whether the Shift key is pressed.
-    private func handleKeyEvent(keyCode: Int64, isShiftPressed: Bool) {
+    /// - Parameter keyCode: The Carbon key code of the pressed key.
+    private func handleKeyEvent(keyCode: Int64) {
         guard let scrollKey = ScrollKey.from(keyCode: keyCode) else { return }
-
-        // Handle G key specially (gg sequence or Shift+G)
-        if scrollKey == .g {
-            handleGKey(isShiftPressed: isShiftPressed)
-            return
-        }
-
-        // Clear input buffer for non-g keys
-        inputBuffer = ""
 
         // Execute scroll action
         switch scrollKey {
@@ -244,43 +222,6 @@ final class ScrollModeController {
         case .j: executor.scroll(direction: .down)
         case .k: executor.scroll(direction: .up)
         case .l: executor.scroll(direction: .right)
-        case .g: break  // Handled above
-        }
-    }
-
-    /// Handles the G key for gg (scroll to top) or Shift+G (scroll to bottom).
-    ///
-    /// - Parameter isShiftPressed: Whether the Shift key is pressed.
-    private func handleGKey(isShiftPressed: Bool) {
-        if isShiftPressed {
-            // Shift+G = scroll to bottom
-            inputBuffer = ""
-            executor.scroll(direction: .toBottom)
-            #if DEBUG
-            print("[ScrollModeController] Shift+G: scroll to bottom")
-            #endif
-            return
-        }
-
-        // Check for gg sequence
-        let now = Date()
-        if inputBuffer == "g",
-           let lastTime = lastKeyTime,
-           now.timeIntervalSince(lastTime) < ScrollConfiguration.sequenceTimeout {
-            // Second 'g' within timeout - scroll to top
-            inputBuffer = ""
-            lastKeyTime = nil
-            executor.scroll(direction: .toTop)
-            #if DEBUG
-            print("[ScrollModeController] gg: scroll to top")
-            #endif
-        } else {
-            // First 'g' - start sequence
-            inputBuffer = "g"
-            lastKeyTime = now
-            #if DEBUG
-            print("[ScrollModeController] g: waiting for second g")
-            #endif
         }
     }
 

@@ -18,7 +18,6 @@ struct ScrollConfigurationTests {
         #expect(ScrollKey.j.keyCode == 38)
         #expect(ScrollKey.k.keyCode == 40)
         #expect(ScrollKey.l.keyCode == 37)
-        #expect(ScrollKey.g.keyCode == 5)
     }
 
     @Test
@@ -27,19 +26,17 @@ struct ScrollConfigurationTests {
         #expect(ScrollKey.j.rawValue == "j")
         #expect(ScrollKey.k.rawValue == "k")
         #expect(ScrollKey.l.rawValue == "l")
-        #expect(ScrollKey.g.rawValue == "g")
     }
 
     @Test
     func testScrollKeyCaseIterable() {
         let allCases = ScrollKey.allCases
 
-        #expect(allCases.count == 5)
+        #expect(allCases.count == 4)
         #expect(allCases.contains(.h))
         #expect(allCases.contains(.j))
         #expect(allCases.contains(.k))
         #expect(allCases.contains(.l))
-        #expect(allCases.contains(.g))
     }
 
     @Test
@@ -48,12 +45,12 @@ struct ScrollConfigurationTests {
         #expect(ScrollKey.from(keyCode: 38) == .j)
         #expect(ScrollKey.from(keyCode: 40) == .k)
         #expect(ScrollKey.from(keyCode: 37) == .l)
-        #expect(ScrollKey.from(keyCode: 5) == .g)
     }
 
     @Test
     func testScrollKeyFromInvalidKeyCode() {
         #expect(ScrollKey.from(keyCode: 0) == nil)
+        #expect(ScrollKey.from(keyCode: 5) == nil)  // g key is no longer a scroll key
         #expect(ScrollKey.from(keyCode: 100) == nil)
         #expect(ScrollKey.from(keyCode: -1) == nil)
     }
@@ -65,20 +62,6 @@ struct ScrollConfigurationTests {
         // Scroll amount should be a reasonable value for noticeable scrolling
         #expect(ScrollConfiguration.scrollAmount > 0)
         #expect(ScrollConfiguration.scrollAmount == 60)
-    }
-
-    @Test
-    func testJumpScrollAmount() {
-        // Jump scroll amount should be larger than regular scroll
-        #expect(ScrollConfiguration.jumpScrollAmount > ScrollConfiguration.scrollAmount)
-        #expect(ScrollConfiguration.jumpScrollAmount == 100)
-    }
-
-    @Test
-    func testSequenceTimeout() {
-        // Sequence timeout should be a reasonable duration for typing
-        #expect(ScrollConfiguration.sequenceTimeout > 0)
-        #expect(ScrollConfiguration.sequenceTimeout == 0.5)
     }
 
     @Test
@@ -97,7 +80,7 @@ struct ScrollConfigurationTests {
     @Test
     func testScrollDirectionCases() {
         // Verify all expected cases exist
-        let directions: [ScrollDirection] = [.up, .down, .left, .right, .toTop, .toBottom]
-        #expect(directions.count == 6)
+        let directions: [ScrollDirection] = [.up, .down, .left, .right]
+        #expect(directions.count == 4)
     }
 }

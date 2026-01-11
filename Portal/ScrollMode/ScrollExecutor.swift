@@ -73,8 +73,6 @@ final class ScrollExecutor {
         case .down:     return (0, -ScrollConfiguration.scrollAmount)
         case .left:     return (ScrollConfiguration.scrollAmount, 0)
         case .right:    return (-ScrollConfiguration.scrollAmount, 0)
-        case .toTop:    return (0, ScrollConfiguration.jumpScrollAmount)
-        case .toBottom: return (0, -ScrollConfiguration.jumpScrollAmount)
         }
     }
 

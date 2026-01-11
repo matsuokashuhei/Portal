@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 PortalはmacOS向けVimiumライクなキーボードナビゲーションツール。Accessibility APIを使用してアクティブアプリのウィンドウ要素をヒントラベルで操作する。
 
 - **デフォルトホットキー**: Fキー（修飾キーなし、設定画面で変更可能）
-- **機能**: ウィンドウ要素のヒント表示とクリック、h/j/k/l/gg/Gキーによるスクロール
+- **機能**: ウィンドウ要素のヒント表示とクリック、h/j/k/lキーによるスクロール
 
 ## 技術スタック
 
@@ -137,7 +137,6 @@ HintModeController
 
 ### スクロールモード（#128）
 - [x] h/j/k/lキーでスクロール（左/下/上/右）
-- [x] ggで先頭へ、G（Shift+G）で末尾へジャンプ
 - [x] CGEventTapによるグローバルキー監視
 - [x] テキスト入力中は自動無効化
 - [x] ヒントモードとの共存
