@@ -89,7 +89,13 @@ final class NativeAppCrawler: ElementCrawler {
         "AXSwitch",
         "AXPopUpButton",
         "AXComboBox",
-        "AXTextField"
+        "AXTextField",
+        // Additional controls (#132)
+        "AXSlider",              // Volume, brightness sliders
+        "AXIncrementor",         // Numeric steppers
+        "AXDisclosureTriangle",  // Expand/collapse triangles
+        "AXTab",                 // Tab selection
+        "AXSegment"              // Individual segment buttons
     ]
 
     // MARK: - ElementCrawler Protocol
@@ -597,7 +603,10 @@ final class NativeAppCrawler: ElementCrawler {
                actions.contains("AXConfirm") ||
                actions.contains("AXShowDefaultUI") ||
                // Common for popup/select menus
-               actions.contains("AXPick")
+               actions.contains("AXPick") ||
+               // For sliders and incrementors (#132)
+               actions.contains("AXIncrement") ||
+               actions.contains("AXDecrement")
     }
 
     /// Checks if an element is a section header that should be excluded.
