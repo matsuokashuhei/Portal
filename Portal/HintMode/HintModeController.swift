@@ -621,8 +621,8 @@ final class HintModeController {
         print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.target.title)'")
         #endif
 
-        // Get executor and execute the action
-        let executor = executorFactory.executor()
+        // Get executor based on target type and execute the action
+        let executor = executorFactory.executor(for: hint.target)
         let result = executor.execute(hint.target)
 
         switch result {

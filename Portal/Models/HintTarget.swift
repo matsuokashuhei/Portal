@@ -38,11 +38,16 @@ struct HintTarget: Identifiable, @unchecked Sendable {
     /// Cached frame from crawl time. Used when AXUIElement becomes invalid (common in Electron apps).
     let cachedFrame: CGRect?
 
-    init(title: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil) {
+    /// The type of application this target belongs to.
+    /// Used by ExecutorFactory to select the appropriate executor.
+    let targetType: HintTargetType
+
+    init(title: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil, targetType: HintTargetType = .native) {
         self.title = title
         self.axElement = axElement
         self.isEnabled = isEnabled
         self.cachedFrame = cachedFrame
+        self.targetType = targetType
     }
 }
 

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Error types for Hint Mode execution operations.
-enum HintExecutionError: Error, LocalizedError {
+enum HintExecutionError: Error, LocalizedError, Equatable {
     /// The accessibility element is no longer valid (app quit, UI changed).
     case elementInvalid
     /// The target is disabled and cannot be executed.

@@ -311,7 +311,8 @@ final class ElectronCrawler: ElementCrawler {
                         title: displayTitle!,
                         axElement: child,
                         isEnabled: isEnabled,
-                        cachedFrame: frame
+                        cachedFrame: frame,
+                        targetType: .electron
                     )
                     items.append(target)
                     itemCount += 1
@@ -368,7 +369,8 @@ final class ElectronCrawler: ElementCrawler {
                         title: title,
                         axElement: child,
                         isEnabled: isEnabled,
-                        cachedFrame: frame
+                        cachedFrame: frame,
+                        targetType: .electron
                     )
                     items.append(target)
                     itemCount += 1

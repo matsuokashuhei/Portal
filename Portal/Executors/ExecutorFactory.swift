@@ -5,43 +5,66 @@
 //  Created by Claude Code on 2026/01/10.
 //
 
-/// Factory for creating ActionExecutor instances.
+/// Factory for creating ActionExecutor instances based on target type.
 ///
-/// Currently, all targets use AccessibilityExecutor since all hint targets
-/// are based on AXUIElement. In the future, this factory can be extended
-/// to support different executor types (e.g., CDP-based execution for
-/// browser elements).
+/// This factory selects the appropriate executor based on `HintTargetType`:
+/// - `.native`: Uses `NativeAppExecutor` for standard macOS apps
+/// - `.electron`: Uses `ElectronExecutor` for Electron-based apps
 ///
 /// ## Usage
 /// ```swift
 /// let factory = ExecutorFactory()
-/// let executor = factory.executor()
+/// let executor = factory.executor(for: target)
 /// let result = executor.execute(target)
 /// ```
 @MainActor
 final class ExecutorFactory {
-    /// The default executor used for all targets.
-    private let defaultExecutor: ActionExecutor
+    /// Executor for native macOS applications.
+    private let nativeExecutor: ActionExecutor
 
-    /// Creates a new ExecutorFactory with the default executor.
+    /// Executor for Electron-based applications.
+    private let electronExecutor: ActionExecutor
+
+    /// Creates a new ExecutorFactory with default executors.
     init() {
-        self.defaultExecutor = AccessibilityExecutor()
+        self.nativeExecutor = NativeAppExecutor()
+        self.electronExecutor = ElectronExecutor()
     }
 
-    /// Creates an ExecutorFactory with a custom executor (for testing).
+    /// Creates an ExecutorFactory with custom executors (for testing).
     ///
-    /// - Parameter defaultExecutor: The executor to use for all targets.
-    init(defaultExecutor: ActionExecutor) {
-        self.defaultExecutor = defaultExecutor
+    /// - Parameters:
+    ///   - nativeExecutor: The executor to use for native app targets.
+    ///   - electronExecutor: The executor to use for Electron app targets.
+    init(nativeExecutor: ActionExecutor, electronExecutor: ActionExecutor) {
+        self.nativeExecutor = nativeExecutor
+        self.electronExecutor = electronExecutor
     }
 
-    /// Returns the appropriate executor for hint targets.
+    /// Returns the appropriate executor for the given hint target.
     ///
-    /// Currently returns AccessibilityExecutor for all targets.
-    /// Future versions may select different executors based on target type.
+    /// Selects executor based on `target.targetType`:
+    /// - `.native`: Returns `NativeAppExecutor`
+    /// - `.electron`: Returns `ElectronExecutor`
     ///
-    /// - Returns: An ActionExecutor instance.
+    /// - Parameter target: The hint target to get an executor for.
+    /// - Returns: An ActionExecutor instance appropriate for the target type.
+    func executor(for target: HintTarget) -> ActionExecutor {
+        switch target.targetType {
+        case .native:
+            return nativeExecutor
+        case .electron:
+            return electronExecutor
+        }
+    }
+
+    /// Returns the native executor.
+    ///
+    /// - Note: Prefer using `executor(for:)` to automatically select the correct executor.
+    ///
+    /// - Returns: The native app executor.
+    @available(*, deprecated, message: "Use executor(for:) instead")
     func executor() -> ActionExecutor {
-        return defaultExecutor
+        return nativeExecutor
     }
 }

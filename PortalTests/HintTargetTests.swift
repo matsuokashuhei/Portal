@@ -50,4 +50,32 @@ struct HintTargetTests {
         set.insert(target2)
         #expect(set.count == 2)
     }
+
+    // MARK: - HintTargetType Tests
+
+    @Test
+    func testTargetTypeDefaultsToNative() {
+        let element = createDummyElement()
+        let target = HintTarget(title: "Test", axElement: element, isEnabled: true)
+
+        #expect(target.targetType == .native)
+    }
+
+    @Test
+    func testTargetTypeNativeIsSetCorrectly() {
+        let element = createDummyElement()
+        let target = HintTarget(title: "Test", axElement: element, isEnabled: true, targetType: .native)
+
+        #expect(target.targetType == .native)
+    }
+
+    @Test
+    func testTargetTypeElectronIsSetCorrectly() {
+        let element = createDummyElement()
+        let frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let target = HintTarget(title: "Test", axElement: element, isEnabled: true, cachedFrame: frame, targetType: .electron)
+
+        #expect(target.targetType == .electron)
+        #expect(target.cachedFrame == frame)
+    }
 }
