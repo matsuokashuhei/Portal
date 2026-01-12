@@ -521,12 +521,15 @@ final class NativeAppCrawler: ElementCrawler {
 
             // Get title or description - try multiple attributes for buttons
             // Use first non-empty value (empty string is different from nil)
+            // Priority: title > label > description > value > help
             let title = getTitle(from: child)
+            let label = getLabel(from: child)
             let desc = getDescription(from: child)
             let value = getValue(from: child)
             let help = getHelp(from: child)
             var displayTitle: String? = nil
             if let t = title, !t.isEmpty { displayTitle = t }
+            else if let l = label, !l.isEmpty { displayTitle = l }
             else if let d = desc, !d.isEmpty { displayTitle = d }
             else if let v = value, !v.isEmpty { displayTitle = v }
             else if let h = help, !h.isEmpty { displayTitle = h }
@@ -788,6 +791,19 @@ final class NativeAppCrawler: ElementCrawler {
             return nil
         }
         return titleRef as? String
+    }
+
+    /// Gets the label attribute from an accessibility element.
+    /// This is different from title - some elements (like Xcode's toggle buttons)
+    /// have an empty title but a populated label.
+    private func getLabel(from element: AXUIElement) -> String? {
+        // AXLabel is exposed as "AXDescription" in some contexts, but we also try the direct label
+        var labelRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty {
+            return label
+        }
+        return nil
     }
 
     /// Gets the title from a row element by searching its children.
