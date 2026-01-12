@@ -84,6 +84,9 @@ struct HintOverlayView: View {
 }
 
 /// A single hint label badge displayed at an element's position.
+///
+/// Uses Apple's Liquid Glass design style which automatically respects
+/// System Settings > Appearance > Liquid Glass (Clear/Tinted) preference.
 struct HintLabelView: View {
     let hint: HintLabel
     let input: String
@@ -93,25 +96,17 @@ struct HintLabelView: View {
             // Matched portion (dimmed)
             if !input.isEmpty {
                 Text(matchedPortion)
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(.primary.opacity(0.5))
             }
 
             // Remaining portion (bright)
             Text(remainingPortion)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
         }
-        .font(.system(size: 11, weight: .bold, design: .monospaced))
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .background(
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.orange)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 3)
-                .stroke(Color.black.opacity(0.3), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        .font(.system(size: 12, weight: .bold, design: .rounded))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
     }
 
     /// The portion of the label that matches the current input.
@@ -160,7 +155,7 @@ struct InputBufferView: View {
 
 // MARK: - Previews
 
-#Preview("Hint Label") {
+#Preview("Hint Label - Light Background") {
     HintLabelView(
         hint: HintLabel(
             label: "AB",
@@ -175,7 +170,49 @@ struct InputBufferView: View {
         input: "A"
     )
     .padding()
-    .background(Color.gray)
+    .background(Color.white)
+}
+
+#Preview("Hint Label - Dark Background") {
+    HintLabelView(
+        hint: HintLabel(
+            label: "AB",
+            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
+            target: HintTarget(
+                title: "Test",
+                axElement: AXUIElementCreateSystemWide(),
+                isEnabled: true
+            ),
+            coordinateSystem: .native
+        ),
+        input: "A"
+    )
+    .padding()
+    .background(Color.black)
+}
+
+#Preview("Hint Label - Gradient Background") {
+    HintLabelView(
+        hint: HintLabel(
+            label: "AB",
+            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
+            target: HintTarget(
+                title: "Test",
+                axElement: AXUIElementCreateSystemWide(),
+                isEnabled: true
+            ),
+            coordinateSystem: .native
+        ),
+        input: "A"
+    )
+    .padding()
+    .background(
+        LinearGradient(
+            colors: [.blue, .purple],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    )
 }
 
 #Preview("Input Buffer") {

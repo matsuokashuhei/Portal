@@ -159,6 +159,11 @@ HintModeController
 
 **除外対象例**: VS Code (`com.microsoft.VSCode`), Terminal (`com.apple.Terminal`), iTerm2 (`com.googlecode.iterm2`)
 
+### ヒントラベルスタイル（#143）
+- [x] Liquid Glassスタイルのデザイン（`.glassEffect()`モディファイア使用）
+- [x] システム設定 > 外観 > Liquid Glass（Clear/Tinted）に自動同期
+- [x] ライト/ダークモード両対応（`.primary`色使用）
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
