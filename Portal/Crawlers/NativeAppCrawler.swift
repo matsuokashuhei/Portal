@@ -585,7 +585,6 @@ final class NativeAppCrawler: ElementCrawler {
             var pathForChildren = path
             if Self.itemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
-
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     // Skip section headers (like "Library", "Store", "Playlists" in Music app)
                     // These have AXPress action but don't actually do anything

@@ -13,7 +13,20 @@
       "Bash(git add:*)",
       "Bash(gh pr edit:*)",
       "Bash(gh issue create:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\n#134 force castにコメントを追加\n\n- kAXPositionAttribute/kAXSizeAttributeがAXValue型を返すことを説明するコメント追加\n- kAXParentAttributeがAXUIElement型を返すことを説明するコメント追加\n- CoreFoundation型へのconditional downcastは常に成功するため、force castを使用\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n#134 force castにコメントを追加\n\n- kAXPositionAttribute/kAXSizeAttributeがAXValue型を返すことを説明するコメント追加\n- kAXParentAttributeがAXUIElement型を返すことを説明するコメント追加\n- CoreFoundation型へのconditional downcastは常に成功するため、force castを使用\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh pr merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git log:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n#140 AXTable/AXOutline内のスイッチにヒントラベルを表示\n\nシステム環境設定などでAXCell内にあるスイッチのラベルが検出されない問題を修正。\n\ngetTitleFromSiblingsを拡張し、親がAXCell/AXGroupの場合に\n祖父母（AXRow）の子要素も検索するフォールバックを追加。\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh pr create:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr view:*)",
+      "WebSearch",
+      "Bash(git push:*)",
+      "Bash(gh issue edit:*)"
     ]
   }
 }

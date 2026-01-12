@@ -6,6 +6,7 @@
 //
 
 import ApplicationServices
+import AppKit
 
 /// Executor for native macOS applications using standard Accessibility API.
 ///
@@ -288,39 +289,60 @@ final class NativeAppExecutor: ActionExecutor {
     }
 
     /// Performs a mouse click at the center of the element's frame.
+    ///
+    /// This method tries direct attribute access first, then falls back to
+    /// `AccessibilityHelper.getFrameWithFallback` if direct access fails.
     private func performMouseClick(on element: AXUIElement) -> Bool {
+        var clickPoint: CGPoint?
+
+        // Try direct attribute access first (returns Accessibility API coordinates: top-left origin)
         var positionRef: CFTypeRef?
         var sizeRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
+           AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success {
+            var position = CGPoint.zero
+            var size = CGSize.zero
 
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success else {
+            // Note: kAXPositionAttribute and kAXSizeAttribute always return AXValue type
+            // when the copy succeeds, so force cast is safe here.
+            // swiftlint:disable force_cast
+            AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
+            AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+            // swiftlint:enable force_cast
+
+            clickPoint = CGPoint(
+                x: position.x + size.width / 2,
+                y: position.y + size.height / 2
+            )
+        }
+
+        // Fallback: use AccessibilityHelper.getFrameWithFallback
+        // Note: getFrameWithFallback returns AppKit coordinates (bottom-left origin),
+        // so we need to convert to Accessibility coordinates (top-left origin) for CGEvent.
+        if clickPoint == nil, let frame = AccessibilityHelper.getFrameWithFallback(element) {
+            if let screenHeight = NSScreen.main?.frame.height {
+                // Convert from AppKit (bottom-left) to Accessibility (top-left) coordinates
+                let accessibilityY = screenHeight - frame.origin.y - frame.height
+                clickPoint = CGPoint(
+                    x: frame.origin.x + frame.width / 2,
+                    y: accessibilityY + frame.height / 2
+                )
+            }
+        }
+
+        guard let point = clickPoint else {
             #if DEBUG
             print("[NativeAppExecutor] performMouseClick: Failed to get position/size")
             #endif
             return false
         }
 
-        var position = CGPoint.zero
-        var size = CGSize.zero
-
-        // Note: kAXPositionAttribute and kAXSizeAttribute always return AXValue type
-        // when the copy succeeds, so force cast is safe here.
-        // swiftlint:disable force_cast
-        AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
-        AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
-        // swiftlint:enable force_cast
-
-        let clickPoint = CGPoint(
-            x: position.x + size.width / 2,
-            y: position.y + size.height / 2
-        )
-
         #if DEBUG
-        print("[NativeAppExecutor] performMouseClick: Clicking at \(clickPoint)")
+        print("[NativeAppExecutor] performMouseClick: Clicking at \(point)")
         #endif
 
-        guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
-              let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
+        guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
+              let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else {
             #if DEBUG
             print("[NativeAppExecutor] performMouseClick: Failed to create mouse events")
             #endif
