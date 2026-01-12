@@ -107,11 +107,14 @@ enum AccessibilityHelper {
            let parentFrame = getFrame(parent) {
             // Use top-left corner of parent with a small default size
             // This isn't perfectly accurate but allows the hint to be displayed
+            // Note: In AppKit coordinates (bottom-left origin), top-left is (minX, maxY - height)
+            let width = min(parentFrame.width, 20)
+            let height = min(parentFrame.height, 20)
             return CGRect(
                 x: parentFrame.minX,
-                y: parentFrame.minY,
-                width: min(parentFrame.width, 20),
-                height: min(parentFrame.height, 20)
+                y: parentFrame.maxY - height,
+                width: width,
+                height: height
             )
         }
 

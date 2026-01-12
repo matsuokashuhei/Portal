@@ -811,11 +811,10 @@ final class NativeAppCrawler: ElementCrawler {
         return titleRef as? String
     }
 
-    /// Gets the label attribute from an accessibility element.
-    /// This is different from title - some elements (like Xcode's toggle buttons)
+    /// Gets the AXLabel attribute from an accessibility element.
+    /// This is different from the title: some elements (like Xcode's toggle buttons)
     /// have an empty title but a populated label.
     private func getLabel(from element: AXUIElement) -> String? {
-        // AXLabel is exposed as "AXDescription" in some contexts, but we also try the direct label
         var labelRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
            let label = labelRef as? String, !label.isEmpty {
