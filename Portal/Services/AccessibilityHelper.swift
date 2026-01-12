@@ -248,7 +248,7 @@ enum AccessibilityHelper {
     ///
     /// - Parameter element: The element to get the parent from.
     /// - Returns: The parent element, or `nil` if not available.
-    private static func getParent(_ element: AXUIElement) -> AXUIElement? {
+    static func getParent(_ element: AXUIElement) -> AXUIElement? {
         var parentRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
             element,
@@ -259,5 +259,97 @@ enum AccessibilityHelper {
         }
         // swiftlint:disable:next force_cast
         return (parentRef as! AXUIElement)
+    }
+
+    /// Gets the children of an accessibility element.
+    ///
+    /// - Parameter element: The element to get children from.
+    /// - Returns: Array of child elements, or empty array if not available.
+    static func getChildren(_ element: AXUIElement) -> [AXUIElement] {
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXChildrenAttribute as CFString,
+            &childrenRef
+        ) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return []
+        }
+        return children
+    }
+
+    /// Gets the value attribute of an accessibility element.
+    ///
+    /// - Parameter element: The element to get the value from.
+    /// - Returns: The value string, or `nil` if not available.
+    static func getValue(_ element: AXUIElement) -> String? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXValueAttribute as CFString,
+            &valueRef
+        ) == .success,
+              let value = valueRef as? String else {
+            return nil
+        }
+        return value
+    }
+
+    /// Searches uncle elements (grandparent's children) for a title.
+    ///
+    /// This handles cases like System Settings tables where:
+    /// ```
+    /// AXRow (grandparent)
+    /// ├── AXCell (label cell) > AXStaticText "App Store"  ← title is here
+    /// └── AXCell (toggle cell) > AXSwitch                 ← we're here
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - parent: The parent element (e.g., AXCell containing the switch).
+    ///   - skipElement: The element to skip when searching (the parent itself).
+    /// - Returns: The title found in uncle elements, or `nil` if not found.
+    static func getTitleFromUncles(parent: AXUIElement, skipElement: AXUIElement) -> String? {
+        guard let grandparent = getParent(parent) else {
+            return nil
+        }
+
+        let uncles = getChildren(grandparent)
+
+        for uncle in uncles {
+            // Skip the parent cell itself
+            if CFEqual(uncle, skipElement) {
+                continue
+            }
+
+            guard let uncleRole = getRole(uncle) else {
+                continue
+            }
+
+            // Direct AXStaticText under grandparent
+            if uncleRole == "AXStaticText" {
+                if let value = getValue(uncle), !value.isEmpty {
+                    return value
+                }
+                if let title = getTitle(uncle), !title.isEmpty {
+                    return title
+                }
+            }
+            // Check uncle's children for AXStaticText (e.g., AXCell > AXStaticText)
+            else if uncleRole == "AXCell" || uncleRole == "AXGroup" {
+                let uncleChildren = getChildren(uncle)
+                for uncleChild in uncleChildren {
+                    if let childRole = getRole(uncleChild), childRole == "AXStaticText" {
+                        if let value = getValue(uncleChild), !value.isEmpty {
+                            return value
+                        }
+                        if let title = getTitle(uncleChild), !title.isEmpty {
+                            return title
+                        }
+                    }
+                }
+            }
+        }
+
+        return nil
     }
 }

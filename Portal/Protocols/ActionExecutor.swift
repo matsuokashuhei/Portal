@@ -185,6 +185,10 @@ extension ActionExecutor {
 
     /// Gets title from sibling elements (for checkboxes/switches with separate labels).
     ///
+    /// For elements inside AXCell/AXGroup containers (e.g., System Settings tables),
+    /// the label may be in a sibling AXCell's child element rather than a direct sibling.
+    /// In this case, we also search the grandparent's children (uncle elements).
+    ///
     /// - Parameter element: The AXUIElement to check siblings of.
     /// - Returns: The title found in sibling elements, or `nil` if not found.
     func getTitleFromSiblings(_ element: AXUIElement) -> String? {
@@ -196,6 +200,9 @@ extension ActionExecutor {
         // Note: kAXParentAttribute always returns AXUIElement type when copy succeeds.
         // swiftlint:disable:next force_cast
         let parent = parentRef as! AXUIElement
+
+        // Get parent's role for grandparent search decision
+        let parentRole = getRole(parent)
 
         // Get sibling elements (children of parent)
         var childrenRef: CFTypeRef?
@@ -225,6 +232,16 @@ extension ActionExecutor {
                    let title = titleRef as? String, !title.isEmpty {
                     return title
                 }
+            }
+        }
+
+        // If parent is AXCell or AXGroup, look in grandparent's children (uncle elements).
+        // This handles cases like System Settings tables where:
+        // AXRow > AXCell (label) > AXStaticText "App Store"
+        // AXRow > AXCell (toggle) > AXSwitch  <- we're here
+        if parentRole == "AXCell" || parentRole == "AXGroup" {
+            if let uncleTitle = AccessibilityHelper.getTitleFromUncles(parent: parent, skipElement: parent) {
+                return uncleTitle
             }
         }
 

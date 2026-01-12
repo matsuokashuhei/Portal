@@ -53,7 +53,9 @@ final class NativeAppCrawler: ElementCrawler {
     // MARK: - Constants
 
     /// Maximum depth for recursive traversal to prevent infinite loops.
-    private static let maxDepth = 10
+    /// Increased from 10 to 15 to support deeply nested elements like
+    /// AXCheckBox inside AXCell inside AXRow in System Settings tables.
+    private static let maxDepth = 15
 
     /// Maximum number of items to return (performance safeguard).
     /// Increased from 200 to 500 to ensure player controls and other UI elements
@@ -808,6 +810,10 @@ final class NativeAppCrawler: ElementCrawler {
     /// AXSwitch and AXCheckBox elements typically don't have their own title attribute.
     /// Instead, the label is in a sibling AXStaticText element within the same parent container.
     ///
+    /// For elements inside AXCell/AXGroup containers (e.g., System Settings tables),
+    /// the label may be in a sibling AXCell's child element rather than a direct sibling.
+    /// In this case, we also search the grandparent's children (uncle elements).
+    ///
     /// - Parameter element: The AXSwitch or AXCheckBox element.
     /// - Returns: The title found in a sibling element, or nil if not found.
     private func getTitleFromSiblings(_ element: AXUIElement) -> String? {
@@ -818,6 +824,9 @@ final class NativeAppCrawler: ElementCrawler {
         }
         // swiftlint:disable:next force_cast
         let parent = parentRef as! AXUIElement
+
+        // Get parent's role for grandparent search decision
+        let parentRole = getRole(from: parent)
 
         // Get sibling elements (children of parent)
         let siblings = getChildren(parent)
@@ -836,6 +845,16 @@ final class NativeAppCrawler: ElementCrawler {
                 if let title = getTitle(from: sibling), !title.isEmpty {
                     return title
                 }
+            }
+        }
+
+        // If parent is AXCell or AXGroup, look in grandparent's children (uncle elements).
+        // This handles cases like System Settings tables where:
+        // AXRow > AXCell (label) > AXStaticText "App Store"
+        // AXRow > AXCell (toggle) > AXSwitch  <- we're here
+        if parentRole == "AXCell" || parentRole == "AXGroup" {
+            if let uncleTitle = AccessibilityHelper.getTitleFromUncles(parent: parent, skipElement: parent) {
+                return uncleTitle
             }
         }
 
