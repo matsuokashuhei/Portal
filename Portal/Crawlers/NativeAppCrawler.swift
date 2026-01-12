@@ -43,6 +43,17 @@ enum NativeAppCrawlerError: Error, LocalizedError {
 /// Window crawling typically takes 50-200ms depending on UI complexity.
 /// No caching is used because window content can change
 /// more frequently (e.g., when navigating folders).
+///
+/// ## Known Limitations
+/// Some applications have UI elements that are visible in Accessibility Inspector
+/// but are not exposed through the standard `kAXChildrenAttribute` API. For example:
+/// - **Xcode Debug Area**: The "Show the Variables View" and "Show the Console"
+///   toggle buttons (AXCheckBox with AXToggle subrole) are visible in Accessibility
+///   Inspector but not returned by the API. This appears to be a limitation in
+///   Xcode's accessibility implementation.
+///
+/// These elements cannot be targeted by hint labels because they are not discoverable
+/// through the Accessibility API that Portal uses.
 @MainActor
 final class NativeAppCrawler: ElementCrawler {
     // MARK: - ElementCrawler Protocol
@@ -574,6 +585,7 @@ final class NativeAppCrawler: ElementCrawler {
             var pathForChildren = path
             if Self.itemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
+
                 if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
                     // Skip section headers (like "Library", "Store", "Playlists" in Music app)
                     // These have AXPress action but don't actually do anything
