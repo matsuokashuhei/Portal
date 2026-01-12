@@ -296,39 +296,47 @@ struct AppPickerView: View {
     }
 
     private func loadApplications() {
-        var apps: [AppInfo] = []
+        DispatchQueue.global(qos: .userInitiated).async {
+            var apps: [AppInfo] = []
 
-        // Scan /Applications and ~/Applications directories
-        let applicationDirs = [
-            URL(fileURLWithPath: "/Applications"),
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
-        ]
+            // Scan /Applications and ~/Applications directories
+            let applicationDirs = [
+                URL(fileURLWithPath: "/Applications"),
+                FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
+            ]
 
-        for dir in applicationDirs {
-            guard let contents = try? FileManager.default.contentsOfDirectory(
-                at: dir,
-                includingPropertiesForKeys: [.isApplicationKey],
-                options: [.skipsHiddenFiles]
-            ) else { continue }
+            for dir in applicationDirs {
+                guard let contents = try? FileManager.default.contentsOfDirectory(
+                    at: dir,
+                    includingPropertiesForKeys: [.isApplicationKey],
+                    options: [.skipsHiddenFiles]
+                ) else { continue }
 
-            for url in contents where url.pathExtension == "app" {
-                if let bundle = Bundle(url: url),
-                   let bundleId = bundle.bundleIdentifier,
-                   let displayName = bundle.infoDictionary?["CFBundleName"] as? String
-                       ?? bundle.infoDictionary?["CFBundleDisplayName"] as? String
-                       ?? url.deletingPathExtension().lastPathComponent as String? {
-                    let icon = NSWorkspace.shared.icon(forFile: url.path)
-                    apps.append(AppInfo(
-                        bundleIdentifier: bundleId,
-                        displayName: displayName,
-                        icon: icon
-                    ))
+                for url in contents where url.pathExtension == "app" {
+                    if let bundle = Bundle(url: url),
+                       let bundleId = bundle.bundleIdentifier {
+                        let displayName = (bundle.infoDictionary?["CFBundleName"] as? String)
+                            ?? (bundle.infoDictionary?["CFBundleDisplayName"] as? String)
+                            ?? url.deletingPathExtension().lastPathComponent
+                        let icon = NSWorkspace.shared.icon(forFile: url.path)
+                        apps.append(AppInfo(
+                            bundleIdentifier: bundleId,
+                            displayName: displayName,
+                            icon: icon
+                        ))
+                    }
                 }
             }
-        }
 
-        // Sort by display name
-        applications = apps.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+            // Sort by display name
+            let sortedApps = apps.sorted {
+                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            }
+
+            DispatchQueue.main.async {
+                self.applications = sortedApps
+            }
+        }
     }
 }
 
