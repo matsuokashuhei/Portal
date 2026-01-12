@@ -297,7 +297,7 @@ struct AppPickerView: View {
 
     private func loadApplications() {
         DispatchQueue.global(qos: .userInitiated).async {
-            var apps: [AppInfo] = []
+            var appData: [(bundleId: String, displayName: String, path: String)] = []
 
             // Scan /Applications and ~/Applications directories
             let applicationDirs = [
@@ -318,23 +318,25 @@ struct AppPickerView: View {
                         let displayName = (bundle.infoDictionary?["CFBundleName"] as? String)
                             ?? (bundle.infoDictionary?["CFBundleDisplayName"] as? String)
                             ?? url.deletingPathExtension().lastPathComponent
-                        let icon = NSWorkspace.shared.icon(forFile: url.path)
-                        apps.append(AppInfo(
-                            bundleIdentifier: bundleId,
-                            displayName: displayName,
-                            icon: icon
-                        ))
+                        appData.append((bundleId, displayName, url.path))
                     }
                 }
             }
 
             // Sort by display name
-            let sortedApps = apps.sorted {
+            let sortedData = appData.sorted {
                 $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
             }
 
+            // Get icons on main thread (NSWorkspace methods should be called from main thread)
             DispatchQueue.main.async {
-                self.applications = sortedApps
+                self.applications = sortedData.map { data in
+                    AppInfo(
+                        bundleIdentifier: data.bundleId,
+                        displayName: data.displayName,
+                        icon: NSWorkspace.shared.icon(forFile: data.path)
+                    )
+                }
             }
         }
     }
