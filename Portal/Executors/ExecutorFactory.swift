@@ -57,14 +57,4 @@ final class ExecutorFactory {
             return electronExecutor
         }
     }
-
-    /// Returns the native executor.
-    ///
-    /// - Note: Prefer using `executor(for:)` to automatically select the correct executor.
-    ///
-    /// - Returns: The native app executor.
-    @available(*, deprecated, message: "Use executor(for:) instead")
-    func executor() -> ActionExecutor {
-        return nativeExecutor
-    }
 }

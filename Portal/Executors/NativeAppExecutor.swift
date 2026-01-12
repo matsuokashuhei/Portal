@@ -38,14 +38,6 @@ final class NativeAppExecutor: ActionExecutor {
         kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"
     ]
 
-    /// Roles that require AXPress action (not kAXSelectedAttribute).
-    private static let rolesRequiringPress: Set<String> = [
-        "AXRadioButton", "AXButton", "AXMenuItem", "AXCheckBox", "AXMenuButton",
-        "AXSwitch", "AXPopUpButton", "AXComboBox",
-        // Additional controls (#132)
-        "AXDisclosureTriangle", "AXTab", "AXSegment"
-    ]
-
     /// Roles that require focus action instead of press.
     private static let rolesRequiringFocus: Set<String> = ["AXTextField"]
 
