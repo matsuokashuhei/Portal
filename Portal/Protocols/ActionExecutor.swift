@@ -80,7 +80,7 @@ extension ActionExecutor {
         }
 
         // Verify title - check all possible title sources since crawlers use
-        // title/description/value/help priority and we need to match any of them.
+        // title/label/description/value/help priority and we need to match any of them.
         var possibleTitles: [String] = []
 
         // Try direct title attribute
@@ -88,6 +88,13 @@ extension ActionExecutor {
         if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
            let title = titleRef as? String, !title.isEmpty {
             possibleTitles.append(title)
+        }
+
+        // Try label attribute (used by some elements like Xcode's toggle buttons)
+        var labelRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty {
+            possibleTitles.append(label)
         }
 
         // Try description
