@@ -155,9 +155,15 @@ struct ExclusionsSettingsView: View {
                                 .frame(width: 20, height: 20)
                             Text(app.displayName)
                             Spacer()
+                            Button {
+                                deleteApp(app)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .onDelete(perform: deleteApps)
                 }
             } header: {
                 Text("Excluded Applications")
@@ -201,8 +207,8 @@ struct ExclusionsSettingsView: View {
         saveConfiguration()
     }
 
-    private func deleteApps(at offsets: IndexSet) {
-        excludedApps.remove(atOffsets: offsets)
+    private func deleteApp(_ app: ExcludedApp) {
+        excludedApps.removeAll { $0.bundleIdentifier == app.bundleIdentifier }
         saveConfiguration()
     }
 }
