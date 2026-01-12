@@ -30,9 +30,7 @@ final class NativeAppExecutor: ActionExecutor {
         "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton",
         "AXComboBox", "AXTextField", "AXTextArea", "AXLink", "AXImage",
         // Additional controls (#132)
-        "AXSlider", "AXIncrementor", "AXDisclosureTriangle", "AXTab", "AXSegment",
-        // Window control buttons (#136)
-        "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
+        "AXSlider", "AXIncrementor", "AXDisclosureTriangle", "AXTab", "AXSegment"
     ]
 
     /// Actions to try for window elements, in order of preference.

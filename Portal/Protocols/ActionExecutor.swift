@@ -66,6 +66,22 @@ extension ActionExecutor {
             return false
         }
 
+        // Check subrole for window control buttons - they don't have title attributes
+        // but can be identified by their subrole (AXCloseButton, AXMinimizeButton, etc.)
+        var subroleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleRef) == .success,
+           let subrole = subroleRef as? String {
+            let windowControlSubroles: Set<String> = [
+                "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
+            ]
+            if windowControlSubroles.contains(subrole) {
+                #if DEBUG
+                print("[ActionExecutor] isElementValid: Window control button detected (subrole: \(subrole)), skipping title validation")
+                #endif
+                return true
+            }
+        }
+
         // Verify title - check all possible title sources since crawlers use
         // title/description/value/help priority and we need to match any of them.
         var possibleTitles: [String] = []
