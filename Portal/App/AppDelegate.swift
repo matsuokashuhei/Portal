@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupScrollMode()
         setupPermissionObserver()
         setupHotkeyConfigurationObserver()
+        setupExcludedAppsConfigurationObserver()
         setupOpenSettingsObserver()
     }
 
@@ -149,6 +150,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             defer { self.isRecreatingHotkeyManager = false }
 
             // Recreate HintModeHotkeyManager with new configuration
+            self.hintModeHotkeyManager?.stop()
+            self.hintModeHotkeyManager = nil
+            self.setupHintModeHotkeyManager()
+        }
+    }
+
+    private func setupExcludedAppsConfigurationObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(excludedAppsConfigurationDidChange),
+            name: .excludedAppsConfigurationChanged,
+            object: nil
+        )
+    }
+
+    @objc private func excludedAppsConfigurationDidChange() {
+        // Ensure we're on the main thread since hotkeyManager manages
+        // UI-related event monitors and run loop sources
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            // Prevent concurrent recreation if multiple notifications arrive rapidly
+            guard !self.isRecreatingHotkeyManager else { return }
+            self.isRecreatingHotkeyManager = true
+            defer { self.isRecreatingHotkeyManager = false }
+
+            // Recreate HintModeHotkeyManager with new excluded apps configuration
             self.hintModeHotkeyManager?.stop()
             self.hintModeHotkeyManager = nil
             self.setupHintModeHotkeyManager()
@@ -284,7 +311,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let window = SettingsWindow(contentViewController: hostingController)
         window.title = "Portal Settings"
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 450, height: 250))
+        window.setContentSize(NSSize(width: 450, height: 350))
         window.center()
 
         window.isReleasedWhenClosed = false

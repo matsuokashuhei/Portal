@@ -144,6 +144,8 @@ enum SettingsKey {
     /// Key for storing the hint mode hotkey key (Space/Tab/A-Z).
     /// Note: Uses new key name to avoid inheriting old command palette settings.
     static let hotkeyKey = "hintModeHotkeyKey"
+    /// Key for storing the excluded apps list (JSON-encoded array of ExcludedApp).
+    static let excludedApps = "excludedApps"
 }
 
 extension HotkeyConfiguration {

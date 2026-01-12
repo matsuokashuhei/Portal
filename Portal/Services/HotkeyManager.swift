@@ -18,8 +18,16 @@ final class HotkeyManager {
     /// Configurable hotkey combination (modifier + key)
     private let configuration: HotkeyConfiguration
 
-    init(configuration: HotkeyConfiguration = .load(), onHotkeyPressed: @escaping () -> Void) {
+    /// Configuration for apps where the hotkey should be disabled
+    private let excludedAppsConfiguration: ExcludedAppsConfiguration
+
+    init(
+        configuration: HotkeyConfiguration = .load(),
+        excludedAppsConfiguration: ExcludedAppsConfiguration = .load(),
+        onHotkeyPressed: @escaping () -> Void
+    ) {
         self.configuration = configuration
+        self.excludedAppsConfiguration = excludedAppsConfiguration
         self.onHotkeyPressed = onHotkeyPressed
     }
 
@@ -90,6 +98,11 @@ final class HotkeyManager {
             }
 
             if isMatch {
+                // Check if the frontmost app is excluded
+                if manager.shouldSkipForFrontmostApp() {
+                    return Unmanaged.passUnretained(event)
+                }
+
                 // Dispatch callback to main thread
                 DispatchQueue.main.async {
                     manager.onHotkeyPressed()
@@ -161,6 +174,10 @@ final class HotkeyManager {
         // This is kept as a fallback but won't consume the event
         fallbackMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return }
+            // Check if the frontmost app is excluded
+            if self.shouldSkipForFrontmostApp() {
+                return
+            }
             if self.isHotkeyEvent(event) {
                 self.onHotkeyPressed()
             }
@@ -195,6 +212,18 @@ final class HotkeyManager {
     }
 
     // MARK: - Helper
+
+    /// Checks if the frontmost application is in the exclusion list.
+    ///
+    /// This method is safe to call from CGEventTap callback as it runs on the main thread
+    /// (the tap is added to the main run loop via CFRunLoopGetCurrent()).
+    private func shouldSkipForFrontmostApp() -> Bool {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
+              let bundleIdentifier = frontmostApp.bundleIdentifier else {
+            return false
+        }
+        return excludedAppsConfiguration.isExcluded(bundleIdentifier: bundleIdentifier)
+    }
 
     private func isHotkeyEvent(_ event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
