@@ -272,9 +272,6 @@ extension ActionExecutor {
         return role == "AXButton"
     }
 
-    /// Maximum depth for child button search to prevent stack overflow.
-    private static var maxChildButtonSearchDepth: Int { 5 }
-
     /// Tries to press child buttons recursively.
     ///
     /// This is used as a fallback when the main element's AXPress action
@@ -283,9 +280,10 @@ extension ActionExecutor {
     /// - Parameters:
     ///   - element: The parent element to search for child buttons.
     ///   - depth: Current search depth (default 0).
+    ///   - maxDepth: Maximum depth to prevent stack overflow (default 5).
     /// - Returns: `true` if a child button was successfully pressed.
-    func tryPressChildButtons(_ element: AXUIElement, depth: Int = 0) -> Bool {
-        guard depth < 5 else {  // maxChildButtonSearchDepth
+    func tryPressChildButtons(_ element: AXUIElement, depth: Int = 0, maxDepth: Int = 5) -> Bool {
+        guard depth < maxDepth else {
             return false
         }
 
@@ -305,7 +303,7 @@ extension ActionExecutor {
                 }
             }
 
-            if tryPressChildButtons(child, depth: depth + 1) {
+            if tryPressChildButtons(child, depth: depth + 1, maxDepth: maxDepth) {
                 return true
             }
         }
