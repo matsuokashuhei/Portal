@@ -331,8 +331,8 @@ final class NativeAppCrawler: ElementCrawler {
                let button = buttonRef {
                 // swiftlint:disable:next force_cast
                 let axButton = button as! AXUIElement
-                // Only add if frame can be retrieved
-                if AccessibilityHelper.getFrame(axButton) != nil {
+                // Only add if frame can be retrieved (with fallback)
+                if AccessibilityHelper.getFrameWithFallback(axButton) != nil {
                     let isEnabled = getIsEnabled(from: axButton)
                     buttons.append(HintTarget(
                         title: title,
@@ -418,13 +418,16 @@ final class NativeAppCrawler: ElementCrawler {
             guard let role = getRole(from: child) else { continue }
 
             if role == "AXMenuItem" {
+                // Priority: title > label > description > value > help
                 let title = getTitle(from: child)
+                let label = getLabel(from: child)
                 let desc = getDescription(from: child)
                 let value = getValue(from: child)
                 let help = getHelp(from: child)
 
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }
@@ -462,13 +465,16 @@ final class NativeAppCrawler: ElementCrawler {
         for child in children {
             guard itemCount < Self.maxItems else { break }
             if let role = getRole(from: child), role == "AXMenuItem" {
+                // Priority: title > label > description > value > help
                 let title = getTitle(from: child)
+                let label = getLabel(from: child)
                 let desc = getDescription(from: child)
                 let value = getValue(from: child)
                 let help = getHelp(from: child)
 
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }

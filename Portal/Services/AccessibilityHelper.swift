@@ -13,6 +13,19 @@ import AppKit
 /// Provides common operations like retrieving element positions and sizes,
 /// which are used by hint mode to display labels at element locations.
 enum AccessibilityHelper {
+    // MARK: - Constants
+
+    /// Subroles that identify window control buttons (close, minimize, zoom, fullscreen).
+    ///
+    /// These buttons are handled specially because:
+    /// - They don't have title attributes, so validation must check subrole instead
+    /// - They often don't respond to AXPress, so mouse click is used as fallback
+    static let windowControlSubroles: Set<String> = [
+        "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
+    ]
+
+    // MARK: - Frame Methods
+
     /// Retrieves the screen frame of an accessibility element.
     ///
     /// - Parameter element: The accessibility element to get the frame for.

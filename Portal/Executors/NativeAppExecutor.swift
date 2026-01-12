@@ -150,10 +150,7 @@ final class NativeAppExecutor: ActionExecutor {
         var subroleRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(target.axElement, kAXSubroleAttribute as CFString, &subroleRef) == .success,
            let subrole = subroleRef as? String {
-            let windowControlSubroles: Set<String> = [
-                "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
-            ]
-            if windowControlSubroles.contains(subrole) {
+            if AccessibilityHelper.windowControlSubroles.contains(subrole) {
                 #if DEBUG
                 print("[NativeAppExecutor] execute: Window control button detected, using mouse click")
                 #endif

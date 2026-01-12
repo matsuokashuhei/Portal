@@ -71,10 +71,7 @@ extension ActionExecutor {
         var subroleRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleRef) == .success,
            let subrole = subroleRef as? String {
-            let windowControlSubroles: Set<String> = [
-                "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
-            ]
-            if windowControlSubroles.contains(subrole) {
+            if AccessibilityHelper.windowControlSubroles.contains(subrole) {
                 #if DEBUG
                 print("[ActionExecutor] isElementValid: Window control button detected (subrole: \(subrole)), skipping title validation")
                 #endif
