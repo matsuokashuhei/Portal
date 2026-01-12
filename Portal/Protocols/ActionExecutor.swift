@@ -193,6 +193,7 @@ extension ActionExecutor {
         guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success else {
             return nil
         }
+        // Note: kAXParentAttribute always returns AXUIElement type when copy succeeds.
         // swiftlint:disable:next force_cast
         let parent = parentRef as! AXUIElement
 

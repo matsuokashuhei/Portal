@@ -277,6 +277,8 @@ final class NativeAppExecutor: ActionExecutor {
         var position = CGPoint.zero
         var size = CGSize.zero
 
+        // Note: kAXPositionAttribute and kAXSizeAttribute always return AXValue type
+        // when the copy succeeds, so force cast is safe here.
         // swiftlint:disable force_cast
         AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
         AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
