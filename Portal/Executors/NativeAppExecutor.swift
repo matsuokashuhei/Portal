@@ -145,11 +145,33 @@ final class NativeAppExecutor: ActionExecutor {
             // Fall through to try other actions if toggle fails
         }
 
+        // Check if this is a window control button (close, minimize, zoom, fullscreen)
+        // These buttons often don't respond well to AXPress, so use mouse click
+        var subroleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(target.axElement, kAXSubroleAttribute as CFString, &subroleRef) == .success,
+           let subrole = subroleRef as? String {
+            let windowControlSubroles: Set<String> = [
+                "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
+            ]
+            if windowControlSubroles.contains(subrole) {
+                #if DEBUG
+                print("[NativeAppExecutor] execute: Window control button detected, using mouse click")
+                #endif
+                if performMouseClick(on: target.axElement) {
+                    return .success(())
+                }
+                // Fall through to try other actions if mouse click fails
+            }
+        }
+
         // Try preferred actions
         let isWindowContainer = !isButtonElement(target.axElement)
 
         for action in Self.preferredActions {
             let result = AXUIElementPerformAction(target.axElement, action as CFString)
+            #if DEBUG
+            print("[NativeAppExecutor] execute: Tried action '\(action)' result: \(result.rawValue)")
+            #endif
 
             switch result {
             case .success:
@@ -163,6 +185,13 @@ final class NativeAppExecutor: ActionExecutor {
             case .actionUnsupported:
                 continue
             case .invalidUIElement, .cannotComplete:
+                #if DEBUG
+                print("[NativeAppExecutor] execute: Action failed with \(result.rawValue), trying mouse click fallback")
+                #endif
+                // Try mouse click as fallback before failing
+                if performMouseClick(on: target.axElement) {
+                    return .success(())
+                }
                 return .failure(.elementInvalid)
             default:
                 continue
