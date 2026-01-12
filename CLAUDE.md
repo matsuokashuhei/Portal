@@ -8,6 +8,7 @@ PortalはmacOS向けVimiumライクなキーボードナビゲーションツー
 
 - **デフォルトホットキー**: Fキー（修飾キーなし、設定画面で変更可能）
 - **機能**: ウィンドウ要素のヒント表示とクリック、h/j/k/lキーによるスクロール
+- **除外アプリ設定**: 特定のアプリでホットキーを無効化可能（VS Code、Terminal等）
 
 ## 技術スタック
 
@@ -78,8 +79,9 @@ Portal/
 │   ├── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
 │   └── ElectronAppDetector.swift   # Electronアプリ検出
 └── Settings/
-    ├── HotkeyConfiguration.swift   # ホットキー設定モデル
-    └── SettingsView.swift          # 設定画面UI
+    ├── HotkeyConfiguration.swift       # ホットキー設定モデル
+    ├── ExcludedAppsConfiguration.swift # 除外アプリ設定モデル
+    └── SettingsView.swift              # 設定画面UI（General/Exclusionsタブ）
 ```
 
 ### Crawler/Executorアーキテクチャ
@@ -149,6 +151,14 @@ HintModeController
 - [x] テキスト入力中は自動無効化
 - [x] ヒントモードとの共存
 
+### 除外アプリ設定（#139）
+- [x] 特定のアプリでホットキーを無効化
+- [x] 設定画面からアプリを追加/削除
+- [x] JSON形式でUserDefaultsに永続化
+- [x] HotkeyManagerで除外判定を実行
+
+**除外対象例**: VS Code (`com.microsoft.VSCode`), Terminal (`com.apple.Terminal`), iTerm2 (`com.googlecode.iterm2`)
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
@@ -170,15 +180,16 @@ GitHub Project: https://github.com/users/matsuokashuhei/projects/3
 
 ```
 PortalTests/
-├── PortalTests.swift                    # テンプレート
-├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
-├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
-├── HintTargetTests.swift                # HintTarget/HintTargetTypeテスト
-├── ElectronAppDetectorTests.swift       # Electronアプリ検出テスト
-├── ScrollConfigurationTests.swift       # スクロール設定テスト
-├── ExecutorFactoryTests.swift           # Executor選択テスト
-├── NativeAppExecutorTests.swift         # ネイティブExecutorテスト
-└── ElectronExecutorTests.swift          # ElectronExecutorテスト
+├── PortalTests.swift                        # テンプレート
+├── HintLabelGeneratorTests.swift            # ヒントラベル生成テスト
+├── HotkeyConfigurationTests.swift           # ホットキー設定テスト
+├── ExcludedAppsConfigurationTests.swift     # 除外アプリ設定テスト
+├── HintTargetTests.swift                    # HintTarget/HintTargetTypeテスト
+├── ElectronAppDetectorTests.swift           # Electronアプリ検出テスト
+├── ScrollConfigurationTests.swift           # スクロール設定テスト
+├── ExecutorFactoryTests.swift               # Executor選択テスト
+├── NativeAppExecutorTests.swift             # ネイティブExecutorテスト
+└── ElectronExecutorTests.swift              # ElectronExecutorテスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト
