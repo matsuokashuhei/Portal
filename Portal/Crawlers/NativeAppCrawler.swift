@@ -379,7 +379,7 @@ final class NativeAppCrawler: ElementCrawler {
 
                 if let itemTitle = displayTitle, !itemTitle.isEmpty {
                     let isEnabled = getIsEnabled(from: child)
-                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled))
+                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
                     itemCount += 1
                 }
 
@@ -423,7 +423,7 @@ final class NativeAppCrawler: ElementCrawler {
 
                 if let itemTitle = displayTitle, !itemTitle.isEmpty {
                     let isEnabled = getIsEnabled(from: child)
-                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled))
+                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
                     itemCount += 1
                 }
             }
@@ -534,7 +534,8 @@ final class NativeAppCrawler: ElementCrawler {
                     let target = HintTarget(
                         title: itemTitle,
                         axElement: child,
-                        isEnabled: isEnabled
+                        isEnabled: isEnabled,
+                        targetType: .native
                     )
                     items.append(target)
                     itemCount += 1

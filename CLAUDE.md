@@ -55,10 +55,12 @@ Portal/
 │   ├── NativeAppCrawler.swift # ネイティブアプリ用Crawler
 │   └── ElectronCrawler.swift  # Electronアプリ用Crawler
 ├── Executors/                 # アクション実行実装
-│   ├── ExecutorFactory.swift  # Executor生成ファクトリ
-│   └── AccessibilityExecutor.swift # Accessibility API実行
+│   ├── ExecutorFactory.swift    # Executor生成ファクトリ（HintTargetTypeに基づく選択）
+│   ├── NativeAppExecutor.swift  # ネイティブmacOSアプリ用Executor
+│   └── ElectronExecutor.swift   # Electronアプリ用Executor（cachedFrameフォールバック付き）
 ├── Models/
 │   ├── HintTarget.swift         # Hint Mode用ターゲットモデル
+│   ├── HintTargetType.swift     # アプリタイプ列挙型（native/electron）
 │   └── HintExecutionError.swift # Hint Mode実行エラー
 ├── HintMode/
 │   ├── HintLabel.swift            # ヒントラベルのデータモデル
@@ -88,8 +90,13 @@ HintModeController
     │                     ├── NativeAppCrawler（ネイティブmacOSアプリ）
     │                     └── ElectronCrawler（Slack, VS Code等）
     └── ExecutorFactory → ActionExecutor protocol
-                          └── AccessibilityExecutor（Accessibility API実行）
+                          ├── NativeAppExecutor（target.targetType == .native）
+                          └── ElectronExecutor（target.targetType == .electron）
 ```
+
+**Executor選択ロジック**: `HintTarget.targetType`に基づいて適切なExecutorを選択。
+- `.native`: AXPress/AXSelect等のAccessibility APIを使用
+- `.electron`: Accessibility API + cachedFrameを使ったマウスクリックフォールバック
 
 ## 実装の要点
 
@@ -166,9 +173,12 @@ PortalTests/
 ├── PortalTests.swift                    # テンプレート
 ├── HintLabelGeneratorTests.swift        # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift       # ホットキー設定テスト
-├── HintTargetTests.swift                # HintTargetテスト
+├── HintTargetTests.swift                # HintTarget/HintTargetTypeテスト
 ├── ElectronAppDetectorTests.swift       # Electronアプリ検出テスト
-└── ScrollConfigurationTests.swift       # スクロール設定テスト
+├── ScrollConfigurationTests.swift       # スクロール設定テスト
+├── ExecutorFactoryTests.swift           # Executor選択テスト
+├── NativeAppExecutorTests.swift         # ネイティブExecutorテスト
+└── ElectronExecutorTests.swift          # ElectronExecutorテスト
 
 PortalUITests/
 └── PortalUITestsLaunchTests.swift       # 起動テスト
