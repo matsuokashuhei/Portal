@@ -138,6 +138,16 @@ final class NativeAppCrawler: ElementCrawler {
 
         var allItems: [HintTarget] = []
         for windowElement in windows {
+            // Get window control buttons (close, minimize, zoom, fullscreen)
+            let controlButtons = getWindowControlButtons(from: windowElement)
+            #if DEBUG
+            if !controlButtons.isEmpty {
+                print("[NativeAppCrawler] Found \(controlButtons.count) window control buttons")
+            }
+            #endif
+            allItems.append(contentsOf: controlButtons)
+            itemCount += controlButtons.count
+
             let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
             print("[NativeAppCrawler] Crawling window: '\(windowTitle)'")
@@ -295,6 +305,46 @@ final class NativeAppCrawler: ElementCrawler {
         }
 
         return windows
+    }
+
+    /// Gets window control buttons (close, minimize, zoom, fullscreen) from a window.
+    ///
+    /// These buttons are special macOS system UI elements that need to be fetched
+    /// directly from the window using dedicated attributes rather than through
+    /// normal child element traversal.
+    ///
+    /// - Parameter window: The window element to get control buttons from.
+    /// - Returns: An array of HintTargets for the available control buttons.
+    private func getWindowControlButtons(from window: AXUIElement) -> [HintTarget] {
+        var buttons: [HintTarget] = []
+
+        let buttonAttributes: [(String, String)] = [
+            (kAXCloseButtonAttribute, "Close"),
+            (kAXMinimizeButtonAttribute, "Minimize"),
+            (kAXZoomButtonAttribute, "Zoom"),
+            (kAXFullScreenButtonAttribute, "Full Screen")
+        ]
+
+        for (attribute, title) in buttonAttributes {
+            var buttonRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(window, attribute as CFString, &buttonRef) == .success,
+               let button = buttonRef {
+                // swiftlint:disable:next force_cast
+                let axButton = button as! AXUIElement
+                // Only add if frame can be retrieved
+                if AccessibilityHelper.getFrame(axButton) != nil {
+                    let isEnabled = getIsEnabled(from: axButton)
+                    buttons.append(HintTarget(
+                        title: title,
+                        axElement: axButton,
+                        isEnabled: isEnabled,
+                        targetType: .native
+                    ))
+                }
+            }
+        }
+
+        return buttons
     }
 
     /// Detects an open AXMenu for the given app pid using the SystemWide focused element.

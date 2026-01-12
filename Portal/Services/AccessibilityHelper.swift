@@ -75,6 +75,36 @@ enum AccessibilityHelper {
         elements.map { getFrame($0) ?? .zero }
     }
 
+    /// Retrieves the screen frame of an accessibility element with fallback.
+    ///
+    /// If the element's frame cannot be retrieved directly, this method attempts
+    /// to estimate a position based on the parent element's frame. This is useful
+    /// for elements that don't expose their position through standard attributes.
+    ///
+    /// - Parameter element: The accessibility element to get the frame for.
+    /// - Returns: The element's frame, a parent-based estimate, or `nil` if unavailable.
+    static func getFrameWithFallback(_ element: AXUIElement) -> CGRect? {
+        // First, try to get the frame directly
+        if let frame = getFrame(element) {
+            return frame
+        }
+
+        // Fallback: estimate position from parent element
+        if let parent = getParent(element),
+           let parentFrame = getFrame(parent) {
+            // Use top-left corner of parent with a small default size
+            // This isn't perfectly accurate but allows the hint to be displayed
+            return CGRect(
+                x: parentFrame.minX,
+                y: parentFrame.minY,
+                width: min(parentFrame.width, 20),
+                height: min(parentFrame.height, 20)
+            )
+        }
+
+        return nil
+    }
+
     /// Converts a rect from Accessibility API coordinates to AppKit screen coordinates.
     ///
     /// The Accessibility API uses a coordinate system with the origin at the top-left
