@@ -352,6 +352,32 @@ enum AccessibilityHelper {
         // Conditional cast (as?) cannot be used with CoreFoundation types as it always succeeds.
         let focused = focusedRef as! AXUIElement
 
+        guard let role = getRoleOfFocusedElement(focused) else {
+            return false
+        }
+        return ScrollConfiguration.textInputRoles.contains(role)
+    }
+
+    /// Returns the role of the currently focused UI element (system-wide), if available.
+    ///
+    /// This is used for debugging hotkey suppression (e.g., when focus is AXSearchField).
+    nonisolated static func focusedElementRole() -> String? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedRef
+        ) == .success,
+              let focusedRef else {
+            return nil
+        }
+        // swiftlint:disable:next force_cast
+        let focused = focusedRef as! AXUIElement
+        return getRoleOfFocusedElement(focused)
+    }
+
+    nonisolated private static func getRoleOfFocusedElement(_ focused: AXUIElement) -> String? {
         var roleRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
             focused,
@@ -359,10 +385,9 @@ enum AccessibilityHelper {
             &roleRef
         ) == .success,
               let role = roleRef as? String else {
-            return false
+            return nil
         }
-
-        return ScrollConfiguration.textInputRoles.contains(role)
+        return role
     }
 
     /// Gets the value attribute of an accessibility element.
