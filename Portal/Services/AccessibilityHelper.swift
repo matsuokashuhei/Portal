@@ -332,7 +332,10 @@ enum AccessibilityHelper {
     /// and scroll mode during text input.
     ///
     /// - Returns: `true` if a text input element (AXTextField, AXTextArea, etc.) has focus.
-    static func isTextInputElementFocused() -> Bool {
+    ///
+    /// - Note: This method is `nonisolated` to allow calling from CGEventTap callbacks
+    ///   which run outside the MainActor context.
+    nonisolated static func isTextInputElementFocused() -> Bool {
         let systemWide = AXUIElementCreateSystemWide()
         var focusedRef: CFTypeRef?
 
