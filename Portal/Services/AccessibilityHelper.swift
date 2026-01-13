@@ -325,6 +325,46 @@ enum AccessibilityHelper {
         return children
     }
 
+    /// Checks if a text input element currently has focus.
+    ///
+    /// Uses the system-wide focused element to determine if the user is
+    /// typing in a text input field. This is used to disable hotkeys
+    /// and scroll mode during text input.
+    ///
+    /// - Returns: `true` if a text input element (AXTextField, AXTextArea, etc.) has focus.
+    ///
+    /// - Note: This method is `nonisolated` to allow calling from CGEventTap callbacks
+    ///   which run on the main thread but outside the MainActor isolation context.
+    nonisolated static func isTextInputElementFocused() -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: CFTypeRef?
+
+        guard AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedRef
+        ) == .success else {
+            return false
+        }
+
+        // Note: Force cast is safe here because AXUIElementCopyAttributeValue with
+        // kAXFocusedUIElementAttribute always returns an AXUIElement when successful.
+        // Conditional cast (as?) cannot be used with CoreFoundation types as it always succeeds.
+        let focused = focusedRef as! AXUIElement
+
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            focused,
+            kAXRoleAttribute as CFString,
+            &roleRef
+        ) == .success,
+              let role = roleRef as? String else {
+            return false
+        }
+
+        return ScrollConfiguration.textInputRoles.contains(role)
+    }
+
     /// Gets the value attribute of an accessibility element.
     ///
     /// - Parameter element: The element to get the value from.
