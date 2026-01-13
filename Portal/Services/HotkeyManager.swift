@@ -99,7 +99,7 @@ final class HotkeyManager {
 
             if isMatch {
                 // Check if the frontmost app is excluded
-                if manager.shouldSkipForFrontmostApp() {
+                if manager.shouldSkipHotkey() {
                     return Unmanaged.passUnretained(event)
                 }
 
@@ -175,7 +175,7 @@ final class HotkeyManager {
         fallbackMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return }
             // Check if the frontmost app is excluded
-            if self.shouldSkipForFrontmostApp() {
+            if self.shouldSkipHotkey() {
                 return
             }
             if self.isHotkeyEvent(event) {
@@ -221,7 +221,7 @@ final class HotkeyManager {
     ///
     /// This method is safe to call from CGEventTap callback as it runs on the main thread
     /// (the tap is added to the main run loop via CFRunLoopGetCurrent()).
-    private func shouldSkipForFrontmostApp() -> Bool {
+    private func shouldSkipHotkey() -> Bool {
         // 1. Check if the frontmost app is excluded
         if let frontmostApp = NSWorkspace.shared.frontmostApplication,
            let bundleIdentifier = frontmostApp.bundleIdentifier,

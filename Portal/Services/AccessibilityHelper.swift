@@ -347,8 +347,9 @@ enum AccessibilityHelper {
             return false
         }
 
-        // Safe cast: AXUIElementCopyAttributeValue with kAXFocusedUIElementAttribute
-        // always returns an AXUIElement when successful
+        // Note: Force cast is safe here because AXUIElementCopyAttributeValue with
+        // kAXFocusedUIElementAttribute always returns an AXUIElement when successful.
+        // Conditional cast (as?) cannot be used with CoreFoundation types as it always succeeds.
         let focused = focusedRef as! AXUIElement
 
         var roleRef: CFTypeRef?
