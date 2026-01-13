@@ -347,7 +347,7 @@ final class ElectronCrawler: ElementCrawler {
             if role == "AXWebArea" { continue }
 
             // Electron native chrome: collect any element that has a usable frame.
-            if let frame = getFrame(from: child),
+            if let frame = getNativeChromeFrameWithFallback(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
@@ -374,8 +374,8 @@ final class ElectronCrawler: ElementCrawler {
                 }
             }
 
-            // Recurse into native containers (but not web areas)
-            if isNativeContainerRole(role) {
+            // Recurse into native containers / any element with children (but not web areas)
+            if isNativeContainerRole(role) || hasChildren(child) {
                 await crawlNativeChromeStreaming(
                     in: child,
                     itemCount: &itemCount,
@@ -580,7 +580,7 @@ final class ElectronCrawler: ElementCrawler {
             }
 
             // Electron native chrome: collect any element that has a usable frame.
-            if let frame = getFrame(from: child),
+            if let frame = getNativeChromeFrameWithFallback(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
@@ -602,8 +602,8 @@ final class ElectronCrawler: ElementCrawler {
                 #endif
             }
 
-            // Recurse into native containers (but not web areas)
-            if isNativeContainerRole(role) {
+            // Recurse into native containers / any element with children (but not web areas)
+            if isNativeContainerRole(role) || hasChildren(child) {
                 items.append(contentsOf: crawlNativeChrome(in: child, itemCount: &itemCount))
             }
         }
@@ -793,6 +793,49 @@ final class ElectronCrawler: ElementCrawler {
         }
 
         return CGRect(origin: position, size: size)
+    }
+
+    /// Gets a usable frame for Electron native chrome elements with a parent-based fallback.
+    ///
+    /// Some Electron/native-chrome elements (e.g. toolbar/search controls) may not expose
+    /// `AXFrame` / `AXPosition` / `AXSize`. In that case, we estimate a small frame from
+    /// the parent element to allow hint placement.
+    private func getNativeChromeFrameWithFallback(from element: AXUIElement) -> CGRect? {
+        if let frame = getFrame(from: element) {
+            return frame
+        }
+
+        // Parent-based fallback
+        var parentRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success,
+              let parentRef else {
+            return nil
+        }
+
+        // swiftlint:disable:next force_cast
+        let parent = parentRef as! AXUIElement
+        guard let parentFrame = getFrame(from: parent),
+              parentFrame != .zero,
+              parentFrame.width > 0,
+              parentFrame.height > 0 else {
+            return nil
+        }
+
+        let width = min(parentFrame.width, 20)
+        let height = min(parentFrame.height, 20)
+        let estimated = CGRect(
+            x: parentFrame.minX,
+            y: parentFrame.minY,
+            width: width,
+            height: height
+        )
+
+        #if DEBUG
+        let role = getRole(from: element) ?? "unknown"
+        print("[ElectronCrawler] Native chrome frame fallback used (role: \(role)) parentFrame=\(parentFrame.debugDescription) estimated=\(estimated.debugDescription)")
+        #endif
+
+        return estimated
     }
 
     /// Gets the enabled state.
