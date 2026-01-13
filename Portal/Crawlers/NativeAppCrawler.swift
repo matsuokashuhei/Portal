@@ -186,6 +186,320 @@ final class NativeAppCrawler: ElementCrawler {
         return deduplicateItems(allItems)
     }
 
+    /// Crawls UI elements from the specified application as an async stream.
+    ///
+    /// This method yields elements as they are discovered, enabling progressive
+    /// rendering of hint labels. Use this for better responsiveness when crawling
+    /// applications with many UI elements.
+    ///
+    /// - Parameter app: The application to crawl elements from.
+    /// - Returns: An async stream of discovered hint targets.
+    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error> {
+        AsyncThrowingStream { continuation in
+            Task { @MainActor in
+                guard AccessibilityService.isGranted else {
+                    continuation.finish(throwing: NativeAppCrawlerError.accessibilityNotGranted)
+                    return
+                }
+
+                let pid = app.processIdentifier
+                let axApp = AXUIElementCreateApplication(pid)
+
+                // Track seen elements for deduplication during streaming
+                var seenElements: [AXUIElement] = []
+                var itemCount = 0
+
+                let windows = self.getAllWindows(from: axApp)
+                guard !windows.isEmpty else {
+                    continuation.finish(throwing: NativeAppCrawlerError.mainWindowNotAccessible)
+                    return
+                }
+
+                for windowElement in windows {
+                    // Check for cancellation
+                    if Task.isCancelled {
+                        continuation.finish()
+                        return
+                    }
+
+                    // Get window control buttons and yield them immediately
+                    let controlButtons = self.getWindowControlButtons(from: windowElement)
+                    for button in controlButtons {
+                        guard itemCount < Self.maxItems else { break }
+                        if !self.isDuplicate(button.axElement, in: seenElements) {
+                            seenElements.append(button.axElement)
+                            continuation.yield(button)
+                            itemCount += 1
+                            // Yield to allow UI updates
+                            await Task.yield()
+                        }
+                    }
+
+                    let windowTitle = self.getTitle(from: windowElement) ?? app.localizedName ?? "Window"
+
+                    // Crawl window elements with streaming
+                    await self.crawlWindowInElementStreaming(
+                        windowElement,
+                        path: [windowTitle],
+                        depth: 0,
+                        itemCount: &itemCount,
+                        seenElements: &seenElements,
+                        continuation: continuation
+                    )
+                }
+
+                // Check for open menu (popup/select menus)
+                if let openMenu = self.getOpenMenuForApp(pid: pid) {
+                    await self.crawlOpenMenuStreaming(
+                        openMenu,
+                        itemCount: &itemCount,
+                        seenElements: &seenElements,
+                        continuation: continuation
+                    )
+                }
+
+                continuation.finish()
+            }
+        }
+    }
+
+    /// Checks if an element is a duplicate.
+    private func isDuplicate(_ element: AXUIElement, in seenElements: [AXUIElement]) -> Bool {
+        return seenElements.contains { existing in
+            CFEqual(existing, element)
+        }
+    }
+
+    /// Recursively crawls an element for actionable window items, yielding results via continuation.
+    private func crawlWindowInElementStreaming(
+        _ element: AXUIElement,
+        path: [String],
+        depth: Int,
+        itemCount: inout Int,
+        seenElements: inout [AXUIElement],
+        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
+    ) async {
+        // Prevent infinite recursion and enforce item limit
+        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+
+        // Check for cancellation
+        if Task.isCancelled { return }
+
+        // Get children
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if Task.isCancelled { return }
+
+            // Get role
+            var roleRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
+                  let role = roleRef as? String else {
+                continue
+            }
+
+            // Get title or description
+            let title = getTitle(from: child)
+            let label = getLabel(from: child)
+            let desc = getDescription(from: child)
+            let value = getValue(from: child)
+            let help = getHelp(from: child)
+            var displayTitle: String? = nil
+            if let t = title, !t.isEmpty { displayTitle = t }
+            else if let l = label, !l.isEmpty { displayTitle = l }
+            else if let d = desc, !d.isEmpty { displayTitle = d }
+            else if let v = value, !v.isEmpty { displayTitle = v }
+            else if let h = help, !h.isEmpty { displayTitle = h }
+
+            // For row-type elements without a direct title, look in children
+            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
+               (role == "AXRow" || role == "AXOutlineRow" || role == "AXCell") {
+                displayTitle = getTitleFromRowChildren(child)
+            }
+
+            // For toggle switches and checkboxes, look in sibling elements for labels
+            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
+               (role == "AXSwitch" || role == "AXCheckBox") {
+                displayTitle = getTitleFromSiblings(child)
+            }
+
+            // For text fields, try placeholder value first
+            if (displayTitle == nil || displayTitle?.isEmpty == true) && role == "AXTextField" {
+                displayTitle = getPlaceholderValue(from: child)
+                if displayTitle == nil || displayTitle?.isEmpty == true {
+                    displayTitle = getTitleFromSiblings(child)
+                }
+            }
+
+            // Check if this is an actionable item
+            var pathForChildren = path
+            if Self.itemRoles.contains(role) {
+                let canAct = canPerformAction(on: child)
+                if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
+                    if isSectionHeader(child, role: role) {
+                        continue
+                    }
+
+                    // Check for duplicates
+                    if !isDuplicate(child, in: seenElements) {
+                        seenElements.append(child)
+                        let isEnabled = getIsEnabled(from: child)
+                        let currentPath = path + [itemTitle]
+                        pathForChildren = currentPath
+
+                        let target = HintTarget(
+                            title: itemTitle,
+                            axElement: child,
+                            isEnabled: isEnabled,
+                            targetType: .native
+                        )
+                        continuation.yield(target)
+                        itemCount += 1
+                        // Yield to allow UI updates
+                        await Task.yield()
+                    }
+                }
+            }
+
+            // Recurse into containers or elements with children
+            let hasChildElements = hasChildren(child)
+            let isLeafItem = (role == "AXCheckBox" || role == "AXSwitch" || role == "AXTextField") ||
+                             ((role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox") && !hasChildElements)
+
+            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildElements) {
+                var pathForContainer = pathForChildren
+                if Self.containerRoles.contains(role) {
+                    if let containerName = getContainerName(child, role: role), !containerName.isEmpty {
+                        pathForContainer = pathForChildren + [containerName]
+                    }
+                }
+                await crawlWindowInElementStreaming(
+                    child,
+                    path: pathForContainer,
+                    depth: depth + 1,
+                    itemCount: &itemCount,
+                    seenElements: &seenElements,
+                    continuation: continuation
+                )
+            }
+        }
+    }
+
+    /// Crawls menu items from an open AXMenu element, yielding results via continuation.
+    private func crawlOpenMenuStreaming(
+        _ menu: AXUIElement,
+        itemCount: inout Int,
+        seenElements: inout [AXUIElement],
+        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
+    ) async {
+        if Task.isCancelled { return }
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(menu, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if Task.isCancelled { return }
+
+            guard let role = getRole(from: child) else { continue }
+
+            if role == "AXMenuItem" {
+                let title = getTitle(from: child)
+                let label = getLabel(from: child)
+                let desc = getDescription(from: child)
+                let value = getValue(from: child)
+                let help = getHelp(from: child)
+
+                var displayTitle: String? = nil
+                if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
+                else if let d = desc, !d.isEmpty { displayTitle = d }
+                else if let v = value, !v.isEmpty { displayTitle = v }
+                else if let h = help, !h.isEmpty { displayTitle = h }
+
+                if let itemTitle = displayTitle, !itemTitle.isEmpty {
+                    if !isDuplicate(child, in: seenElements) {
+                        seenElements.append(child)
+                        let isEnabled = getIsEnabled(from: child)
+                        continuation.yield(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
+                        itemCount += 1
+                        // Yield to allow UI updates
+                        await Task.yield()
+                    }
+                }
+
+                if hasChildren(child) {
+                    await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: 1, continuation: continuation)
+                }
+            } else if role == "AXMenu" {
+                await crawlOpenMenuStreaming(child, itemCount: &itemCount, seenElements: &seenElements, continuation: continuation)
+            } else if hasChildren(child) {
+                await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: 1, continuation: continuation)
+            }
+        }
+    }
+
+    /// Crawls nested menu items, yielding results via continuation.
+    private func crawlNestedMenuItemsStreaming(
+        in element: AXUIElement,
+        itemCount: inout Int,
+        seenElements: inout [AXUIElement],
+        depth: Int,
+        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
+    ) async {
+        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+        if Task.isCancelled { return }
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if Task.isCancelled { return }
+
+            if let role = getRole(from: child), role == "AXMenuItem" {
+                let title = getTitle(from: child)
+                let label = getLabel(from: child)
+                let desc = getDescription(from: child)
+                let value = getValue(from: child)
+                let help = getHelp(from: child)
+
+                var displayTitle: String? = nil
+                if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
+                else if let d = desc, !d.isEmpty { displayTitle = d }
+                else if let v = value, !v.isEmpty { displayTitle = v }
+                else if let h = help, !h.isEmpty { displayTitle = h }
+
+                if let itemTitle = displayTitle, !itemTitle.isEmpty {
+                    if !isDuplicate(child, in: seenElements) {
+                        seenElements.append(child)
+                        let isEnabled = getIsEnabled(from: child)
+                        continuation.yield(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
+                        itemCount += 1
+                        // Yield to allow UI updates
+                        await Task.yield()
+                    }
+                }
+            }
+
+            if hasChildren(child) {
+                await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: depth + 1, continuation: continuation)
+            }
+        }
+    }
+
     /// Removes duplicate items based on their AXUIElement reference.
     ///
     /// Since `HintTarget.id` is UUID-based (to support elements with the same title),

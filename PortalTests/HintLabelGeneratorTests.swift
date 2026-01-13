@@ -27,27 +27,28 @@ struct HintLabelGeneratorTests {
     }
 
     @Test
-    func testGenerateLabelsSingleCharacter() {
+    func testGenerateLabelsSmallCount() {
+        // All labels are always two-character
         let labels = HintLabelGenerator.generateLabels(count: 5)
-        #expect(labels == ["A", "B", "C", "D", "E"])
+        #expect(labels == ["AA", "AB", "AC", "AD", "AE"])
     }
 
     @Test
-    func testGenerateLabelsFullAlphabet() {
-        // Note: "F" is excluded from the alphabet, so we have 25 single-character labels
+    func testGenerateLabelsFullAlphabetRow() {
+        // 25 labels (one row of two-char labels, F excluded from alphabet)
         let labels = HintLabelGenerator.generateLabels(count: 25)
         #expect(labels.count == 25)
-        #expect(labels.first == "A")
-        #expect(labels.last == "Z")
-        #expect(!labels.contains("F"))  // F should not be in the labels
+        #expect(labels.first == "AA")
+        #expect(labels.last == "AZ")
+        #expect(!labels.contains("AF"))  // F should not be in the labels
     }
 
     @Test
     func testGenerateLabelsTwoCharacters() {
-        // When count > 25, ALL labels are two-character (no overlap with single-char)
+        // All labels are two-character
         let labels = HintLabelGenerator.generateLabels(count: 28)
         #expect(labels.count == 28)
-        #expect(labels[0] == "AA")  // Starts with two-char
+        #expect(labels[0] == "AA")
         #expect(labels[1] == "AB")
         #expect(labels[24] == "AZ")  // 25 labels from AA to AZ (no AF)
         #expect(labels[25] == "BA")
@@ -59,12 +60,59 @@ struct HintLabelGeneratorTests {
     func testGenerateLabelsLargeCount() {
         let labels = HintLabelGenerator.generateLabels(count: 100)
         #expect(labels.count == 100)
-        // When count > 25, ALL labels are two-character
         #expect(labels[0] == "AA")
         #expect(labels[24] == "AZ")  // 25 two-char labels starting with A (no AF)
         #expect(labels[25] == "BA")
         #expect(labels[49] == "BZ")  // 25 two-char labels starting with B (no BF)
         #expect(labels[50] == "CA")
+    }
+
+    // MARK: - Index-based Label Generation Tests (for progressive rendering)
+
+    @Test
+    func testGenerateLabelAtIndexNegative() {
+        let label = HintLabelGenerator.generateLabel(at: -1)
+        #expect(label == "")
+    }
+
+    @Test
+    func testGenerateLabelAtIndexFirstRow() {
+        // All labels are two-character, starting from AA
+        // Alphabet has 25 chars (F excluded): A, B, C, D, E, G, H, ..., Z
+        #expect(HintLabelGenerator.generateLabel(at: 0) == "AA")
+        #expect(HintLabelGenerator.generateLabel(at: 1) == "AB")
+        #expect(HintLabelGenerator.generateLabel(at: 4) == "AE")
+        #expect(HintLabelGenerator.generateLabel(at: 5) == "AG")  // F is excluded
+        #expect(HintLabelGenerator.generateLabel(at: 24) == "AZ") // Last of first row
+    }
+
+    @Test
+    func testGenerateLabelAtIndexSecondRow() {
+        // Second row starts at index 25 (BA, BB, BC, ...)
+        #expect(HintLabelGenerator.generateLabel(at: 25) == "BA")
+        #expect(HintLabelGenerator.generateLabel(at: 26) == "BB")
+        #expect(HintLabelGenerator.generateLabel(at: 49) == "BZ")  // Last of second row
+        #expect(HintLabelGenerator.generateLabel(at: 50) == "CA")  // Start of third row
+        #expect(HintLabelGenerator.generateLabel(at: 74) == "CZ")  // Last of third row
+        #expect(HintLabelGenerator.generateLabel(at: 75) == "DA")  // Start of fourth row
+    }
+
+    @Test
+    func testGenerateLabelAtIndexSequence() {
+        // Test that progressive generation produces expected sequence
+        var labels: [String] = []
+        for i in 0..<30 {
+            labels.append(HintLabelGenerator.generateLabel(at: i))
+        }
+        // All labels should be two-char starting from AA
+        #expect(labels[0] == "AA")
+        #expect(labels[1] == "AB")
+        #expect(labels[24] == "AZ")
+        #expect(labels[25] == "BA")
+        #expect(labels[26] == "BB")
+        #expect(labels[27] == "BC")
+        #expect(labels[28] == "BD")
+        #expect(labels[29] == "BE")
     }
 
     // MARK: - Filter Tests

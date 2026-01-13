@@ -31,6 +31,16 @@ protocol ElementCrawler {
     /// - Throws: An error if crawling fails (e.g., accessibility not granted).
     func crawlElements(_ app: NSRunningApplication) async throws -> [HintTarget]
 
+    /// Crawls UI elements from the specified application as an async stream.
+    ///
+    /// This method yields elements as they are discovered, enabling progressive
+    /// rendering of hint labels. Use this for better responsiveness when crawling
+    /// applications with many UI elements.
+    ///
+    /// - Parameter app: The application to crawl elements from.
+    /// - Returns: An async stream of discovered hint targets.
+    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error>
+
     /// Determines whether this crawler can handle the specified application.
     ///
     /// - Parameter app: The application to check.
