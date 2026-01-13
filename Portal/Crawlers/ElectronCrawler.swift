@@ -746,7 +746,22 @@ final class ElectronCrawler: ElementCrawler {
     }
 
     /// Gets the frame (position + size) of an element.
+    ///
+    /// Electron apps sometimes expose geometry via `kAXFrameAttribute` even when
+    /// `kAXPositionAttribute` / `kAXSizeAttribute` are unavailable. We try `kAXFrame`
+    /// first, then fall back to position+size.
     private func getFrame(from element: AXUIElement) -> CGRect? {
+        // Prefer kAXFrameAttribute if available
+        var frameRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXFrameAttribute as CFString, &frameRef) == .success,
+           let axValue = frameRef,
+           CFGetTypeID(axValue) == AXValueGetTypeID() {
+            var rect = CGRect.zero
+            if AXValueGetValue(axValue as! AXValue, .cgRect, &rect) {
+                return rect
+            }
+        }
+
         var positionRef: CFTypeRef?
         var sizeRef: CFTypeRef?
 
@@ -758,12 +773,14 @@ final class ElectronCrawler: ElementCrawler {
         var position = CGPoint.zero
         var size = CGSize.zero
 
-        // Note: CoreFoundation types require force cast as conditional cast (as?) always succeeds.
-        // The cast is safe because AXUIElementCopyAttributeValue guarantees the correct type on success.
-        // swiftlint:disable force_cast
-        AXValueGetValue(positionRef as! AXValue, .cgPoint, &position)
-        AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
-        // swiftlint:enable force_cast
+        guard let posValue = positionRef,
+              CFGetTypeID(posValue) == AXValueGetTypeID(),
+              AXValueGetValue(posValue as! AXValue, .cgPoint, &position),
+              let sizeValue = sizeRef,
+              CFGetTypeID(sizeValue) == AXValueGetTypeID(),
+              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else {
+            return nil
+        }
 
         return CGRect(origin: position, size: size)
     }
