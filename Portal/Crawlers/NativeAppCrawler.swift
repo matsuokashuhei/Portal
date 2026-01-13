@@ -43,6 +43,17 @@ enum NativeAppCrawlerError: Error, LocalizedError {
 /// Window crawling typically takes 50-200ms depending on UI complexity.
 /// No caching is used because window content can change
 /// more frequently (e.g., when navigating folders).
+///
+/// ## Known Limitations
+/// Some applications have UI elements that are visible in Accessibility Inspector
+/// but are not exposed through the standard `kAXChildrenAttribute` API. For example:
+/// - **Xcode Debug Area**: The "Show the Variables View" and "Show the Console"
+///   toggle buttons (AXCheckBox with AXToggle subrole) are visible in Accessibility
+///   Inspector but not returned by the API. This appears to be a limitation in
+///   Xcode's accessibility implementation.
+///
+/// These elements cannot be targeted by hint labels because they are not discoverable
+/// through the Accessibility API that Portal uses.
 @MainActor
 final class NativeAppCrawler: ElementCrawler {
     // MARK: - ElementCrawler Protocol
@@ -138,6 +149,16 @@ final class NativeAppCrawler: ElementCrawler {
 
         var allItems: [HintTarget] = []
         for windowElement in windows {
+            // Get window control buttons (close, minimize, zoom, fullscreen)
+            let controlButtons = getWindowControlButtons(from: windowElement)
+            #if DEBUG
+            if !controlButtons.isEmpty {
+                print("[NativeAppCrawler] Found \(controlButtons.count) window control buttons")
+            }
+            #endif
+            allItems.append(contentsOf: controlButtons)
+            itemCount += controlButtons.count
+
             let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
             print("[NativeAppCrawler] Crawling window: '\(windowTitle)'")
@@ -297,6 +318,48 @@ final class NativeAppCrawler: ElementCrawler {
         return windows
     }
 
+    /// Gets window control buttons (close, minimize, zoom, fullscreen) from a window.
+    ///
+    /// These buttons are special macOS system UI elements that need to be fetched
+    /// directly from the window using dedicated attributes rather than through
+    /// normal child element traversal.
+    ///
+    /// - Parameter window: The window element to get control buttons from.
+    /// - Returns: An array of HintTargets for the available control buttons.
+    private func getWindowControlButtons(from window: AXUIElement) -> [HintTarget] {
+        var buttons: [HintTarget] = []
+
+        let buttonAttributes: [(String, String)] = [
+            (kAXCloseButtonAttribute, "Close"),
+            (kAXMinimizeButtonAttribute, "Minimize"),
+            (kAXZoomButtonAttribute, "Zoom"),
+            (kAXFullScreenButtonAttribute, "Full Screen")
+        ]
+
+        for (attribute, title) in buttonAttributes {
+            var buttonRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(window, attribute as CFString, &buttonRef) == .success,
+               let button = buttonRef {
+                // Note: kAXCloseButtonAttribute and related window control attributes
+                // always return AXUIElement type when copy succeeds.
+                // swiftlint:disable:next force_cast
+                let axButton = button as! AXUIElement
+                // Only add if frame can be retrieved (with fallback)
+                if AccessibilityHelper.getFrameWithFallback(axButton) != nil {
+                    let isEnabled = getIsEnabled(from: axButton)
+                    buttons.append(HintTarget(
+                        title: title,
+                        axElement: axButton,
+                        isEnabled: isEnabled,
+                        targetType: .native
+                    ))
+                }
+            }
+        }
+
+        return buttons
+    }
+
     /// Detects an open AXMenu for the given app pid using the SystemWide focused element.
     ///
     /// Some popup/select menus are not exposed under `kAXWindowsAttribute` of the app.
@@ -368,13 +431,16 @@ final class NativeAppCrawler: ElementCrawler {
             guard let role = getRole(from: child) else { continue }
 
             if role == "AXMenuItem" {
+                // Priority: title > label > description > value > help
                 let title = getTitle(from: child)
+                let label = getLabel(from: child)
                 let desc = getDescription(from: child)
                 let value = getValue(from: child)
                 let help = getHelp(from: child)
 
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }
@@ -412,13 +478,16 @@ final class NativeAppCrawler: ElementCrawler {
         for child in children {
             guard itemCount < Self.maxItems else { break }
             if let role = getRole(from: child), role == "AXMenuItem" {
+                // Priority: title > label > description > value > help
                 let title = getTitle(from: child)
+                let label = getLabel(from: child)
                 let desc = getDescription(from: child)
                 let value = getValue(from: child)
                 let help = getHelp(from: child)
 
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
+                else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }
@@ -471,12 +540,15 @@ final class NativeAppCrawler: ElementCrawler {
 
             // Get title or description - try multiple attributes for buttons
             // Use first non-empty value (empty string is different from nil)
+            // Priority: title > label > description > value > help
             let title = getTitle(from: child)
+            let label = getLabel(from: child)
             let desc = getDescription(from: child)
             let value = getValue(from: child)
             let help = getHelp(from: child)
             var displayTitle: String? = nil
             if let t = title, !t.isEmpty { displayTitle = t }
+            else if let l = label, !l.isEmpty { displayTitle = l }
             else if let d = desc, !d.isEmpty { displayTitle = d }
             else if let v = value, !v.isEmpty { displayTitle = v }
             else if let h = help, !h.isEmpty { displayTitle = h }
@@ -738,6 +810,18 @@ final class NativeAppCrawler: ElementCrawler {
             return nil
         }
         return titleRef as? String
+    }
+
+    /// Gets the AXLabel attribute from an accessibility element.
+    /// This is different from the title: some elements (like Xcode's toggle buttons)
+    /// have an empty title but a populated label.
+    private func getLabel(from element: AXUIElement) -> String? {
+        var labelRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty {
+            return label
+        }
+        return nil
     }
 
     /// Gets the title from a row element by searching its children.

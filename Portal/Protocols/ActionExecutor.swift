@@ -66,8 +66,21 @@ extension ActionExecutor {
             return false
         }
 
+        // Check subrole for window control buttons - they don't have title attributes
+        // but can be identified by their subrole (AXCloseButton, AXMinimizeButton, etc.)
+        var subroleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleRef) == .success,
+           let subrole = subroleRef as? String {
+            if AccessibilityHelper.windowControlSubroles.contains(subrole) {
+                #if DEBUG
+                print("[ActionExecutor] isElementValid: Window control button detected (subrole: \(subrole)), skipping title validation")
+                #endif
+                return true
+            }
+        }
+
         // Verify title - check all possible title sources since crawlers use
-        // title/description/value/help priority and we need to match any of them.
+        // title/label/description/value/help priority and we need to match any of them.
         var possibleTitles: [String] = []
 
         // Try direct title attribute
@@ -75,6 +88,13 @@ extension ActionExecutor {
         if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
            let title = titleRef as? String, !title.isEmpty {
             possibleTitles.append(title)
+        }
+
+        // Try label attribute (used by some elements like Xcode's toggle buttons)
+        var labelRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty {
+            possibleTitles.append(label)
         }
 
         // Try description

@@ -248,7 +248,7 @@ final class HintModeController {
                     let frame: CGRect
                     if let cached = item.cachedFrame {
                         frame = cached
-                    } else if let f = AccessibilityHelper.getFrame(item.axElement) {
+                    } else if let f = AccessibilityHelper.getFrameWithFallback(item.axElement) {
                         frame = f
                     } else {
                         #if DEBUG
@@ -318,7 +318,7 @@ final class HintModeController {
                 if let cached = item.cachedFrame {
                     return cached
                 }
-                return AccessibilityHelper.getFrame(item.axElement) ?? .zero
+                return AccessibilityHelper.getFrameWithFallback(item.axElement) ?? .zero
             }
 
             #if DEBUG

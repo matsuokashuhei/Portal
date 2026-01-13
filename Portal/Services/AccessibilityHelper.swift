@@ -13,6 +13,19 @@ import AppKit
 /// Provides common operations like retrieving element positions and sizes,
 /// which are used by hint mode to display labels at element locations.
 enum AccessibilityHelper {
+    // MARK: - Constants
+
+    /// Subroles that identify window control buttons (close, minimize, zoom, fullscreen).
+    ///
+    /// These buttons are handled specially because:
+    /// - They don't have title attributes, so validation must check subrole instead
+    /// - They often don't respond to AXPress, so mouse click is used as fallback
+    static let windowControlSubroles: Set<String> = [
+        "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
+    ]
+
+    // MARK: - Frame Methods
+
     /// Retrieves the screen frame of an accessibility element.
     ///
     /// - Parameter element: The accessibility element to get the frame for.
@@ -73,6 +86,40 @@ enum AccessibilityHelper {
     ///            will have `.zero` as their frame.
     static func getFrames(_ elements: [AXUIElement]) -> [CGRect] {
         elements.map { getFrame($0) ?? .zero }
+    }
+
+    /// Retrieves the screen frame of an accessibility element with fallback.
+    ///
+    /// If the element's frame cannot be retrieved directly, this method attempts
+    /// to estimate a position based on the parent element's frame. This is useful
+    /// for elements that don't expose their position through standard attributes.
+    ///
+    /// - Parameter element: The accessibility element to get the frame for.
+    /// - Returns: The element's frame, a parent-based estimate, or `nil` if unavailable.
+    static func getFrameWithFallback(_ element: AXUIElement) -> CGRect? {
+        // First, try to get the frame directly
+        if let frame = getFrame(element) {
+            return frame
+        }
+
+        // Fallback: estimate position from parent element
+        if let parent = getParent(element),
+           let parentFrame = getFrame(parent),
+           parentFrame.width > 0, parentFrame.height > 0 {
+            // Use top-left corner of parent with a small default size
+            // This isn't perfectly accurate but allows the hint to be displayed
+            // Note: In AppKit coordinates (bottom-left origin), top-left is (minX, maxY - height)
+            let width = min(parentFrame.width, 20)
+            let height = min(parentFrame.height, 20)
+            return CGRect(
+                x: parentFrame.minX,
+                y: parentFrame.maxY - height,
+                width: width,
+                height: height
+            )
+        }
+
+        return nil
     }
 
     /// Converts a rect from Accessibility API coordinates to AppKit screen coordinates.
