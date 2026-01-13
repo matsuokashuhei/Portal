@@ -237,6 +237,15 @@ final class ElectronCrawler: ElementCrawler {
             let existingArea = existingFrame.width * existingFrame.height
             let intersectionArea = intersection.width * intersection.height
             let smallerArea = min(itemArea, existingArea)
+            let largerArea = max(itemArea, existingArea)
+
+            // Avoid treating parent/child containment as a duplicate.
+            // We only want to dedupe elements that are roughly the same size (e.g., icon + label),
+            // not a large container (web area) overlapping with every child inside it.
+            let areaSimilarity = (largerArea > 0) ? (smallerArea / largerArea) : 0
+            if areaSimilarity < 0.3 {
+                return false
+            }
 
             let overlapRatio = smallerArea > 0 ? intersectionArea / smallerArea : 0
             return overlapRatio > 0.5
@@ -848,6 +857,13 @@ final class ElectronCrawler: ElementCrawler {
                 let existingArea = existingFrame.width * existingFrame.height
                 let intersectionArea = intersection.width * intersection.height
                 let smallerArea = min(itemArea, existingArea)
+                let largerArea = max(itemArea, existingArea)
+
+                // Same rationale as streaming path: only dedupe when frames are similar size.
+                let areaSimilarity = (largerArea > 0) ? (smallerArea / largerArea) : 0
+                if areaSimilarity < 0.3 {
+                    return false
+                }
 
                 // If overlap is more than 50% of smaller frame, consider duplicate
                 let overlapRatio = smallerArea > 0 ? intersectionArea / smallerArea : 0
