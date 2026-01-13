@@ -334,7 +334,7 @@ enum AccessibilityHelper {
     /// - Returns: `true` if a text input element (AXTextField, AXTextArea, etc.) has focus.
     ///
     /// - Note: This method is `nonisolated` to allow calling from CGEventTap callbacks
-    ///   which run outside the MainActor context.
+    ///   which run on the main thread but outside the MainActor isolation context.
     nonisolated static func isTextInputElementFocused() -> Bool {
         let systemWide = AXUIElementCreateSystemWide()
         var focusedRef: CFTypeRef?
