@@ -753,7 +753,8 @@ final class ElectronCrawler: ElementCrawler {
     private func getFrame(from element: AXUIElement) -> CGRect? {
         // Prefer kAXFrameAttribute if available
         var frameRef: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXFrameAttribute as CFString, &frameRef) == .success,
+        // Note: `kAXFrameAttribute` is not available in all Swift SDK overlays, so use the raw name.
+        if AXUIElementCopyAttributeValue(element, "AXFrame" as CFString, &frameRef) == .success,
            let axValue = frameRef,
            CFGetTypeID(axValue) == AXValueGetTypeID() {
             var rect = CGRect.zero
