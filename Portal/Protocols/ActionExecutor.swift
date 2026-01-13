@@ -39,8 +39,16 @@ extension ActionExecutor {
     ///   - element: The AXUIElement to validate.
     ///   - expectedTitle: The title that was recorded when the target was discovered.
     ///   - validRoles: Set of valid accessibility roles for this executor.
+    ///   - validateTitle: Whether to validate the element's title against `expectedTitle`.
+    ///                    Native apps should keep this `true` to avoid executing the wrong element.
+    ///                    Electron apps may set this to `false` because titles can change dynamically.
     /// - Returns: `true` if the element is still valid and matches expectations.
-    func isElementValid(_ element: AXUIElement, expectedTitle: String, validRoles: Set<String>) -> Bool {
+    func isElementValid(
+        _ element: AXUIElement,
+        expectedTitle: String,
+        validRoles: Set<String>,
+        validateTitle: Bool = true
+    ) -> Bool {
         #if DEBUG
         print("[ActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
         #endif
@@ -77,6 +85,13 @@ extension ActionExecutor {
                 #endif
                 return true
             }
+        }
+
+        if !validateTitle {
+            #if DEBUG
+            print("[ActionExecutor] isElementValid: Title validation disabled, role check passed for '\(expectedTitle)' (role: \(role))")
+            #endif
+            return true
         }
 
         // Verify title - check all possible title sources since crawlers use

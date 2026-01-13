@@ -47,24 +47,6 @@ final class ElectronCrawler: ElementCrawler {
     /// Native app crawler for handling native chrome elements.
     private let nativeCrawler: NativeAppCrawler
 
-    /// Web element roles we're interested in.
-    private static let webItemRoles: Set<String> = [
-        "AXLink",
-        "AXButton",
-        "AXTextField",
-        "AXTextArea",
-        "AXCheckBox",
-        "AXRadioButton",
-        "AXMenuItem",
-        "AXMenuItemCheckbox",
-        "AXMenuItemRadio",
-        "AXTab",
-        "AXStaticText",  // Sometimes used for clickable text
-        "AXRow",  // Sidebar items in Slack/Electron apps
-        "AXPopUpButton",  // Dropdown buttons
-        "AXImage",  // Clickable images/icons
-    ]
-
     /// Container roles that should be traversed.
     private static let webContainerRoles: Set<String> = [
         "AXWebArea",
@@ -287,36 +269,31 @@ final class ElectronCrawler: ElementCrawler {
 
             let displayTitle = getDisplayTitle(from: child)
 
-            // Check if this is an actionable web element
-            if Self.webItemRoles.contains(role) {
-                let hasAction = canPerformAction(on: child)
-                let hasTitle = displayTitle != nil && !displayTitle!.isEmpty
+            // Electron web content: collect any element that has a usable frame.
+            if let frame = getFrame(from: child),
+               frame != .zero,
+               frame.width > 0,
+               frame.height > 0 {
+                // Check for duplicates
+                if !isDuplicate(child, in: seenElements) {
+                    // Check for frame overlap
+                    if !hasFrameOverlap(frame, with: seenFrames) {
+                        seenElements.append(child)
+                        seenFrames.append(frame)
 
-                if hasTitle && hasAction {
-                    // Check for duplicates
-                    if !isDuplicate(child, in: seenElements) {
-                        let frame = getFrame(from: child)
-
-                        // Check for frame overlap
-                        if !hasFrameOverlap(frame, with: seenFrames) {
-                            seenElements.append(child)
-                            if let f = frame, f != .zero {
-                                seenFrames.append(f)
-                            }
-
-                            let isEnabled = getIsEnabled(from: child)
-                            let target = HintTarget(
-                                title: displayTitle!,
-                                axElement: child,
-                                isEnabled: isEnabled,
-                                cachedFrame: frame,
-                                targetType: .electron
-                            )
-                            continuation.yield(target)
-                            itemCount += 1
-                            // Yield to allow UI updates
-                            await Task.yield()
-                        }
+                        let isEnabled = getIsEnabled(from: child)
+                        let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
+                        let target = HintTarget(
+                            title: title,
+                            axElement: child,
+                            isEnabled: isEnabled,
+                            cachedFrame: frame,
+                            targetType: .electron
+                        )
+                        continuation.yield(target)
+                        itemCount += 1
+                        // Yield to allow UI updates
+                        await Task.yield()
                     }
                 }
             }
@@ -360,31 +337,30 @@ final class ElectronCrawler: ElementCrawler {
             // Skip web areas (already crawled)
             if role == "AXWebArea" { continue }
 
-            // Check for actionable native elements
-            if isNativeActionableRole(role) {
-                if let title = getDisplayTitle(from: child), !title.isEmpty, canPerformAction(on: child) {
-                    if !isDuplicate(child, in: seenElements) {
-                        let frame = getFrame(from: child)
+            // Electron native chrome: collect any element that has a usable frame.
+            if let frame = getFrame(from: child),
+               frame != .zero,
+               frame.width > 0,
+               frame.height > 0 {
+                if !isDuplicate(child, in: seenElements) {
+                    if !hasFrameOverlap(frame, with: seenFrames) {
+                        seenElements.append(child)
+                        seenFrames.append(frame)
 
-                        if !hasFrameOverlap(frame, with: seenFrames) {
-                            seenElements.append(child)
-                            if let f = frame, f != .zero {
-                                seenFrames.append(f)
-                            }
-
-                            let isEnabled = getIsEnabled(from: child)
-                            let target = HintTarget(
-                                title: title,
-                                axElement: child,
-                                isEnabled: isEnabled,
-                                cachedFrame: frame,
-                                targetType: .electron
-                            )
-                            continuation.yield(target)
-                            itemCount += 1
-                            // Yield to allow UI updates
-                            await Task.yield()
-                        }
+                        let isEnabled = getIsEnabled(from: child)
+                        let displayTitle = getDisplayTitle(from: child)
+                        let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
+                        let target = HintTarget(
+                            title: title,
+                            axElement: child,
+                            isEnabled: isEnabled,
+                            cachedFrame: frame,
+                            targetType: .electron
+                        )
+                        continuation.yield(target)
+                        itemCount += 1
+                        // Yield to allow UI updates
+                        await Task.yield()
                     }
                 }
             }
@@ -458,7 +434,6 @@ final class ElectronCrawler: ElementCrawler {
         #if DEBUG
         print("[ElectronCrawler] Found \(webAreas.count) AXWebArea elements")
         Self.roleCountsForDebug.removeAll()
-        Self.skippedRolesForDebug.removeAll()
         #endif
 
         for webArea in webAreas {
@@ -471,9 +446,7 @@ final class ElectronCrawler: ElementCrawler {
         // Print role distribution summary
         print("[ElectronCrawler] === Role Distribution Summary ===")
         for (role, count) in Self.roleCountsForDebug.sorted(by: { $0.value > $1.value }) {
-            let skipped = Self.skippedRolesForDebug[role]
-            let skippedInfo = skipped != nil ? " (skipped: noTitle=\(skipped!.noTitle), noAction=\(skipped!.noAction))" : ""
-            print("[ElectronCrawler]   \(role): \(count)\(skippedInfo)")
+            print("[ElectronCrawler]   \(role): \(count)")
         }
         print("[ElectronCrawler] ================================")
         #endif
@@ -509,7 +482,6 @@ final class ElectronCrawler: ElementCrawler {
     #if DEBUG
     /// Tracks role counts for debugging
     private static var roleCountsForDebug: [String: Int] = [:]
-    private static var skippedRolesForDebug: [String: (noTitle: Int, noAction: Int)] = [:]
     #endif
 
     /// Crawls web elements within a web area.
@@ -539,40 +511,28 @@ final class ElectronCrawler: ElementCrawler {
             Self.roleCountsForDebug[role, default: 0] += 1
             #endif
 
-            // Check if this is an actionable web element
-            if Self.webItemRoles.contains(role) {
-                let hasAction = canPerformAction(on: child)
-                let hasTitle = displayTitle != nil && !displayTitle!.isEmpty
+            // Electron web content: collect any element that has a usable frame.
+            if let frame = getFrame(from: child),
+               frame != .zero,
+               frame.width > 0,
+               frame.height > 0 {
+                let isEnabled = getIsEnabled(from: child)
+                let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
+                let target = HintTarget(
+                    title: title,
+                    axElement: child,
+                    isEnabled: isEnabled,
+                    cachedFrame: frame,
+                    targetType: .electron
+                )
+                items.append(target)
+                itemCount += 1
 
                 #if DEBUG
-                // Track why webItemRoles elements are skipped
-                if !hasTitle || !hasAction {
-                    var current = Self.skippedRolesForDebug[role] ?? (noTitle: 0, noAction: 0)
-                    if !hasTitle { current.noTitle += 1 }
-                    if !hasAction { current.noAction += 1 }
-                    Self.skippedRolesForDebug[role] = current
+                if depth <= 3 {
+                    print("[ElectronCrawler] Adding web item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
                 }
                 #endif
-
-                if hasTitle && hasAction {
-                    let isEnabled = getIsEnabled(from: child)
-                    let frame = getFrame(from: child)
-                    let target = HintTarget(
-                        title: displayTitle!,
-                        axElement: child,
-                        isEnabled: isEnabled,
-                        cachedFrame: frame,
-                        targetType: .electron
-                    )
-                    items.append(target)
-                    itemCount += 1
-
-                    #if DEBUG
-                    if depth <= 3 {
-                        print("[ElectronCrawler] Adding web item: '\(displayTitle!)' (role: \(role)) frame=\(frame?.debugDescription ?? "nil")")
-                    }
-                    #endif
-                }
             }
 
             // Recurse into containers
@@ -610,25 +570,27 @@ final class ElectronCrawler: ElementCrawler {
                 continue
             }
 
-            // Check for actionable native elements
-            if isNativeActionableRole(role) {
-                if let title = getDisplayTitle(from: child), !title.isEmpty, canPerformAction(on: child) {
-                    let isEnabled = getIsEnabled(from: child)
-                    let frame = getFrame(from: child)
-                    let target = HintTarget(
-                        title: title,
-                        axElement: child,
-                        isEnabled: isEnabled,
-                        cachedFrame: frame,
-                        targetType: .electron
-                    )
-                    items.append(target)
-                    itemCount += 1
+            // Electron native chrome: collect any element that has a usable frame.
+            if let frame = getFrame(from: child),
+               frame != .zero,
+               frame.width > 0,
+               frame.height > 0 {
+                let isEnabled = getIsEnabled(from: child)
+                let displayTitle = getDisplayTitle(from: child)
+                let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
+                let target = HintTarget(
+                    title: title,
+                    axElement: child,
+                    isEnabled: isEnabled,
+                    cachedFrame: frame,
+                    targetType: .electron
+                )
+                items.append(target)
+                itemCount += 1
 
-                    #if DEBUG
-                    print("[ElectronCrawler] Adding native item: '\(title)' (role: \(role)) frame=\(frame?.debugDescription ?? "nil")")
-                    #endif
-                }
+                #if DEBUG
+                print("[ElectronCrawler] Adding native item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
+                #endif
             }
 
             // Recurse into native containers (but not web areas)
@@ -638,16 +600,6 @@ final class ElectronCrawler: ElementCrawler {
         }
 
         return items
-    }
-
-    /// Checks if a role is an actionable native element.
-    private func isNativeActionableRole(_ role: String) -> Bool {
-        let nativeActionableRoles: Set<String> = [
-            "AXButton", "AXRadioButton", "AXCheckBox", "AXMenuItem",
-            "AXMenuButton", "AXPopUpButton", "AXComboBox", "AXTextField",
-            "AXRow", "AXCell", "AXOutlineRow", "AXSwitch", "AXTab"
-        ]
-        return nativeActionableRoles.contains(role)
     }
 
     /// Checks if a role is a native container.
@@ -791,22 +743,6 @@ final class ElectronCrawler: ElementCrawler {
             return false
         }
         return !children.isEmpty
-    }
-
-    /// Checks if an action can be performed on an element.
-    private func canPerformAction(on element: AXUIElement) -> Bool {
-        var actionsRef: CFArray?
-        guard AXUIElementCopyActionNames(element, &actionsRef) == .success,
-              let actions = actionsRef as? [String] else {
-            return false
-        }
-
-        return actions.contains(kAXPressAction as String) ||
-               actions.contains("AXSelect") ||
-               actions.contains("AXConfirm") ||
-               actions.contains("AXShowDefaultUI") ||
-               actions.contains("AXPick") ||
-               actions.contains("AXShowMenu")  // Electron/Web elements often use this
     }
 
     /// Gets the frame (position + size) of an element.
