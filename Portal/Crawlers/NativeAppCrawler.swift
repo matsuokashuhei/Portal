@@ -340,6 +340,8 @@ final class NativeAppCrawler: ElementCrawler {
             var buttonRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(window, attribute as CFString, &buttonRef) == .success,
                let button = buttonRef {
+                // Note: kAXCloseButtonAttribute and related window control attributes
+                // always return AXUIElement type when copy succeeds.
                 // swiftlint:disable:next force_cast
                 let axButton = button as! AXUIElement
                 // Only add if frame can be retrieved (with fallback)

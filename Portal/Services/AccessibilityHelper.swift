@@ -104,7 +104,8 @@ enum AccessibilityHelper {
 
         // Fallback: estimate position from parent element
         if let parent = getParent(element),
-           let parentFrame = getFrame(parent) {
+           let parentFrame = getFrame(parent),
+           parentFrame.width > 0, parentFrame.height > 0 {
             // Use top-left corner of parent with a small default size
             // This isn't perfectly accurate but allows the hint to be displayed
             // Note: In AppKit coordinates (bottom-left origin), top-left is (minX, maxY - height)

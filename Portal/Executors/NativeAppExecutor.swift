@@ -147,7 +147,7 @@ final class NativeAppExecutor: ActionExecutor {
         }
 
         // Check if this is a window control button (close, minimize, zoom, fullscreen)
-        // These buttons often don't respond well to AXPress, so use mouse click
+        // These buttons only respond to mouse click, not AXPress
         var subroleRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(target.axElement, kAXSubroleAttribute as CFString, &subroleRef) == .success,
            let subrole = subroleRef as? String {
@@ -158,7 +158,8 @@ final class NativeAppExecutor: ActionExecutor {
                 if performMouseClick(on: target.axElement) {
                     return .success(())
                 }
-                // Fall through to try other actions if mouse click fails
+                // Window control buttons don't support AXPress, return error immediately
+                return .failure(.actionFailed(-1))
             }
         }
 
