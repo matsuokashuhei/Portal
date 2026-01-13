@@ -146,6 +146,8 @@ enum SettingsKey {
     static let hotkeyKey = "hintModeHotkeyKey"
     /// Key for storing the excluded apps list (JSON-encoded array of ExcludedApp).
     static let excludedApps = "excludedApps"
+    /// Key for storing the maximum crawl depth for UI element discovery.
+    static let maxCrawlDepth = "maxCrawlDepth"
 }
 
 extension HotkeyConfiguration {

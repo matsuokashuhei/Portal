@@ -14,6 +14,9 @@ extension Notification.Name {
     /// Posted when the excluded apps configuration changes in Settings.
     static let excludedAppsConfigurationChanged = Notification.Name("com.matsuokashuhei.Portal.excludedAppsConfigurationChanged")
 
+    /// Posted when the crawl configuration changes in Settings.
+    static let crawlConfigurationChanged = Notification.Name("com.matsuokashuhei.Portal.crawlConfigurationChanged")
+
     /// Posted when user requests to open Settings (e.g., from status bar menu).
     static let openSettings = Notification.Name("com.matsuokashuhei.Portal.openSettings")
 

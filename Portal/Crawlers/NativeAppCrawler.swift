@@ -63,10 +63,9 @@ final class NativeAppCrawler: ElementCrawler {
 
     // MARK: - Constants
 
-    /// Maximum depth for recursive traversal to prevent infinite loops.
-    /// Increased from 10 to 15 to support deeply nested elements like
-    /// AXCheckBox inside AXCell inside AXRow in System Settings tables.
-    private static let maxDepth = 15
+    /// Cached maximum depth for the current crawl operation.
+    /// Updated at the start of each crawl to pick up setting changes.
+    private var cachedMaxDepth: Int = CrawlConfiguration.defaultMaxDepth
 
     /// Maximum number of items to return (performance safeguard).
     /// Increased from 200 to 500 to ensure player controls and other UI elements
@@ -135,6 +134,9 @@ final class NativeAppCrawler: ElementCrawler {
             throw NativeAppCrawlerError.accessibilityNotGranted
         }
 
+        // Load maxDepth once at the start of crawl for consistent behavior and performance
+        cachedMaxDepth = CrawlConfiguration.load().maxDepth
+
         let pid = app.processIdentifier
         let axApp = AXUIElementCreateApplication(pid)
 
@@ -201,6 +203,9 @@ final class NativeAppCrawler: ElementCrawler {
                     continuation.finish(throwing: NativeAppCrawlerError.accessibilityNotGranted)
                     return
                 }
+
+                // Load maxDepth once at the start of crawl for consistent behavior and performance
+                self.cachedMaxDepth = CrawlConfiguration.load().maxDepth
 
                 let pid = app.processIdentifier
                 let axApp = AXUIElementCreateApplication(pid)
@@ -280,7 +285,7 @@ final class NativeAppCrawler: ElementCrawler {
         continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
     ) async {
         // Prevent infinite recursion and enforce item limit
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+        guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return }
 
         // Check for cancellation
         if Task.isCancelled { return }
@@ -455,7 +460,7 @@ final class NativeAppCrawler: ElementCrawler {
         depth: Int,
         continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
     ) async {
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+        guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return }
         if Task.isCancelled { return }
 
         var childrenRef: CFTypeRef?
@@ -690,7 +695,7 @@ final class NativeAppCrawler: ElementCrawler {
         var current: AXUIElement? = focused as! AXUIElement
         var depth = 0
 
-        while let element = current, depth < Self.maxDepth {
+        while let element = current, depth < cachedMaxDepth {
             depth += 1
 
             // Note: For some system popups (e.g., System Settings select menus),
@@ -780,7 +785,7 @@ final class NativeAppCrawler: ElementCrawler {
     }
 
     private func crawlNestedMenuItems(in element: AXUIElement, itemCount: inout Int, depth: Int) -> [HintTarget] {
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return [] }
+        guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return [] }
         var results: [HintTarget] = []
 
         var childrenRef: CFTypeRef?
@@ -829,7 +834,7 @@ final class NativeAppCrawler: ElementCrawler {
         itemCount: inout Int
     ) -> [HintTarget] {
         // Prevent infinite recursion and enforce item limit
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else {
+        guard depth < cachedMaxDepth, itemCount < Self.maxItems else {
             return []
         }
 

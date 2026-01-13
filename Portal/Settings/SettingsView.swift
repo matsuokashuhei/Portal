@@ -19,13 +19,14 @@ struct SettingsView: View {
                     Label("Exclusions", systemImage: "nosign")
                 }
         }
-        .frame(width: 450, height: 350)
+        .frame(width: 450, height: 420)
     }
 }
 
 struct GeneralSettingsView: View {
     @AppStorage(SettingsKey.hotkeyModifier) private var modifierRaw = ModifierKey.none.rawValue
     @AppStorage(SettingsKey.hotkeyKey) private var keyRaw = HotkeyKey.f.rawValue
+    @AppStorage(SettingsKey.maxCrawlDepth) private var maxCrawlDepth = CrawlConfiguration.defaultMaxDepth
 
     @State private var isAccessibilityGranted = AccessibilityService.isGranted
 
@@ -45,6 +46,17 @@ struct GeneralSettingsView: View {
             set: {
                 keyRaw = $0.rawValue
                 notifyHotkeyChanged()
+            }
+        )
+    }
+
+    private var maxCrawlDepthBinding: Binding<Int> {
+        Binding(
+            get: { maxCrawlDepth },
+            set: { newValue in
+                // Clamp to valid range
+                maxCrawlDepth = min(max(newValue, CrawlConfiguration.minDepth), CrawlConfiguration.maxDepthLimit)
+                notifyCrawlConfigChanged()
             }
         )
     }
@@ -93,6 +105,27 @@ struct GeneralSettingsView: View {
 
             Section {
                 HStack {
+                    Text("Maximum Crawl Depth")
+                    Spacer()
+
+                    TextField("", value: maxCrawlDepthBinding, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 60)
+                        .multilineTextAlignment(.trailing)
+
+                    Stepper("", value: maxCrawlDepthBinding, in: CrawlConfiguration.minDepth...CrawlConfiguration.maxDepthLimit)
+                        .labelsHidden()
+                }
+
+                Text("Higher values find more deeply nested UI elements but may slow down hint mode. Default: 15")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Element Discovery")
+            }
+
+            Section {
+                HStack {
                     Text("Accessibility Permission")
                     Spacer()
 
@@ -129,6 +162,10 @@ struct GeneralSettingsView: View {
 
     private func notifyHotkeyChanged() {
         NotificationCenter.default.post(name: .hotkeyConfigurationChanged, object: nil)
+    }
+
+    private func notifyCrawlConfigChanged() {
+        NotificationCenter.default.post(name: .crawlConfigurationChanged, object: nil)
     }
 
     private func refreshAccessibilityStatus() {
