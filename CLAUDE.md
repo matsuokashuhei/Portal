@@ -180,7 +180,7 @@ HintModeController
 
 ### 走査深度設定（#144）
 - [x] 設定画面に「Maximum Crawl Depth」オプション追加
-- [x] @AppStorageで永続化（デフォルト15、範囲5-30）
+- [x] @AppStorageで永続化（デフォルト15、範囲5-50）
 - [x] NativeAppCrawler/ElectronCrawlerに設定値を反映
 
 **用途**: 深くネストされたUI要素を検出するためにmaxDepthを増加可能。パフォーマンスとのトレードオフあり。
