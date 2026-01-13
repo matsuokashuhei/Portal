@@ -100,6 +100,59 @@ final class HintOverlayWindow: NSWindow {
         hostingView?.rootView = updatedView
     }
 
+    /// Adds a single hint label to the window.
+    ///
+    /// This method is used for progressive rendering where hints are added
+    /// as they are discovered during crawling.
+    ///
+    /// - Parameter hint: The hint label to add.
+    func addHint(_ hint: HintLabel) {
+        guard let screen = screen else { return }
+
+        // Only add if the hint is visible on this screen
+        guard screen.frame.intersects(hint.frame) else { return }
+
+        hints.append(hint)
+        refreshView()
+    }
+
+    /// Adds multiple hint labels to the window.
+    ///
+    /// This method is used for batch updates to improve performance
+    /// when adding multiple hints at once.
+    ///
+    /// - Parameter newHints: The hint labels to add.
+    func addHints(_ newHints: [HintLabel]) {
+        guard let screen = screen else { return }
+
+        // Filter to only hints visible on this screen
+        let screenHints = newHints.filter { hint in
+            screen.frame.intersects(hint.frame)
+        }
+
+        guard !screenHints.isEmpty else { return }
+
+        hints.append(contentsOf: screenHints)
+        refreshView()
+    }
+
+    /// Returns all hint labels currently in this window.
+    var allHints: [HintLabel] {
+        return hints
+    }
+
+    /// Refreshes the SwiftUI view with current hints.
+    private func refreshView() {
+        guard let screen = screen else { return }
+
+        let updatedView = HintOverlayView(
+            hints: hints,
+            currentInput: currentInput,
+            screenBounds: screen.frame
+        )
+        hostingView?.rootView = updatedView
+    }
+
     /// Dismisses the overlay window.
     func dismiss() {
         #if DEBUG
@@ -143,6 +196,18 @@ extension HintOverlayWindow {
                 screen.frame.intersects(hint.frame)
             }
             return HintOverlayWindow(hints: screenHints, on: screen)
+        }
+    }
+
+    /// Creates empty overlay windows for all screens.
+    ///
+    /// This is used for progressive rendering where hints are added
+    /// incrementally as they are discovered during crawling.
+    ///
+    /// - Returns: An array of empty overlay windows, one for each screen.
+    static func createEmptyForAllScreens() -> [HintOverlayWindow] {
+        NSScreen.screens.map { screen in
+            HintOverlayWindow(hints: [], on: screen)
         }
     }
 }

@@ -152,6 +152,250 @@ final class ElectronCrawler: ElementCrawler {
         return deduplicateItems(allItems)
     }
 
+    /// Crawls UI elements from the specified application as an async stream.
+    ///
+    /// This method yields elements as they are discovered, enabling progressive
+    /// rendering of hint labels. Use this for better responsiveness when crawling
+    /// applications with many UI elements.
+    ///
+    /// - Parameter app: The application to crawl elements from.
+    /// - Returns: An async stream of discovered hint targets.
+    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error> {
+        AsyncThrowingStream { continuation in
+            Task { @MainActor in
+                guard AccessibilityService.isGranted else {
+                    continuation.finish(throwing: NativeAppCrawlerError.accessibilityNotGranted)
+                    return
+                }
+
+                let pid = app.processIdentifier
+                let axApp = AXUIElementCreateApplication(pid)
+
+                // Enable enhanced accessibility for Electron apps
+                self.enableAccessibility(for: axApp)
+
+                // Track seen elements and frames for deduplication during streaming
+                var seenElements: [AXUIElement] = []
+                var seenFrames: [CGRect] = []
+                var itemCount = 0
+
+                let windows = self.getAllWindows(from: axApp)
+                guard !windows.isEmpty else {
+                    continuation.finish(throwing: NativeAppCrawlerError.mainWindowNotAccessible)
+                    return
+                }
+
+                for windowElement in windows {
+                    if Task.isCancelled {
+                        continuation.finish()
+                        return
+                    }
+
+                    // First, crawl AXWebArea elements (web content)
+                    let webAreas = self.findWebAreas(in: windowElement, depth: 0)
+                    for webArea in webAreas {
+                        guard itemCount < Self.maxItems else { break }
+                        if Task.isCancelled {
+                            continuation.finish()
+                            return
+                        }
+                        await self.crawlWebElementStreaming(
+                            webArea,
+                            depth: 0,
+                            itemCount: &itemCount,
+                            seenElements: &seenElements,
+                            seenFrames: &seenFrames,
+                            continuation: continuation
+                        )
+                    }
+
+                    // Also crawl native chrome (toolbars, etc.)
+                    if Task.isCancelled {
+                        continuation.finish()
+                        return
+                    }
+                    await self.crawlNativeChromeStreaming(
+                        in: windowElement,
+                        itemCount: &itemCount,
+                        seenElements: &seenElements,
+                        seenFrames: &seenFrames,
+                        continuation: continuation
+                    )
+                }
+
+                continuation.finish()
+            }
+        }
+    }
+
+    /// Checks if an element is a duplicate by AXUIElement reference.
+    private func isDuplicate(_ element: AXUIElement, in seenElements: [AXUIElement]) -> Bool {
+        return seenElements.contains { existing in
+            CFEqual(existing, element)
+        }
+    }
+
+    /// Checks if a frame significantly overlaps with any existing frame.
+    private func hasFrameOverlap(_ frame: CGRect?, with seenFrames: [CGRect]) -> Bool {
+        guard let itemFrame = frame, itemFrame != .zero else { return false }
+
+        return seenFrames.contains { existingFrame in
+            guard existingFrame != .zero else { return false }
+
+            let intersection = itemFrame.intersection(existingFrame)
+            guard !intersection.isNull else { return false }
+
+            let itemArea = itemFrame.width * itemFrame.height
+            let existingArea = existingFrame.width * existingFrame.height
+            let intersectionArea = intersection.width * intersection.height
+            let smallerArea = min(itemArea, existingArea)
+
+            let overlapRatio = smallerArea > 0 ? intersectionArea / smallerArea : 0
+            return overlapRatio > 0.5
+        }
+    }
+
+    /// Crawls web elements within a web area, yielding results via continuation.
+    private func crawlWebElementStreaming(
+        _ element: AXUIElement,
+        depth: Int,
+        itemCount: inout Int,
+        seenElements: inout [AXUIElement],
+        seenFrames: inout [CGRect],
+        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
+    ) async {
+        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+        if Task.isCancelled { return }
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if Task.isCancelled { return }
+
+            guard let role = getRole(from: child) else { continue }
+
+            let displayTitle = getDisplayTitle(from: child)
+
+            // Check if this is an actionable web element
+            if Self.webItemRoles.contains(role) {
+                let hasAction = canPerformAction(on: child)
+                let hasTitle = displayTitle != nil && !displayTitle!.isEmpty
+
+                if hasTitle && hasAction {
+                    // Check for duplicates
+                    if !isDuplicate(child, in: seenElements) {
+                        let frame = getFrame(from: child)
+
+                        // Check for frame overlap
+                        if !hasFrameOverlap(frame, with: seenFrames) {
+                            seenElements.append(child)
+                            if let f = frame, f != .zero {
+                                seenFrames.append(f)
+                            }
+
+                            let isEnabled = getIsEnabled(from: child)
+                            let target = HintTarget(
+                                title: displayTitle!,
+                                axElement: child,
+                                isEnabled: isEnabled,
+                                cachedFrame: frame,
+                                targetType: .electron
+                            )
+                            continuation.yield(target)
+                            itemCount += 1
+                            // Yield to allow UI updates
+                            await Task.yield()
+                        }
+                    }
+                }
+            }
+
+            // Recurse into containers
+            if Self.webContainerRoles.contains(role) || hasChildren(child) {
+                await crawlWebElementStreaming(
+                    child,
+                    depth: depth + 1,
+                    itemCount: &itemCount,
+                    seenElements: &seenElements,
+                    seenFrames: &seenFrames,
+                    continuation: continuation
+                )
+            }
+        }
+    }
+
+    /// Crawls native chrome elements, yielding results via continuation.
+    private func crawlNativeChromeStreaming(
+        in element: AXUIElement,
+        itemCount: inout Int,
+        seenElements: inout [AXUIElement],
+        seenFrames: inout [CGRect],
+        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
+    ) async {
+        if Task.isCancelled { return }
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return
+        }
+
+        for child in children {
+            guard itemCount < Self.maxItems else { break }
+            if Task.isCancelled { return }
+
+            guard let role = getRole(from: child) else { continue }
+
+            // Skip web areas (already crawled)
+            if role == "AXWebArea" { continue }
+
+            // Check for actionable native elements
+            if isNativeActionableRole(role) {
+                if let title = getDisplayTitle(from: child), !title.isEmpty, canPerformAction(on: child) {
+                    if !isDuplicate(child, in: seenElements) {
+                        let frame = getFrame(from: child)
+
+                        if !hasFrameOverlap(frame, with: seenFrames) {
+                            seenElements.append(child)
+                            if let f = frame, f != .zero {
+                                seenFrames.append(f)
+                            }
+
+                            let isEnabled = getIsEnabled(from: child)
+                            let target = HintTarget(
+                                title: title,
+                                axElement: child,
+                                isEnabled: isEnabled,
+                                cachedFrame: frame,
+                                targetType: .electron
+                            )
+                            continuation.yield(target)
+                            itemCount += 1
+                            // Yield to allow UI updates
+                            await Task.yield()
+                        }
+                    }
+                }
+            }
+
+            // Recurse into native containers (but not web areas)
+            if isNativeContainerRole(role) {
+                await crawlNativeChromeStreaming(
+                    in: child,
+                    itemCount: &itemCount,
+                    seenElements: &seenElements,
+                    seenFrames: &seenFrames,
+                    continuation: continuation
+                )
+            }
+        }
+    }
+
     // MARK: - Accessibility Enhancement
 
     /// Enables enhanced accessibility for the Electron app.

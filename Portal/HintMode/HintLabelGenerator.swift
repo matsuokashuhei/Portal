@@ -17,35 +17,47 @@ enum HintLabelGenerator {
     /// Note: "F" is excluded because it's reserved for hint mode activation.
     private static let alphabet = Array("ABCDEGHIJKLMNOPQRSTUVWXYZ")
 
+    /// Generates a label for a given index.
+    ///
+    /// This method is designed for progressive/streaming label generation where
+    /// the total count is not known in advance. Labels are always two characters
+    /// starting from AA, AB, AC, ... to avoid prefix conflicts.
+    ///
+    /// - Parameter index: The zero-based index of the label to generate.
+    /// - Returns: The two-character label string for the given index.
+    static func generateLabel(at index: Int) -> String {
+        guard index >= 0 else { return "" }
+
+        let alphabetCount = alphabet.count
+
+        let first = index / alphabetCount
+        let second = index % alphabetCount
+
+        // Ensure we don't exceed available two-char combinations
+        guard first < alphabetCount else {
+            // Fallback for very large indices (unlikely in practice)
+            return "Z\(index)"
+        }
+
+        return String(alphabet[first]) + String(alphabet[second])
+    }
+
     /// Generates an array of hint labels for the given count.
     ///
     /// - Parameter count: The number of labels to generate.
     /// - Returns: An array of label strings.
     ///
-    /// Label generation strategy:
-    /// - 1-N items (N = alphabet size): Single characters (A, B, C, ...)
-    /// - N+1 and above: ALL two-character labels (AA, AB, AC, ...)
-    ///
-    /// This avoids overlap between single and two-character labels,
-    /// so "A" doesn't conflict with "AA" when selecting.
+    /// All labels are two characters (AA, AB, AC, ...) to avoid prefix conflicts.
     static func generateLabels(count: Int) -> [String] {
         guard count > 0 else { return [] }
 
-        let alphabetCount = alphabet.count
         var labels: [String] = []
 
-        if count <= alphabetCount {
-            // Use single character labels only
-            for i in 0..<count {
-                labels.append(String(alphabet[i]))
-            }
-        } else {
-            // Use ALL two-character labels (no single-char to avoid overlap)
-            outer: for first in alphabet {
-                for second in alphabet {
-                    if labels.count >= count { break outer }
-                    labels.append(String(first) + String(second))
-                }
+        // Always use two-character labels
+        outer: for first in alphabet {
+            for second in alphabet {
+                if labels.count >= count { break outer }
+                labels.append(String(first) + String(second))
             }
         }
 

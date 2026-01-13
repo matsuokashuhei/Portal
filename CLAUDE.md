@@ -65,10 +65,10 @@ Portal/
 │   └── HintExecutionError.swift # Hint Mode実行エラー
 ├── HintMode/
 │   ├── HintLabel.swift            # ヒントラベルのデータモデル
-│   ├── HintLabelGenerator.swift   # A-Z, AA-AZ式ラベル生成
+│   ├── HintLabelGenerator.swift   # AA-ZZ式2文字ラベル生成（インデックスベース/一括生成両対応）
 │   ├── HintOverlayView.swift      # SwiftUIラベル描画
-│   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理
-│   └── HintModeController.swift   # ヒントモード全体制御
+│   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理（動的ラベル追加対応）
+│   └── HintModeController.swift   # ヒントモード全体制御（プログレッシブレンダリング）
 ├── ScrollMode/
 │   ├── ScrollConfiguration.swift  # スクロールキー・設定定義
 │   ├── ScrollExecutor.swift       # スクロールイベント生成・実行
@@ -132,7 +132,7 @@ HintModeController
 - [x] ホットキーでヒントモード起動（#104, #107）
 - [x] `NativeAppCrawler`で操作可能要素取得（#104）
 - [x] `kAXPositionAttribute`/`kAXSizeAttribute`で位置取得（#104）
-- [x] A-Z, AA-AZ式ラベル生成（#104）
+- [x] AA-ZZ式2文字ラベル生成（#104）
 - [x] オーバーレイウィンドウでラベル表示（#104）
 - [x] キー入力で要素選択・実行（#104）
 - [x] ESCで終了、Backspaceで入力クリア（#104）
@@ -164,11 +164,25 @@ HintModeController
 - [x] システム設定 > 外観 > Liquid Glass（Clear/Tinted）に自動同期
 - [x] ライト/ダークモード両対応（`.primary`色使用）
 
+### プログレッシブレンダリング（#148）
+- [x] `AsyncThrowingStream`による逐次要素発見
+- [x] `crawlElementsStream()`メソッドをElementCrawlerプロトコルに追加
+- [x] インデックスベースのラベル生成（`generateLabel(at:)`）
+- [x] `HintOverlayWindow.addHint()`/`addHints()`で動的ラベル追加
+- [x] `Task.isCancelled`チェックによるESCキーでの走査中断
+- [x] 走査中も即座にキー入力で選択・実行可能
+
+**アーキテクチャ**:
+```
+[走査開始] → [要素発見] → [即座にyield] → [ラベル生成] → [UI追加] → [次の要素...]
+```
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
 |------|------|
 | ホットキー→表示 | <10ms |
+| 最初のヒントラベル表示 | <50ms |
 | メモリ | <30MB |
 | CPU（アイドル時） | 0% |
 

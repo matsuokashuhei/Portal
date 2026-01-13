@@ -79,6 +79,12 @@ final class HintModeController {
     /// Observer for application activation notifications.
     private var applicationActivationObserver: NSObjectProtocol?
 
+    /// The task for crawling UI elements (used for cancellation on ESC).
+    private var crawlTask: Task<Void, Never>?
+
+    /// Index counter for generating hint labels progressively.
+    private var labelIndex: Int = 0
+
     // MARK: - Dependencies
 
     /// Factory for creating crawlers based on application type.
@@ -156,6 +162,10 @@ final class HintModeController {
         print("[HintModeController] Deactivating")
         #endif
 
+        // Cancel the crawl task if it's still running
+        crawlTask?.cancel()
+        crawlTask = nil
+
         // Stop keyboard monitoring
         stopKeyboardMonitor()
 
@@ -178,6 +188,7 @@ final class HintModeController {
         hints.removeAll()
         inputBuffer = ""
         targetApp = nil
+        labelIndex = 0
         isActive = false
 
         // Post notification
@@ -186,232 +197,145 @@ final class HintModeController {
 
     // MARK: - Private Methods
 
-    /// Performs the async activation process.
+    /// Performs the async activation process with progressive rendering.
+    ///
+    /// This method uses AsyncStream to crawl UI elements and display hint labels
+    /// progressively as they are discovered, improving perceived responsiveness.
     private func performActivation(for app: NSRunningApplication) async {
-        do {
-            // Get the appropriate crawler for this application
-            let crawler = crawlerFactory.crawler(for: app)
+        // Get the appropriate crawler for this application
+        let crawler = crawlerFactory.crawler(for: app)
 
-            // Get coordinate system from the crawler (protocol-based, no type checking)
-            let coordinateSystem = crawler.coordinateSystem
+        // Get coordinate system from the crawler
+        let coordinateSystem = crawler.coordinateSystem
 
-            // Crawl UI elements
-            var items = try await crawler.crawlElements(app)
+        // Get window frames for filtering (includes main window, popups, dialogs)
+        let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
+        #if DEBUG
+        print("[HintModeController] Found \(windowFrames.count) window frames")
+        #endif
 
-            // Cache roles to avoid repeated AX API calls during filtering.
-            // HintTarget.id is UUID-based, so it's safe as a stable key for this activation run.
-            let roleById: [String: String?] = Dictionary(
-                uniqueKeysWithValues: items.map { item in
-                    (item.id, AccessibilityHelper.getRole(item.axElement))
-                }
-            )
-
-            // If a popup/select menu is open, prefer showing ONLY its options.
-            // This matches the historical behavior: when menu items are present,
-            // avoid showing hints for unrelated controls in the underlying window.
-            let menuItems = items.filter { item in
-                roleById[item.id] ?? nil == "AXMenuItem"
-            }
-            if !menuItems.isEmpty {
-                #if DEBUG
-                print("[HintModeController] Detected open menu (\(menuItems.count) items) — showing menu options only")
-                #endif
-                items = menuItems
-            }
-
-            guard !items.isEmpty else {
-                #if DEBUG
-                print("[HintModeController] No window elements found")
-                #endif
-                return
-            }
-
+        // Create empty overlay windows and show them immediately
+        overlayWindows = HintOverlayWindow.createEmptyForAllScreens()
+        guard !overlayWindows.isEmpty else {
             #if DEBUG
-            print("[HintModeController] Crawled \(items.count) items")
+            print("[HintModeController] No screens available for overlay")
             #endif
+            return
+        }
+        for window in overlayWindows {
+            window.show()
+        }
 
-            // Filter items by window bounds (includes main window, popups, dialogs)
-            let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
-            #if DEBUG
-            print("[HintModeController] Found \(windowFrames.count) window frames")
-            for (index, frame) in windowFrames.enumerated() {
-                print("[HintModeController] Window \(index): \(frame.debugDescription)")
-            }
-            #endif
+        // Start keyboard monitoring early so user can input during crawling
+        startKeyboardMonitor()
 
-            if !windowFrames.isEmpty {
-                #if DEBUG
-                let beforeFilterCount = items.count
-                #endif
-                items = items.filter { item in
-                    // Use cachedFrame if available (for Electron apps)
+        // Start observing application activation
+        startApplicationActivationObserver()
+
+        isActive = true
+
+        // Post notification
+        NotificationCenter.default.post(name: .hintModeDidActivate, object: nil)
+
+        // Reset label index for progressive generation
+        labelIndex = 0
+
+        // Track whether we've detected menu items (for menu-only mode)
+        var isMenuOnlyMode = false
+        var hasDetectedFirstItem = false
+
+        #if DEBUG
+        print("[HintModeController] Starting progressive crawl")
+        #endif
+
+        // Start crawling with progressive rendering
+        crawlTask = Task {
+            do {
+                for try await target in crawler.crawlElementsStream(app) {
+                    // Check for cancellation
+                    if Task.isCancelled { break }
+
+                    // Get role for filtering
+                    let role = AccessibilityHelper.getRole(target.axElement)
+                    let isMenuItem = role == "AXMenuItem"
+
+                    // Menu-only mode detection: if first item is a menu item, show only menu items
+                    if !hasDetectedFirstItem {
+                        hasDetectedFirstItem = true
+                        if isMenuItem {
+                            isMenuOnlyMode = true
+                            #if DEBUG
+                            print("[HintModeController] Menu-only mode activated")
+                            #endif
+                        }
+                    }
+
+                    // Skip non-menu items if in menu-only mode
+                    if isMenuOnlyMode && !isMenuItem {
+                        continue
+                    }
+
+                    // Get frame (use cached for Electron, otherwise fetch)
                     let frame: CGRect
-                    if let cached = item.cachedFrame {
+                    if let cached = target.cachedFrame {
                         frame = cached
-                    } else if let f = AccessibilityHelper.getFrameWithFallback(item.axElement) {
+                    } else if let f = AccessibilityHelper.getFrameWithFallback(target.axElement) {
                         frame = f
                     } else {
-                        #if DEBUG
-                        // Get role for debugging
-                        var roleRef: CFTypeRef?
-                        let role: String
-                        if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
-                           let r = roleRef as? String {
-                            role = r
-                        } else {
-                            role = "unknown"
+                        continue // Skip items without valid frame
+                    }
+
+                    // Validate frame
+                    guard frame != .zero, frame.width > 0 else { continue }
+
+                    // Check window bounds (menu items can extend beyond window)
+                    if !isMenuItem && !windowFrames.isEmpty {
+                        let isInAnyWindow = windowFrames.contains { windowFrame in
+                            windowFrame.contains(frame) || windowFrame.intersects(frame)
                         }
-                        print("[HintModeController] SKIP (no frame): '\(item.title)' role=\(role)")
-                        #endif
-                        return false
+                        guard isInAnyWindow else { continue }
+
+                        // Check scroll visibility for non-Electron items
+                        if target.cachedFrame == nil {
+                            guard AccessibilityHelper.isVisibleInScrollContainers(target.axElement) else { continue }
+                        }
                     }
 
-                    // Menu items (popup/select menus) may extend beyond the main window bounds.
-                    // Keep them as long as they have a valid frame.
-                    if roleById[item.id] ?? nil == "AXMenuItem" {
-                        return true
-                    }
-
-                    // Check if element is within ANY of the window bounds
-                    let isInAnyWindow = windowFrames.contains { windowFrame in
-                        windowFrame.contains(frame) || windowFrame.intersects(frame)
-                    }
-                    guard isInAnyWindow else {
-                        #if DEBUG
-                        print("[HintModeController] SKIP (out of window): '\(item.title)' frame=\(frame)")
-                        #endif
-                        return false
-                    }
-                    // For items with cachedFrame (Electron apps), skip scroll visibility check.
-                    // Reason: Electron's AXUIElement references may become invalid after crawling,
-                    // making AccessibilityHelper.isVisibleInScrollContainers() unreliable.
-                    // Trade-off: Some scrolled-out elements may show hints, but the window bounds
-                    // check above provides a reasonable filter. Future improvement could involve
-                    // capturing scroll container bounds during crawling.
-                    if item.cachedFrame != nil {
-                        return true
-                    }
-                    // Check visibility in scroll containers (filters out scrolled-out elements)
-                    let isVisible = AccessibilityHelper.isVisibleInScrollContainers(item.axElement)
-                    #if DEBUG
-                    if !isVisible {
-                        print("[HintModeController] SKIP (scroll hidden): '\(item.title)'")
-                    }
-                    #endif
-                    return isVisible
-                }
-                #if DEBUG
-                print("[HintModeController] Filter result: \(beforeFilterCount) -> \(items.count) items")
-                #endif
-            }
-
-            guard !items.isEmpty else {
-                #if DEBUG
-                print("[HintModeController] No items within window bounds")
-                #endif
-                return
-            }
-
-            // Get frames for filtered elements
-            // Use cachedFrame if available (for Electron apps where AXUIElement may become invalid)
-            let frames = items.map { item -> CGRect in
-                if let cached = item.cachedFrame {
-                    return cached
-                }
-                return AccessibilityHelper.getFrameWithFallback(item.axElement) ?? .zero
-            }
-
-            #if DEBUG
-            // Debug: Analyze frame distribution
-            var invalidItems: [(item: HintTarget, frame: CGRect)] = []
-            var validItems: [(item: HintTarget, frame: CGRect)] = []
-            for (item, frame) in zip(items, frames) {
-                if frame == .zero || frame.width <= 0 || frame.height <= 0 {
-                    invalidItems.append((item, frame))
-                } else {
-                    validItems.append((item, frame))
-                }
-            }
-            print("[HintModeController] Frame analysis: total=\(frames.count), valid=\(validItems.count), invalid=\(invalidItems.count)")
-
-            // Show sample of invalid items to understand why frames are invalid
-            if !invalidItems.isEmpty {
-                let sampleInvalid = invalidItems.prefix(10)
-                print("[HintModeController] Sample INVALID items (no frame):")
-                for (item, frame) in sampleInvalid {
-                    var roleRef: CFTypeRef?
-                    let role: String
-                    if AXUIElementCopyAttributeValue(item.axElement, kAXRoleAttribute as CFString, &roleRef) == .success,
-                       let r = roleRef as? String {
-                        role = r
+                    // Adjust frame if height is zero
+                    let adjustedFrame: CGRect
+                    if frame.height <= 0 {
+                        adjustedFrame = CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.width, height: 20.0)
                     } else {
-                        role = "unknown"
+                        adjustedFrame = frame
                     }
-                    print("[HintModeController]   role=\(role) title='\(item.title)' frame=\(frame)")
+
+                    // Generate label progressively
+                    let label = HintLabelGenerator.generateLabel(at: labelIndex)
+                    labelIndex += 1
+
+                    let hintLabel = HintLabel(
+                        label: label,
+                        frame: adjustedFrame,
+                        target: target,
+                        coordinateSystem: coordinateSystem
+                    )
+
+                    // Add to our hints array
+                    hints.append(hintLabel)
+
+                    // Add to overlay windows (they will filter by screen)
+                    for window in overlayWindows {
+                        window.addHint(hintLabel)
+                    }
                 }
-            }
-
-            // Show sample of valid frames to check positions
-            if !validItems.isEmpty {
-                let sampleValid = validItems.prefix(5)
-                print("[HintModeController] Sample VALID items:")
-                for (item, frame) in sampleValid {
-                    print("[HintModeController]   '\(item.title)' at \(frame)")
-                }
-            }
-            #endif
-
-            // Create hint labels for filtered items only
-            hints = HintLabelGenerator.createHintLabels(from: items, frames: frames, coordinateSystem: coordinateSystem)
-
-            guard !hints.isEmpty else {
+            } catch {
                 #if DEBUG
-                print("[HintModeController] No valid hints (all frames invalid)")
+                print("[HintModeController] Crawl error: \(error)")
                 #endif
-                return
             }
 
             #if DEBUG
-            print("[HintModeController] Created \(hints.count) hints")
-
-            // Debug: Show sample hints with their screen positions
-            let sampleHints = hints.prefix(5)
-            print("[HintModeController] Sample hints:")
-            for hint in sampleHints {
-                print("[HintModeController]   '\(hint.label)' at \(hint.frame) -> '\(hint.target.title)'")
-            }
-            #endif
-
-            // Create and show overlay windows for all screens
-            overlayWindows = HintOverlayWindow.createForAllScreens(hints: hints)
-            guard !overlayWindows.isEmpty else {
-                #if DEBUG
-                print("[HintModeController] No screens available for overlay")
-                #endif
-                return
-            }
-            for window in overlayWindows {
-                window.show()
-            }
-
-            #if DEBUG
-            print("[HintModeController] Created \(overlayWindows.count) overlay windows for \(NSScreen.screens.count) screens")
-            #endif
-
-            // Start keyboard monitoring
-            startKeyboardMonitor()
-
-            // Start observing application activation to auto-deactivate when app switches
-            startApplicationActivationObserver()
-
-            isActive = true
-
-            // Post notification
-            NotificationCenter.default.post(name: .hintModeDidActivate, object: nil)
-
-        } catch {
-            #if DEBUG
-            print("[HintModeController] Activation failed: \(error)")
+            print("[HintModeController] Progressive crawl completed, total hints: \(hints.count)")
             #endif
         }
     }
