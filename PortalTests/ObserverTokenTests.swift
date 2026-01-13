@@ -47,4 +47,3 @@ final class ObserverTokenTests: XCTestCase {
         XCTAssertEqual(callCount, 1, "After deinit, observer should not be invoked.")
     }
 }
-

@@ -56,4 +56,3 @@ final class AppNotificationBindingsTests: XCTestCase {
         wait(for: [inverted], timeout: 0.2)
     }
 }
-
