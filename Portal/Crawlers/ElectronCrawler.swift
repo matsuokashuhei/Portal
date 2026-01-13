@@ -35,8 +35,10 @@ final class ElectronCrawler: ElementCrawler {
     // MARK: - Constants
 
     /// Maximum depth for recursive traversal.
-    /// Deeper than native (10) due to web DOM structure, but limited to avoid performance issues.
-    private static let maxDepth = 15
+    /// Reads from UserDefaults to allow user customization via Settings.
+    private var maxDepth: Int {
+        CrawlConfiguration.load().maxDepth
+    }
 
     /// Maximum number of items to return.
     private static let maxItems = 500
@@ -264,7 +266,7 @@ final class ElectronCrawler: ElementCrawler {
         seenFrames: inout [CGRect],
         continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
     ) async {
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else { return }
+        guard depth < maxDepth, itemCount < Self.maxItems else { return }
         if Task.isCancelled { return }
 
         var childrenRef: CFTypeRef?
@@ -477,7 +479,7 @@ final class ElectronCrawler: ElementCrawler {
 
     /// Recursively finds AXWebArea elements.
     private func findWebAreas(in element: AXUIElement, depth: Int) -> [AXUIElement] {
-        guard depth < Self.maxDepth else { return [] }
+        guard depth < maxDepth else { return [] }
 
         var webAreas: [AXUIElement] = []
 
@@ -508,7 +510,7 @@ final class ElectronCrawler: ElementCrawler {
 
     /// Crawls web elements within a web area.
     private func crawlWebElement(_ element: AXUIElement, depth: Int, itemCount: inout Int) -> [HintTarget] {
-        guard depth < Self.maxDepth, itemCount < Self.maxItems else {
+        guard depth < maxDepth, itemCount < Self.maxItems else {
             return []
         }
 

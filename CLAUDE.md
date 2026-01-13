@@ -81,6 +81,7 @@ Portal/
 └── Settings/
     ├── HotkeyConfiguration.swift       # ホットキー設定モデル
     ├── ExcludedAppsConfiguration.swift # 除外アプリ設定モデル
+    ├── CrawlConfiguration.swift        # 走査深度設定モデル
     └── SettingsView.swift              # 設定画面UI（General/Exclusionsタブ）
 ```
 
@@ -177,6 +178,13 @@ HintModeController
 [走査開始] → [要素発見] → [即座にyield] → [ラベル生成] → [UI追加] → [次の要素...]
 ```
 
+### 走査深度設定（#144）
+- [x] 設定画面に「Maximum Crawl Depth」オプション追加
+- [x] @AppStorageで永続化（デフォルト15、範囲5-30）
+- [x] NativeAppCrawler/ElectronCrawlerに設定値を反映
+
+**用途**: 深くネストされたUI要素を検出するためにmaxDepthを増加可能。パフォーマンスとのトレードオフあり。
+
 ## パフォーマンス目標
 
 | 指標 | 目標 |
@@ -203,6 +211,7 @@ PortalTests/
 ├── HintLabelGeneratorTests.swift            # ヒントラベル生成テスト
 ├── HotkeyConfigurationTests.swift           # ホットキー設定テスト
 ├── ExcludedAppsConfigurationTests.swift     # 除外アプリ設定テスト
+├── CrawlConfigurationTests.swift            # 走査深度設定テスト
 ├── HintTargetTests.swift                    # HintTarget/HintTargetTypeテスト
 ├── ElectronAppDetectorTests.swift           # Electronアプリ検出テスト
 ├── ScrollConfigurationTests.swift           # スクロール設定テスト
