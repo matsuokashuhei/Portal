@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hintModeHotkeyManager: HotkeyManager?
     private var settingsWindow: NSWindow?
-    private var settingsWindowObserver: NSObjectProtocol?
+    private var settingsWindowObserver: ObserverToken?
+    private let notificationBindings = AppNotificationBindings()
 
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
@@ -39,10 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         wasPermissionGranted = AccessibilityService.isGranted
         setupHintModeHotkeyManager()
         setupScrollMode()
-        setupPermissionObserver()
-        setupHotkeyConfigurationObserver()
-        setupExcludedAppsConfigurationObserver()
-        setupOpenSettingsObserver()
+        notificationBindings.start { [weak self] (event: AppNotificationBindings.Event) in
+            guard let self else { return }
+            self.handleAppNotificationEvent(event)
+        }
     }
 
     private func setupScrollMode() {
@@ -53,17 +54,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func setupPermissionObserver() {
-        // Update permission status when app becomes active (e.g., after returning from System Settings)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(applicationDidBecomeActive),
-            name: NSApplication.didBecomeActiveNotification,
-            object: nil
-        )
+    private func handleAppNotificationEvent(_ event: AppNotificationBindings.Event) {
+        switch event {
+        case .applicationDidBecomeActive:
+            applicationDidBecomeActive()
+        case .hotkeyConfigurationChanged:
+            hotkeyConfigurationDidChange()
+        case .excludedAppsConfigurationChanged:
+            excludedAppsConfigurationDidChange()
+        case .openSettingsRequested:
+            openSettings()
+        }
     }
 
-    @objc private func applicationDidBecomeActive() {
+    private func applicationDidBecomeActive() {
         dispatchPrecondition(condition: .onQueue(.main))
         checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
@@ -130,16 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hintModeHotkeyManager?.start()
     }
 
-    private func setupHotkeyConfigurationObserver() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(hotkeyConfigurationDidChange),
-            name: .hotkeyConfigurationChanged,
-            object: nil
-        )
-    }
-
-    @objc private func hotkeyConfigurationDidChange() {
+    private func hotkeyConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
         DispatchQueue.main.async { [weak self] in
@@ -156,16 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func setupExcludedAppsConfigurationObserver() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(excludedAppsConfigurationDidChange),
-            name: .excludedAppsConfigurationChanged,
-            object: nil
-        )
-    }
-
-    @objc private func excludedAppsConfigurationDidChange() {
+    private func excludedAppsConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
         DispatchQueue.main.async { [weak self] in
@@ -180,15 +166,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.hintModeHotkeyManager = nil
             self.setupHintModeHotkeyManager()
         }
-    }
-
-    private func setupOpenSettingsObserver() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(openSettings),
-            name: .openSettings,
-            object: nil
-        )
     }
 
     private func handleHintModeHotkeyPressed() {
@@ -317,27 +294,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.isReleasedWhenClosed = false
 
         // Remove previous observer if exists (handles rapid open/close cycles)
-        if let observer = settingsWindowObserver {
-            NotificationCenter.default.removeObserver(observer)
-            settingsWindowObserver = nil
-        }
+        settingsWindowObserver = nil
 
         // Observe window close to cleanup references
-        // Block-based observers MUST be explicitly removed via removeObserver()
-        // Setting settingsWindowObserver to nil alone does NOT unregister it
-        settingsWindowObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: window,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            // Remove self (the observer) when window closes
-            if let observer = self.settingsWindowObserver {
-                NotificationCenter.default.removeObserver(observer)
+        // Block-based observers must be explicitly removed; `ObserverToken` does so on deinit.
+        settingsWindowObserver = ObserverToken(
+            token: NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.settingsWindow = nil
+                self.settingsWindowObserver = nil
             }
-            self.settingsWindowObserver = nil
-            self.settingsWindow = nil
-        }
+        )
 
         self.settingsWindow = window
         window.makeKeyAndOrderFront(nil)
@@ -349,10 +320,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
-        if let observer = settingsWindowObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
+        notificationBindings.stop()
         stopPermissionCheckTimer()
         // Note: ScrollModeController.shared.stop() is not called here because:
         // 1. deinit is nonisolated and cannot call MainActor-isolated methods synchronously

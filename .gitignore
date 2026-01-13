@@ -8,3 +8,6 @@ xcuserdata/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Local DerivedData used by CI/agent runs
+.derivedData/
