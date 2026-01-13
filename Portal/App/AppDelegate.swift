@@ -294,7 +294,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.isReleasedWhenClosed = false
 
         // Remove previous observer if exists (handles rapid open/close cycles)
-        settingsWindowObserver?.cancel()
         settingsWindowObserver = nil
 
         // Observe window close to cleanup references
@@ -306,8 +305,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 queue: .main
             ) { [weak self] _ in
                 guard let self else { return }
-                self.settingsWindowObserver = nil
                 self.settingsWindow = nil
+                self.settingsWindowObserver = nil
             }
         )
 
@@ -322,7 +321,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     deinit {
         notificationBindings.stop()
-        settingsWindowObserver?.cancel()
         stopPermissionCheckTimer()
         // Note: ScrollModeController.shared.stop() is not called here because:
         // 1. deinit is nonisolated and cannot call MainActor-isolated methods synchronously

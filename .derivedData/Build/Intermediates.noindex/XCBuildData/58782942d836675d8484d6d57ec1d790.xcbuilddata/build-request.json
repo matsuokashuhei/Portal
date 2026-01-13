@@ -1,0 +1,71 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildAndRun"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "c01dc916c666b3435537a3f2557fb38fd155c95ff7033704436484c01745247c"
+    },
+    {
+      "guid" : "c01dc916c666b3435537a3f2557fb38fe6522e40205547d72f249adfaea50776"
+    },
+    {
+      "guid" : "c01dc916c666b3435537a3f2557fb38fa994a0c48a9a312cfbdfa7943476ca4b"
+    }
+  ],
+  "containerPath" : "/Users/matsuokashuhei/Development/personal/Portal/Portal.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "platform" : "macosx",
+      "sdk" : "macosx26.2",
+      "sdkVariant" : "macos",
+      "supportedArchitectures" : [
+        "arm64e",
+        "arm64",
+        "x86_64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Products",
+      "derivedDataPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData",
+      "indexDataStoreFolderPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "CLANG_COVERAGE_MAPPING" : "YES",
+          "CLANG_PROFILE_DATA_DIRECTORY" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/ProfileData",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "test",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

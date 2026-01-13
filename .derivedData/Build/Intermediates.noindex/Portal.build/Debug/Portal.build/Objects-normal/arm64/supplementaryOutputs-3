@@ -1,0 +1,23 @@
+{
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Crawlers/NativeAppCrawler.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppCrawler.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppCrawler.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppCrawler.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppCrawler.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppCrawler.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Executors/ElectronExecutor.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElectronExecutor.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElectronExecutor.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElectronExecutor.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElectronExecutor.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElectronExecutor.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Executors/ExecutorFactory.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ExecutorFactory.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ExecutorFactory.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ExecutorFactory.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ExecutorFactory.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ExecutorFactory.swiftdeps"
+  }
+}

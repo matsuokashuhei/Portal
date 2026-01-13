@@ -1,0 +1,23 @@
+{
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Executors/NativeAppExecutor.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppExecutor.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppExecutor.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppExecutor.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppExecutor.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/NativeAppExecutor.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/HintMode/HintLabel.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabel.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabel.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabel.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabel.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabel.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/HintMode/HintLabelGenerator.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabelGenerator.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabelGenerator.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabelGenerator.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabelGenerator.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintLabelGenerator.swiftdeps"
+  }
+}

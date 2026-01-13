@@ -1,0 +1,23 @@
+{
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Models/HintExecutionError.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintExecutionError.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintExecutionError.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintExecutionError.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintExecutionError.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintExecutionError.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Models/HintTarget.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTarget.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTarget.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTarget.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTarget.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTarget.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Models/HintTargetType.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTargetType.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTargetType.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTargetType.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTargetType.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/HintTargetType.swiftdeps"
+  }
+}

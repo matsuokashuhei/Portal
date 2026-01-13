@@ -1,0 +1,23 @@
+{
+  "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/PortalApp.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/PortalApp.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/PortalApp.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/PortalApp.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/PortalApp.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/PortalApp.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Settings/SettingsView.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  }
+}

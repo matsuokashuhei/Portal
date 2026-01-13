@@ -1,0 +1,23 @@
+{
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Protocols/ActionExecutor.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ActionExecutor.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ActionExecutor.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ActionExecutor.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ActionExecutor.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ActionExecutor.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/Protocols/ElementCrawler.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElementCrawler.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElementCrawler.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElementCrawler.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElementCrawler.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ElementCrawler.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/Portal/ScrollMode/ScrollConfiguration.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ScrollConfiguration.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ScrollConfiguration.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ScrollConfiguration.dia",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ScrollConfiguration.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/Portal.build/Objects-normal/arm64/ScrollConfiguration.swiftdeps"
+  }
+}

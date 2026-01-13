@@ -1,0 +1,6 @@
+Target dependency graph (3 targets)
+Target 'PortalUITests' in project 'Portal'
+➜ Explicit dependency on target 'Portal' in project 'Portal'
+Target 'PortalTests' in project 'Portal'
+➜ Explicit dependency on target 'Portal' in project 'Portal'
+Target 'Portal' in project 'Portal' (no dependencies)

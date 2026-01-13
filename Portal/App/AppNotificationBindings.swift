@@ -18,63 +18,65 @@ final class AppNotificationBindings {
         case openSettingsRequested
     }
 
+    private let center: NotificationCenter
+    private let lock = NSLock()
     private var observerTokens: [NSObjectProtocol] = []
+
+    init(center: NotificationCenter = .default) {
+        self.center = center
+    }
 
     func start(onEvent: @escaping (Event) -> Void) {
         // Make start idempotent
         stop()
 
-        let center = NotificationCenter.default
-
         // App becomes active (e.g. returning from System Settings)
-        observerTokens.append(
+        let tokens: [NSObjectProtocol] = [
             center.addObserver(
                 forName: NSApplication.didBecomeActiveNotification,
                 object: nil,
                 queue: .main
             ) { _ in
                 onEvent(.applicationDidBecomeActive)
-            }
-        )
-
-        // Settings changes
-        observerTokens.append(
+            },
+            // Settings changes
             center.addObserver(
                 forName: .hotkeyConfigurationChanged,
                 object: nil,
                 queue: .main
             ) { _ in
                 onEvent(.hotkeyConfigurationChanged)
-            }
-        )
-
-        observerTokens.append(
+            },
             center.addObserver(
                 forName: .excludedAppsConfigurationChanged,
                 object: nil,
                 queue: .main
             ) { _ in
                 onEvent(.excludedAppsConfigurationChanged)
-            }
-        )
-
-        // Open settings request
-        observerTokens.append(
+            },
+            // Open settings request
             center.addObserver(
                 forName: .openSettings,
                 object: nil,
                 queue: .main
             ) { _ in
                 onEvent(.openSettingsRequested)
-            }
-        )
+            },
+        ]
+
+        lock.lock()
+        observerTokens.append(contentsOf: tokens)
+        lock.unlock()
     }
 
     func stop() {
-        guard !observerTokens.isEmpty else { return }
-        let center = NotificationCenter.default
-        observerTokens.forEach { center.removeObserver($0) }
+        lock.lock()
+        let tokens = observerTokens
         observerTokens.removeAll()
+        lock.unlock()
+
+        guard !tokens.isEmpty else { return }
+        tokens.forEach { center.removeObserver($0) }
     }
 
     deinit {

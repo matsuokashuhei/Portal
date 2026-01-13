@@ -1,0 +1,16 @@
+{
+  "source": "/Users/matsuokashuhei/Development/personal/Portal/Portal/HintMode/HintOverlayView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Input:",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 134
+        }
+      }
+    ]
+  },
+  "version": 1
+}

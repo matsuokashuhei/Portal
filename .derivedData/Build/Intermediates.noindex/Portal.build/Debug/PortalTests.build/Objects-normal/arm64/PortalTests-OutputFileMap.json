@@ -1,0 +1,139 @@
+{
+  "" : {
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests-primary.dia",
+    "emit-module-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests-primary-emit-module.dia",
+    "pch" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests-primary.swiftdeps"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/AppNotificationBindingsTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/AppNotificationBindingsTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/CrawlConfigurationTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/CrawlConfigurationTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ElectronAppDetectorTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronAppDetectorTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ElectronExecutorTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ElectronExecutorTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ExcludedAppsConfigurationTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExcludedAppsConfigurationTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ExecutorFactoryTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ExecutorFactoryTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/HintLabelGeneratorTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintLabelGeneratorTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/HintTargetTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HintTargetTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/HotkeyConfigurationTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/HotkeyConfigurationTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/NativeAppExecutorTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/NativeAppExecutorTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ObserverTokenTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ObserverTokenTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/PortalTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/PortalTests~partial.swiftmodule"
+  },
+  "/Users/matsuokashuhei/Development/personal/Portal/PortalTests/ScrollConfigurationTests.swift" : {
+    "const-values" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.swiftconstvalues",
+    "dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.d",
+    "diagnostics" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.dia",
+    "index-unit-output-path" : "/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.o",
+    "llvm-bc" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.bc",
+    "object" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.o",
+    "swift-dependencies" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests.swiftdeps",
+    "swiftmodule" : "/Users/matsuokashuhei/Development/personal/Portal/.derivedData/Build/Intermediates.noindex/Portal.build/Debug/PortalTests.build/Objects-normal/arm64/ScrollConfigurationTests~partial.swiftmodule"
+  }
+}
