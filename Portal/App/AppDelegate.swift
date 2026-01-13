@@ -169,9 +169,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func handleHintModeHotkeyPressed() {
-        // Toggle hint mode if already active
+        // Toggle hint mode if already active (with cooldown to prevent immediate toggle-off)
         guard !HintModeController.shared.isActive else {
-            HintModeController.shared.deactivate()
+            // Only allow toggle-off after cooldown period to prevent same key press
+            // from immediately deactivating hint mode
+            if HintModeController.shared.canToggleOff() {
+                HintModeController.shared.deactivate()
+            }
             return
         }
 

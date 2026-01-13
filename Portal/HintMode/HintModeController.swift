@@ -85,6 +85,13 @@ final class HintModeController {
     /// Index counter for generating hint labels progressively.
     private var labelIndex: Int = 0
 
+    /// The time when hint mode was activated (for toggle cooldown).
+    private var activationTime: Date?
+
+    /// Minimum time (in seconds) before toggle-off is allowed after activation.
+    /// This prevents the same F key press from immediately deactivating hint mode.
+    private static let toggleCooldown: TimeInterval = 0.3
+
     // MARK: - Dependencies
 
     /// Factory for creating crawlers based on application type.
@@ -154,6 +161,17 @@ final class HintModeController {
         }
     }
 
+    /// Returns whether toggle-off is allowed (cooldown period has passed).
+    ///
+    /// This prevents the same hotkey press from immediately deactivating hint mode
+    /// after activation. The cooldown period is 0.3 seconds.
+    ///
+    /// - Returns: `true` if enough time has passed since activation, `false` otherwise.
+    func canToggleOff() -> Bool {
+        guard let activationTime else { return true }
+        return Date().timeIntervalSince(activationTime) >= Self.toggleCooldown
+    }
+
     /// Deactivates hint mode and dismisses the overlay.
     func deactivate() {
         guard isActive else { return }
@@ -189,6 +207,7 @@ final class HintModeController {
         inputBuffer = ""
         targetApp = nil
         labelIndex = 0
+        activationTime = nil
         isActive = false
 
         // Post notification
@@ -233,6 +252,7 @@ final class HintModeController {
         startApplicationActivationObserver()
 
         isActive = true
+        activationTime = Date()
 
         // Post notification
         NotificationCenter.default.post(name: .hintModeDidActivate, object: nil)
