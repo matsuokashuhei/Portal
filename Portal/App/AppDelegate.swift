@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    @objc private func applicationDidBecomeActive() {
+    private func applicationDidBecomeActive() {
         dispatchPrecondition(condition: .onQueue(.main))
         checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hintModeHotkeyManager?.start()
     }
 
-    @objc private func hotkeyConfigurationDidChange() {
+    private func hotkeyConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
         DispatchQueue.main.async { [weak self] in
@@ -151,7 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    @objc private func excludedAppsConfigurationDidChange() {
+    private func excludedAppsConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
         DispatchQueue.main.async { [weak self] in
