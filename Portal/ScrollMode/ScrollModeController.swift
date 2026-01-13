@@ -203,7 +203,7 @@ final class ScrollModeController {
         }
 
         // Check if a text field has focus (allow normal text input)
-        if isTextFieldFocused() {
+        if AccessibilityHelper.isTextInputElementFocused() {
             return false
         }
 
@@ -225,40 +225,4 @@ final class ScrollModeController {
         }
     }
 
-    // MARK: - Focus Detection
-
-    /// Checks if a text input field currently has focus.
-    ///
-    /// Uses the Accessibility API to get the currently focused element
-    /// and check its role against known text input roles.
-    ///
-    /// - Returns: `true` if a text input field has focus.
-    private nonisolated func isTextFieldFocused() -> Bool {
-        let systemWide = AXUIElementCreateSystemWide()
-        var focusedRef: CFTypeRef?
-
-        guard AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedRef
-        ) == .success else {
-            return false
-        }
-
-        // Safe cast: AXUIElementCopyAttributeValue with kAXFocusedUIElementAttribute
-        // always returns an AXUIElement when successful
-        let focused = focusedRef as! AXUIElement
-
-        var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            focused,
-            kAXRoleAttribute as CFString,
-            &roleRef
-        ) == .success,
-              let role = roleRef as? String else {
-            return false
-        }
-
-        return ScrollConfiguration.textInputRoles.contains(role)
-    }
 }
