@@ -41,48 +41,58 @@ xcodebuild -project Portal.xcodeproj -scheme Portal clean build
 
 ```
 Portal/
-├── PortalApp.swift            # エントリポイント (NSApplicationDelegateAdaptor)
 ├── Info.plist                 # LSUIElement = YES
 ├── Assets.xcassets/
 ├── App/
-│   ├── AppDelegate.swift      # ステータスバー、ホットキー管理
-│   ├── Notifications.swift    # アプリ全体の通知名定義
+│   ├── PortalApp.swift         # エントリポイント (NSApplicationDelegateAdaptor)
+│   ├── AppDelegate.swift       # ステータスバー、ホットキー管理
+│   ├── Notifications.swift     # アプリ全体の通知名定義
 │   └── TestConfiguration.swift # テスト用起動引数設定
-├── Protocols/                 # プロトコル定義（DIP準拠）
-│   ├── ElementCrawler.swift   # Crawlerプロトコル
-│   └── ActionExecutor.swift   # Executorプロトコル
-├── Crawlers/                  # 要素走査実装
-│   ├── CrawlerFactory.swift   # Crawler生成ファクトリ
-│   ├── NativeAppCrawler.swift # ネイティブアプリ用Crawler
-│   └── ElectronCrawler.swift  # Electronアプリ用Crawler
-├── Executors/                 # アクション実行実装
-│   ├── ExecutorFactory.swift    # Executor生成ファクトリ（HintTargetTypeに基づく選択）
-│   ├── NativeAppExecutor.swift  # ネイティブmacOSアプリ用Executor
-│   └── ElectronExecutor.swift   # Electronアプリ用Executor（cachedFrameフォールバック付き）
-├── Models/
-│   ├── HintTarget.swift         # Hint Mode用ターゲットモデル
-│   ├── HintTargetType.swift     # アプリタイプ列挙型（native/electron）
-│   └── HintExecutionError.swift # Hint Mode実行エラー
-├── HintMode/
-│   ├── HintLabel.swift            # ヒントラベルのデータモデル
-│   ├── HintLabelGenerator.swift   # AA-ZZ式2文字ラベル生成（インデックスベース/一括生成両対応）
-│   ├── HintOverlayView.swift      # SwiftUIラベル描画
-│   ├── HintOverlayWindow.swift    # オーバーレイウィンドウ管理（動的ラベル追加対応）
-│   └── HintModeController.swift   # ヒントモード全体制御（プログレッシブレンダリング）
-├── ScrollMode/
-│   ├── ScrollConfiguration.swift  # スクロールキー・設定定義
-│   ├── ScrollExecutor.swift       # スクロールイベント生成・実行
-│   └── ScrollModeController.swift # スクロールモード全体制御
-├── Services/
-│   ├── HotkeyManager.swift         # 設定可能なホットキー検出
-│   ├── AccessibilityService.swift  # 権限チェック・リクエスト
-│   ├── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
-│   └── ElectronAppDetector.swift   # Electronアプリ検出
-└── Settings/
-    ├── HotkeyConfiguration.swift       # ホットキー設定モデル
-    ├── ExcludedAppsConfiguration.swift # 除外アプリ設定モデル
-    ├── CrawlConfiguration.swift        # 走査深度設定モデル
-    └── SettingsView.swift              # 設定画面UI（General/Exclusionsタブ）
+├── Contracts/                  # プロトコル定義（DIP準拠）
+│   ├── ElementCrawler.swift    # Crawlerプロトコル
+│   └── ActionExecutor.swift    # Executorプロトコル
+├── Core/
+│   ├── Automation/              # 探索と実行のコアロジック
+│   │   ├── Crawlers/               # 要素走査実装
+│   │   │   ├── CrawlerFactory.swift   # Crawler生成ファクトリ
+│   │   │   ├── NativeAppCrawler.swift # ネイティブアプリ用Crawler
+│   │   │   └── ElectronCrawler.swift  # Electronアプリ用Crawler
+│   │   └── Executors/              # アクション実行実装
+│   │       ├── ExecutorFactory.swift    # Executor生成ファクトリ（HintTargetTypeに基づく選択）
+│   │       ├── NativeAppExecutor.swift  # ネイティブmacOSアプリ用Executor
+│   │       └── ElectronExecutor.swift   # Electronアプリ用Executor（cachedFrameフォールバック付き）
+│   └── Models/
+│       ├── HintTarget.swift         # Hint Mode用ターゲットモデル
+│       ├── HintTargetType.swift     # アプリタイプ列挙型（native/electron）
+│       └── HintExecutionError.swift # Hint Mode実行エラー
+├── Features/
+│   ├── HintMode/
+│   │   ├── UI/
+│   │   │   ├── HintLabel.swift            # ヒントラベルのデータモデル
+│   │   │   ├── HintOverlayView.swift      # SwiftUIラベル描画
+│   │   │   └── HintOverlayWindow.swift    # オーバーレイウィンドウ管理（動的ラベル追加対応）
+│   │   ├── Input/
+│   │   │   └── HintModeController.swift   # ヒントモード全体制御（プログレッシブレンダリング）
+│   │   └── Execution/
+│   │       └── HintLabelGenerator.swift   # AA-ZZ式2文字ラベル生成（インデックスベース/一括生成両対応）
+│   ├── ScrollMode/
+│   │   ├── ScrollConfiguration.swift  # スクロールキー・設定定義
+│   │   ├── ScrollExecutor.swift       # スクロールイベント生成・実行
+│   │   └── ScrollModeController.swift # スクロールモード全体制御
+│   └── Settings/
+│       ├── HotkeyConfiguration.swift       # ホットキー設定モデル
+│       ├── ExcludedAppsConfiguration.swift # 除外アプリ設定モデル
+│       ├── CrawlConfiguration.swift        # 走査深度設定モデル
+│       └── SettingsView.swift              # 設定画面UI（General/Exclusionsタブ）
+└── Infrastructure/
+    └── Services/
+        ├── Accessibility/
+        │   ├── AccessibilityService.swift  # 権限チェック・リクエスト
+        │   └── AccessibilityHelper.swift   # 位置情報取得ユーティリティ
+        ├── Hotkey/
+        │   └── HotkeyManager.swift         # 設定可能なホットキー検出
+        └── Electron/
+            └── ElectronAppDetector.swift   # Electronアプリ検出
 ```
 
 ### Crawler/Executorアーキテクチャ
