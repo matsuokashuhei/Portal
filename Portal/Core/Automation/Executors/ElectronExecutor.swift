@@ -62,13 +62,14 @@ final class ElectronExecutor: ActionExecutor {
             return .failure(.targetDisabled)
         }
 
-        // Electron apps may change element titles dynamically, so we avoid strict title matching here.
-        // We still validate the role to reduce the chance of executing the wrong type of element.
+        // Electron apps may change element titles dynamically, so use relaxed matching
+        // while still validating title/role to avoid executing the wrong element.
         let elementIsValid = isElementValid(
             target.axElement,
             expectedTitle: target.title,
             validRoles: Self.validRoles,
-            validateTitle: false
+            validateTitle: true,
+            titleMatchMode: .relaxed
         )
 
         if !elementIsValid {

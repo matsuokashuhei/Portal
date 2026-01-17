@@ -6,6 +6,7 @@
 //
 
 import ApplicationServices
+import Foundation
 
 /// Protocol for executing actions on hint targets.
 ///
@@ -25,6 +26,11 @@ protocol ActionExecutor {
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError>
 }
 
+enum TitleMatchMode {
+    case exact
+    case relaxed
+}
+
 // MARK: - Shared Helper Methods
 
 /// Extension providing shared helper methods for all ActionExecutor implementations.
@@ -41,13 +47,18 @@ extension ActionExecutor {
     ///   - validRoles: Set of valid accessibility roles for this executor.
     ///   - validateTitle: Whether to validate the element's title against `expectedTitle`.
     ///                    Native apps should keep this `true` to avoid executing the wrong element.
-    ///                    Electron apps may set this to `false` because titles can change dynamically.
+    ///                    For highly dynamic UIs (e.g. unread counts or timestamps),
+    ///                    consider using `titleMatchMode: .relaxed` before disabling validation.
+    ///                    Disabling title checks increases the risk of executing the wrong element
+    ///                    when multiple elements share the same role.
+    ///   - titleMatchMode: Controls how strictly titles are compared when `validateTitle` is `true`.
     /// - Returns: `true` if the element is still valid and matches expectations.
     func isElementValid(
         _ element: AXUIElement,
         expectedTitle: String,
         validRoles: Set<String>,
-        validateTitle: Bool = true
+        validateTitle: Bool = true,
+        titleMatchMode: TitleMatchMode = .exact
     ) -> Bool {
         #if DEBUG
         print("[ActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
@@ -152,14 +163,46 @@ extension ActionExecutor {
             }
         }
 
-        guard possibleTitles.contains(expectedTitle) else {
+        guard matchesTitle(expectedTitle, in: possibleTitles, mode: titleMatchMode) else {
             #if DEBUG
-            print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles)")
+            print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles) (mode: \(titleMatchMode))")
             #endif
             return false
         }
 
         return true
+    }
+
+    private func matchesTitle(_ expectedTitle: String, in possibleTitles: [String], mode: TitleMatchMode) -> Bool {
+        switch mode {
+        case .exact:
+            return possibleTitles.contains(expectedTitle)
+        case .relaxed:
+            let normalizedExpected = normalizeTitle(expectedTitle)
+            guard !normalizedExpected.isEmpty else {
+                return false
+            }
+            for candidate in possibleTitles {
+                let normalizedCandidate = normalizeTitle(candidate)
+                if normalizedCandidate == normalizedExpected {
+                    return true
+                }
+                // Allow stable prefixes to match dynamic suffixes (e.g. "Inbox" vs "Inbox (3)")
+                if normalizedExpected.count >= 3, normalizedCandidate.hasPrefix(normalizedExpected) {
+                    return true
+                }
+                if normalizedCandidate.count >= 3, normalizedExpected.hasPrefix(normalizedCandidate) {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+
+    private func normalizeTitle(_ title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let collapsed = trimmed.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return collapsed.lowercased()
     }
 
     /// Gets title from child elements (for sidebar items like AXRow).

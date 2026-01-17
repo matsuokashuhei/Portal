@@ -276,10 +276,11 @@ final class ElectronCrawler: ElementCrawler {
 
             guard let role = getRole(from: child) else { continue }
 
-            let displayTitle = getDisplayTitle(from: child)
+            let displayTitle = normalizedDisplayTitle(from: child)
 
             // Electron web content: collect any element that has a usable frame.
-            if let frame = getFrame(from: child),
+            if let title = displayTitle,
+               let frame = getFrame(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
@@ -291,7 +292,6 @@ final class ElectronCrawler: ElementCrawler {
                         seenFrames.append(frame)
 
                         let isEnabled = getIsEnabled(from: child)
-                        let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
                         let target = HintTarget(
                             title: title,
                             axElement: child,
@@ -347,7 +347,9 @@ final class ElectronCrawler: ElementCrawler {
             if role == "AXWebArea" { continue }
 
             // Electron native chrome: collect any element that has a usable frame.
-            if let frame = getNativeChromeFrameWithFallback(from: child),
+            let displayTitle = normalizedDisplayTitle(from: child)
+            if let title = displayTitle,
+               let frame = getNativeChromeFrameWithFallback(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
@@ -357,8 +359,6 @@ final class ElectronCrawler: ElementCrawler {
                         seenFrames.append(frame)
 
                         let isEnabled = getIsEnabled(from: child)
-                        let displayTitle = getDisplayTitle(from: child)
-                        let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
                         let target = HintTarget(
                             title: title,
                             axElement: child,
@@ -514,19 +514,19 @@ final class ElectronCrawler: ElementCrawler {
             guard let role = getRole(from: child) else { continue }
 
             // Get display title
-            let displayTitle = getDisplayTitle(from: child)
+            let displayTitle = normalizedDisplayTitle(from: child)
 
             #if DEBUG
             Self.roleCountsForDebug[role, default: 0] += 1
             #endif
 
             // Electron web content: collect any element that has a usable frame.
-            if let frame = getFrame(from: child),
+            if let title = displayTitle,
+               let frame = getFrame(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
                 let isEnabled = getIsEnabled(from: child)
-                let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
                 let target = HintTarget(
                     title: title,
                     axElement: child,
@@ -580,13 +580,13 @@ final class ElectronCrawler: ElementCrawler {
             }
 
             // Electron native chrome: collect any element that has a usable frame.
-            if let frame = getNativeChromeFrameWithFallback(from: child),
+            let displayTitle = normalizedDisplayTitle(from: child)
+            if let title = displayTitle,
+               let frame = getNativeChromeFrameWithFallback(from: child),
                frame != .zero,
                frame.width > 0,
                frame.height > 0 {
                 let isEnabled = getIsEnabled(from: child)
-                let displayTitle = getDisplayTitle(from: child)
-                let title = (displayTitle?.isEmpty == false) ? displayTitle! : role
                 let target = HintTarget(
                     title: title,
                     axElement: child,
@@ -685,6 +685,16 @@ final class ElectronCrawler: ElementCrawler {
         }
 
         return nil
+    }
+
+    /// Returns a trimmed, non-empty display title if available.
+    private func normalizedDisplayTitle(from element: AXUIElement) -> String? {
+        guard let title = getDisplayTitle(from: element)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty else {
+            return nil
+        }
+        return title
     }
 
     /// Gets the title attribute.
@@ -821,13 +831,29 @@ final class ElectronCrawler: ElementCrawler {
             return nil
         }
 
-        let width = min(parentFrame.width, 20)
-        let height = min(parentFrame.height, 20)
+        let shortestSide = max(1.0, min(parentFrame.width, parentFrame.height))
+        let baseSize = shortestSide * 0.3
+        let estimatedSize = max(12.0, min(min(baseSize, 44.0), shortestSide))
+        var originX = parentFrame.minX
+        var originY = parentFrame.minY
+
+        // Offset hints for siblings so they don't all stack at the same origin.
+        var childrenRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(parent, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+           let children = childrenRef as? [AXUIElement],
+           let index = children.firstIndex(where: { CFEqual($0, element) }) {
+            let maxHintsPerRow = 8
+            let offsetStep: CGFloat = 4.0
+            let column = index % maxHintsPerRow
+            let row = index / maxHintsPerRow
+            originX = parentFrame.minX + CGFloat(column) * offsetStep
+            originY = parentFrame.minY + CGFloat(row) * offsetStep
+        }
         let estimated = CGRect(
-            x: parentFrame.minX,
-            y: parentFrame.minY,
-            width: width,
-            height: height
+            x: originX,
+            y: originY,
+            width: estimatedSize,
+            height: estimatedSize
         )
 
         #if DEBUG
