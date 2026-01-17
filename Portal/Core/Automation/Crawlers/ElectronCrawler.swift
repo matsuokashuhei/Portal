@@ -842,8 +842,8 @@ final class ElectronCrawler: ElementCrawler {
         if AXUIElementCopyAttributeValue(parent, kAXChildrenAttribute as CFString, &childrenRef) == .success,
            let children = childrenRef as? [AXUIElement],
            let index = children.firstIndex(where: { CFEqual($0, element) }) {
-            let maxHintsPerRow = 8
-            let offsetStep: CGFloat = 4.0
+            let offsetStep = max(6.0, estimatedSize * 0.6)
+            let maxHintsPerRow = max(1, Int(parentFrame.width / offsetStep))
             let column = index % maxHintsPerRow
             let row = index / maxHintsPerRow
             originX = parentFrame.minX + CGFloat(column) * offsetStep

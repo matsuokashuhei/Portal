@@ -184,19 +184,44 @@ extension ActionExecutor {
             }
             for candidate in possibleTitles {
                 let normalizedCandidate = normalizeTitle(candidate)
+                guard !normalizedCandidate.isEmpty else {
+                    continue
+                }
                 if normalizedCandidate == normalizedExpected {
                     return true
                 }
                 // Allow stable prefixes to match dynamic suffixes (e.g. "Inbox" vs "Inbox (3)")
-                if normalizedExpected.count >= 3, normalizedCandidate.hasPrefix(normalizedExpected) {
+                if normalizedExpected.count >= 3,
+                   isBoundaryPrefixMatch(prefix: normalizedExpected, in: normalizedCandidate) {
                     return true
                 }
-                if normalizedCandidate.count >= 3, normalizedExpected.hasPrefix(normalizedCandidate) {
+                if normalizedCandidate.count >= 3,
+                   isBoundaryPrefixMatch(prefix: normalizedCandidate, in: normalizedExpected) {
                     return true
                 }
             }
             return false
         }
+    }
+
+    private func isBoundaryPrefixMatch(prefix: String, in value: String) -> Bool {
+        guard value.hasPrefix(prefix) else {
+            return false
+        }
+        if value.count == prefix.count {
+            return true
+        }
+        let boundaryIndex = value.index(value.startIndex, offsetBy: prefix.count)
+        return isBoundaryCharacter(value[boundaryIndex])
+    }
+
+    private func isBoundaryCharacter(_ character: Character) -> Bool {
+        for scalar in character.unicodeScalars {
+            if CharacterSet.alphanumerics.contains(scalar) {
+                return false
+            }
+        }
+        return true
     }
 
     private func normalizeTitle(_ title: String) -> String {
