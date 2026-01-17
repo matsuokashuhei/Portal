@@ -24,6 +24,32 @@ enum AccessibilityHelper {
         "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton"
     ]
 
+    protocol FocusedElementProviding {
+        func focusedElement() -> AXUIElement?
+        func role(for element: AXUIElement) -> String?
+    }
+
+    struct SystemFocusedElementProvider: FocusedElementProviding {
+        func focusedElement() -> AXUIElement? {
+            let systemWide = AXUIElementCreateSystemWide()
+            var focusedRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                systemWide,
+                kAXFocusedUIElementAttribute as CFString,
+                &focusedRef
+            ) == .success,
+                  let focusedRef else {
+                return nil
+            }
+            // swiftlint:disable:next force_cast
+            return focusedRef as! AXUIElement
+        }
+
+        func role(for element: AXUIElement) -> String? {
+            AccessibilityHelper.getRoleOfFocusedElement(element)
+        }
+    }
+
     // MARK: - Frame Methods
 
     /// Retrieves the screen frame of an accessibility element.
@@ -336,23 +362,12 @@ enum AccessibilityHelper {
     /// - Note: This method is `nonisolated` to allow calling from CGEventTap callbacks
     ///   which run on the main thread but outside the MainActor isolation context.
     nonisolated static func isTextInputElementFocused() -> Bool {
-        let systemWide = AXUIElementCreateSystemWide()
-        var focusedRef: CFTypeRef?
+        isTextInputElementFocused(using: SystemFocusedElementProvider())
+    }
 
-        guard AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedRef
-        ) == .success else {
-            return false
-        }
-
-        // Note: Force cast is safe here because AXUIElementCopyAttributeValue with
-        // kAXFocusedUIElementAttribute always returns an AXUIElement when successful.
-        // Conditional cast (as?) cannot be used with CoreFoundation types as it always succeeds.
-        let focused = focusedRef as! AXUIElement
-
-        guard let role = getRoleOfFocusedElement(focused) else {
+    nonisolated static func isTextInputElementFocused(using provider: FocusedElementProviding) -> Bool {
+        guard let focused = provider.focusedElement(),
+              let role = provider.role(for: focused) else {
             return false
         }
         return ScrollConfiguration.textInputRoles.contains(role)
@@ -362,19 +377,14 @@ enum AccessibilityHelper {
     ///
     /// This is used for debugging hotkey suppression (e.g., when focus is AXSearchField).
     nonisolated static func focusedElementRole() -> String? {
-        let systemWide = AXUIElementCreateSystemWide()
-        var focusedRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedRef
-        ) == .success,
-              let focusedRef else {
+        focusedElementRole(using: SystemFocusedElementProvider())
+    }
+
+    nonisolated static func focusedElementRole(using provider: FocusedElementProviding) -> String? {
+        guard let focused = provider.focusedElement() else {
             return nil
         }
-        // swiftlint:disable:next force_cast
-        let focused = focusedRef as! AXUIElement
-        return getRoleOfFocusedElement(focused)
+        return provider.role(for: focused)
     }
 
     nonisolated private static func getRoleOfFocusedElement(_ focused: AXUIElement) -> String? {

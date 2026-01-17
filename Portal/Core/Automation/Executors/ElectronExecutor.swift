@@ -29,9 +29,10 @@ final class ElectronExecutor: ActionExecutor {
     /// This includes both web-based roles and native chrome elements.
     static let validRoles: Set<String> = [
         // Web-based roles
-        "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXCheckBox",
+        "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXSearchField", "AXCheckBox",
         "AXRadioButton", "AXMenuItem", "AXMenuItemCheckbox", "AXMenuItemRadio",
-        "AXTab", "AXStaticText", "AXRow", "AXPopUpButton", "AXImage",
+        "AXTab", "AXStaticText", "AXRow", "AXPopUpButton", "AXMenuButton",
+        "AXComboBox", "AXSwitch", "AXImage",
         // Native chrome roles (for window controls, menus)
         "AXGroup", "AXCell", "AXOutlineRow"
     ]

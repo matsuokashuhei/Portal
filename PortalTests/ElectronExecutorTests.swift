@@ -61,8 +61,9 @@ struct ElectronExecutorTests {
     @Test
     func testValidRolesContainsExpectedRoles() {
         let expectedRoles = [
-            "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXCheckBox",
-            "AXRadioButton", "AXMenuItem", "AXTab", "AXStaticText", "AXRow"
+            "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXSearchField",
+            "AXCheckBox", "AXRadioButton", "AXMenuItem", "AXMenuButton",
+            "AXComboBox", "AXSwitch", "AXTab", "AXStaticText", "AXRow"
         ]
 
         for role in expectedRoles {
