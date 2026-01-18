@@ -201,6 +201,7 @@ enum AccessibilityHelper {
     }
 
     /// Gets the role of an accessibility element.
+    /// https://developer.apple.com/documentation/applicationservices/kaxroledescriptionattribute
     ///
     /// - Parameter element: The element to get the role from.
     /// - Returns: The role string (e.g., "AXButton"), or `nil` if not available.
@@ -217,24 +218,41 @@ enum AccessibilityHelper {
         return role
     }
 
+    static func getMainWindow(_ app: NSRunningApplication) -> AXUIElement? {
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        var mainWindowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            axApp,
+            kAXFocusedWindowAttribute as CFString,
+            &mainWindowRef
+        ) == .success else {
+            return nil
+        }
+        // swiftlint:disable:next force_cast
+        let mainWindow = mainWindowRef as! AXUIElement
+        return mainWindow
+
+    }
+    
     /// Gets the main window frame of an application.
     ///
     /// - Parameter app: The running application to get the main window frame from.
     /// - Returns: The main window's frame in screen coordinates, or `nil` if unavailable.
     static func getMainWindowFrame(_ app: NSRunningApplication) -> CGRect? {
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-
-        var mainWindowRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            axApp,
-            kAXMainWindowAttribute as CFString,
-            &mainWindowRef
-        ) == .success else {
-            return nil
-        }
-
-        // swiftlint:disable:next force_cast
-        let mainWindow = mainWindowRef as! AXUIElement
+//        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+//        var mainWindowRef: CFTypeRef?
+//        guard AXUIElementCopyAttributeValue(
+//            axApp,
+//            kAXMainWindowAttribute as CFString,
+//            &mainWindowRef
+//        ) == .success else {
+//            return nil
+//        }
+//
+//        // swiftlint:disable:next force_cast
+//        let mainWindow = mainWindowRef as! AXUIElement
+//        return getFrame(mainWindow)
+        guard let mainWindow = getMainWindow(app) else { return nil }
         return getFrame(mainWindow)
     }
 
@@ -335,6 +353,7 @@ enum AccessibilityHelper {
     }
 
     /// Gets the children of an accessibility element.
+    /// https://developer.apple.com/documentation/applicationservices/kaxchildrenattribute
     ///
     /// - Parameter element: The element to get children from.
     /// - Returns: Array of child elements, or empty array if not available.

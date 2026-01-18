@@ -99,7 +99,7 @@ final class HintModeController {
     // MARK: - Dependencies
     
     /// Factory for creating crawlers based on application type.
-//    private let crawlerFactory: CrawlerFactory
+    //    private let crawlerFactory: CrawlerFactory
     
     /// Factory for creating action executors.
     private let executorFactory: ExecutorFactory
@@ -108,7 +108,6 @@ final class HintModeController {
     
     /// Creates a HintModeController with default factories.
     private init() {
-//        self.crawlerFactory = CrawlerFactory()
         self.executorFactory = ExecutorFactory()
     }
     
@@ -165,24 +164,11 @@ final class HintModeController {
     /// This method uses AsyncStream to crawl UI elements and display hint labels
     /// progressively as they are discovered, improving perceived responsiveness.
     private func performActivation(for app: NSRunningApplication) async {
-        // Get the appropriate crawler for this application
-        let crawler = CrawlerFactory.crawler(for: app)
-        
-        logger.debug("\(#function) - app: \(app.bundleIdentifier ?? "unknown"), crawler: \(crawler)")
-        
-        // Get coordinate system from the crawler
-        let coordinateSystem = crawler.coordinateSystem
-        
-        // Get window frames for filtering (includes main window, popups, dialogs)
-        let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
-        logger.debug("Found \(windowFrames.count) window frames")
+        guard let windowFrame = AccessibilityHelper.getMainWindowFrame(app) else { return }
         
         // Create empty overlay windows and show them immediately
         overlayWindows = HintOverlayWindow.createEmptyForAllScreens()
-        guard !overlayWindows.isEmpty else {
-            logger.warning("No screens available for overlay")
-            return
-        }
+        if overlayWindows.isEmpty { return }
         for window in overlayWindows {
             window.show()
         }
@@ -206,6 +192,12 @@ final class HintModeController {
         var hasDetectedFirstItem = false
         
         logger.info("Starting progressive crawl")
+        
+        let crawler = CrawlerFactory.crawler(for: app)
+        logger.debug("\(#function) - app: \(app.bundleIdentifier ?? "unknown"), crawler: \(crawler)")
+        
+        // Get coordinate system from the crawler
+        let coordinateSystem = crawler.coordinateSystem
         
         // Start crawling with progressive rendering
         crawlTask = Task {
@@ -246,17 +238,18 @@ final class HintModeController {
                     guard frame != .zero, frame.width > 0 else { continue }
                     
                     // Check window bounds (menu items can extend beyond window)
-                    if !isMenuItem && !windowFrames.isEmpty {
-                        let isInAnyWindow = windowFrames.contains { windowFrame in
-                            windowFrame.contains(frame) || windowFrame.intersects(frame)
-                        }
-                        guard isInAnyWindow else { continue }
-                        
-                        // Check scroll visibility for non-Electron items
-                        if target.cachedFrame == nil {
-                            guard AccessibilityHelper.isVisibleInScrollContainers(target.axElement) else { continue }
-                        }
+                    //                    if !isMenuItem && !windowFrames.isEmpty {
+                    //                        let isInAnyWindow = windowFrames.contains { windowFrame in
+                    //                            windowFrame.contains(frame) || windowFrame.intersects(frame)
+                    //                        }
+                    //                        guard isInAnyWindow else { continue }
+                    guard windowFrame.contains(frame), windowFrame.intersects(frame) else { continue }
+                    
+                    // Check scroll visibility for non-Electron items
+                    if target.cachedFrame == nil {
+                        guard AccessibilityHelper.isVisibleInScrollContainers(target.axElement) else { continue }
                     }
+                    //                    }
                     
                     // Adjust frame if height is zero
                     let adjustedFrame: CGRect

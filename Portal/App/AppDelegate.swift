@@ -9,10 +9,9 @@ import AppKit
 import SwiftUI
 import Logging
 
-//private let logger = PortalLogger.make("Portal", category: "AppDelegate")
+private let logger = PortalLogger.make("Portal", category: "CrawlerFactory")
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    let logger = Logger(label: "AppDelegate");
     
     private var statusItem: NSStatusItem?
     private var hintModeHotkeyManager: HotkeyManager?
