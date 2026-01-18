@@ -29,9 +29,10 @@ final class ElectronExecutor: ActionExecutor {
     /// This includes both web-based roles and native chrome elements.
     static let validRoles: Set<String> = [
         // Web-based roles
-        "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXCheckBox",
+        "AXLink", "AXButton", "AXTextField", "AXTextArea", "AXSearchField", "AXCheckBox",
         "AXRadioButton", "AXMenuItem", "AXMenuItemCheckbox", "AXMenuItemRadio",
-        "AXTab", "AXStaticText", "AXRow", "AXPopUpButton", "AXImage",
+        "AXTab", "AXStaticText", "AXRow", "AXPopUpButton", "AXMenuButton",
+        "AXComboBox", "AXSwitch", "AXImage",
         // Native chrome roles (for window controls, menus)
         "AXGroup", "AXCell", "AXOutlineRow"
     ]
@@ -62,8 +63,15 @@ final class ElectronExecutor: ActionExecutor {
             return .failure(.targetDisabled)
         }
 
-        // Validate that the axElement still references the expected item.
-        let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title, validRoles: Self.validRoles)
+        // Electron apps may change element titles dynamically, so use relaxed matching
+        // while still validating title/role to avoid executing the wrong element.
+        let elementIsValid = isElementValid(
+            target.axElement,
+            expectedTitle: target.title,
+            validRoles: Self.validRoles,
+            validateTitle: true,
+            titleMatchMode: .relaxed
+        )
 
         if !elementIsValid {
             #if DEBUG

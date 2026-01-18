@@ -6,6 +6,7 @@
 //
 
 import ApplicationServices
+import Foundation
 
 /// Protocol for executing actions on hint targets.
 ///
@@ -25,6 +26,105 @@ protocol ActionExecutor {
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError>
 }
 
+enum TitleMatchMode {
+    case exact
+    case relaxed
+}
+
+struct TitleMatcher {
+    static func matches(expected: String, candidates: [String], mode: TitleMatchMode) -> Bool {
+        switch mode {
+        case .exact:
+            return candidates.contains(expected)
+        case .relaxed:
+            let normalizedExpected = normalizeTitle(expected)
+            guard !normalizedExpected.isEmpty else {
+                return false
+            }
+            for candidate in candidates {
+                let normalizedCandidate = normalizeTitle(candidate)
+                guard !normalizedCandidate.isEmpty else {
+                    continue
+                }
+                if normalizedCandidate == normalizedExpected {
+                    return true
+                }
+                // Allow stable prefixes to match dynamic suffixes (e.g. "Inbox" vs "Inbox (3)")
+                if normalizedExpected.count >= 3,
+                   isBoundaryPrefixMatch(prefix: normalizedExpected, in: normalizedCandidate) {
+                    return true
+                }
+                if normalizedCandidate.count >= 3,
+                   isBoundaryPrefixMatch(prefix: normalizedCandidate, in: normalizedExpected) {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+
+    private static func isBoundaryPrefixMatch(prefix: String, in value: String) -> Bool {
+        guard value.hasPrefix(prefix) else {
+            return false
+        }
+        if value.count == prefix.count {
+            return true
+        }
+        let boundaryIndex = value.index(value.startIndex, offsetBy: prefix.count)
+        return isBoundaryCharacter(value[boundaryIndex])
+    }
+
+    private static func isBoundaryCharacter(_ character: Character) -> Bool {
+        for scalar in character.unicodeScalars {
+            if CharacterSet.alphanumerics.contains(scalar) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func normalizeTitle(_ title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let collapsed = trimmed.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return collapsed.lowercased()
+    }
+}
+
+struct ElementValidationSnapshot {
+    let role: String?
+    let subrole: String?
+    let possibleTitles: [String]
+}
+
+struct ElementValidator {
+    static func isValid(
+        _ snapshot: ElementValidationSnapshot,
+        expectedTitle: String,
+        validRoles: Set<String>,
+        validateTitle: Bool,
+        titleMatchMode: TitleMatchMode
+    ) -> Bool {
+        guard let role = snapshot.role, validRoles.contains(role) else {
+            return false
+        }
+
+        if let subrole = snapshot.subrole,
+           AccessibilityHelper.windowControlSubroles.contains(subrole) {
+            return true
+        }
+
+        guard validateTitle else {
+            return true
+        }
+
+        return TitleMatcher.matches(
+            expected: expectedTitle,
+            candidates: snapshot.possibleTitles,
+            mode: titleMatchMode
+        )
+    }
+}
+
 // MARK: - Shared Helper Methods
 
 /// Extension providing shared helper methods for all ActionExecutor implementations.
@@ -39,8 +139,25 @@ extension ActionExecutor {
     ///   - element: The AXUIElement to validate.
     ///   - expectedTitle: The title that was recorded when the target was discovered.
     ///   - validRoles: Set of valid accessibility roles for this executor.
+    ///   - validateTitle: Whether to validate the element's title against `expectedTitle`.
+    ///                    Native apps should keep this `true` to avoid executing the wrong element.
+    ///                    For highly dynamic UIs (e.g. unread counts or timestamps), keep this
+    ///                    `true` and use `titleMatchMode: .relaxed` to tolerate suffix changes.
+    ///                    Set this to `false` only when the UI is extremely volatile *and* the
+    ///                    element identity is stable via role/hierarchy/position. Disabling title
+    ///                    checks increases the risk of executing the wrong element when multiple
+    ///                    elements share the same role (e.g. multiple buttons or rows).
+    ///                    As an alternative, normalize titles on the caller side or use relaxed
+    ///                    matching instead of disabling validation entirely.
+    ///   - titleMatchMode: Controls how strictly titles are compared when `validateTitle` is `true`.
     /// - Returns: `true` if the element is still valid and matches expectations.
-    func isElementValid(_ element: AXUIElement, expectedTitle: String, validRoles: Set<String>) -> Bool {
+    func isElementValid(
+        _ element: AXUIElement,
+        expectedTitle: String,
+        validRoles: Set<String>,
+        validateTitle: Bool = true,
+        titleMatchMode: TitleMatchMode = .exact
+    ) -> Bool {
         #if DEBUG
         print("[ActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
         #endif
@@ -68,15 +185,11 @@ extension ActionExecutor {
 
         // Check subrole for window control buttons - they don't have title attributes
         // but can be identified by their subrole (AXCloseButton, AXMinimizeButton, etc.)
+        var subrole: String? = nil
         var subroleRef: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleRef) == .success,
-           let subrole = subroleRef as? String {
-            if AccessibilityHelper.windowControlSubroles.contains(subrole) {
-                #if DEBUG
-                print("[ActionExecutor] isElementValid: Window control button detected (subrole: \(subrole)), skipping title validation")
-                #endif
-                return true
-            }
+           let subroleValue = subroleRef as? String {
+            subrole = subroleValue
         }
 
         // Verify title - check all possible title sources since crawlers use
@@ -137,14 +250,33 @@ extension ActionExecutor {
             }
         }
 
-        guard possibleTitles.contains(expectedTitle) else {
-            #if DEBUG
-            print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles)")
-            #endif
-            return false
+        let snapshot = ElementValidationSnapshot(
+            role: role,
+            subrole: subrole,
+            possibleTitles: possibleTitles
+        )
+        let isValid = ElementValidator.isValid(
+            snapshot,
+            expectedTitle: expectedTitle,
+            validRoles: validRoles,
+            validateTitle: validateTitle,
+            titleMatchMode: titleMatchMode
+        )
+
+        if !isValid, validateTitle {
+            let matches = TitleMatcher.matches(
+                expected: expectedTitle,
+                candidates: possibleTitles,
+                mode: titleMatchMode
+            )
+            if !matches {
+                #if DEBUG
+                print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles) (mode: \(titleMatchMode))")
+                #endif
+            }
         }
 
-        return true
+        return isValid
     }
 
     /// Gets title from child elements (for sidebar items like AXRow).
