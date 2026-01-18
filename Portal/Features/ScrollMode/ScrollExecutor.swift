@@ -7,6 +7,9 @@
 
 import AppKit
 import CoreGraphics
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ScrollExecutor")
 
 /// Executes scroll actions by generating CGEvent scroll wheel events.
 ///
@@ -35,7 +38,7 @@ final class ScrollExecutor {
             wheel3: 0
         ) else {
             #if DEBUG
-            print("[ScrollExecutor] Failed to create scroll event")
+            logger.warning("Failed to create scroll event")
             #endif
             return
         }
@@ -46,7 +49,7 @@ final class ScrollExecutor {
         if let location = getActiveWindowCenter() {
             scrollEvent.location = location
             #if DEBUG
-            print("[ScrollExecutor] Scroll location set to \(location)")
+            logger.debug("Scroll location set to \(location)")
             #endif
         }
 
@@ -54,7 +57,7 @@ final class ScrollExecutor {
         scrollEvent.post(tap: .cghidEventTap)
 
         #if DEBUG
-        print("[ScrollExecutor] Scroll \(direction) (deltaX: \(deltaX), deltaY: \(deltaY))")
+        logger.debug("Scroll \(direction) (deltaX: \(deltaX), deltaY: \(deltaY))")
         #endif
     }
 
@@ -83,24 +86,24 @@ final class ScrollExecutor {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
               frontmostApp.bundleIdentifier != Bundle.main.bundleIdentifier else {
             #if DEBUG
-            print("[ScrollExecutor] No frontmost app or frontmost is Portal")
+            logger.debug("No frontmost app or frontmost is Portal")
             #endif
             return nil
         }
 
         #if DEBUG
-        print("[ScrollExecutor] Frontmost app: \(frontmostApp.localizedName ?? "unknown") (bundleID: \(frontmostApp.bundleIdentifier ?? "unknown"))")
+        logger.debug("Frontmost app: \(frontmostApp.localizedName ?? "unknown") (bundleID: \(frontmostApp.bundleIdentifier ?? "unknown"))")
         #endif
 
         guard let frame = AccessibilityHelper.getMainWindowFrame(frontmostApp) else {
             #if DEBUG
-            print("[ScrollExecutor] Could not get main window frame for \(frontmostApp.localizedName ?? "unknown")")
+            logger.warning("Could not get main window frame for \(frontmostApp.localizedName ?? "unknown")")
             #endif
             return nil
         }
 
         #if DEBUG
-        print("[ScrollExecutor] Main window frame (AppKit coords, bottom-left origin): \(frame)")
+        logger.debug("Main window frame (AppKit coords, bottom-left origin): \(frame)")
         #endif
 
         // Convert from AppKit coordinates (bottom-left origin) to
@@ -108,7 +111,7 @@ final class ScrollExecutor {
         // Formula: cgEventY = screenHeight - appKitY
         guard let screenHeight = NSScreen.main?.frame.height else {
             #if DEBUG
-            print("[ScrollExecutor] Could not get screen height")
+            logger.warning("Could not get screen height")
             #endif
             return nil
         }
@@ -117,7 +120,7 @@ final class ScrollExecutor {
         let centerY = screenHeight - frame.midY
 
         #if DEBUG
-        print("[ScrollExecutor] Screen height: \(screenHeight), Converted center: (\(centerX), \(centerY))")
+        logger.debug("Screen height: \(screenHeight), Converted center: (\(centerX), \(centerY))")
         #endif
 
         return CGPoint(x: centerX, y: centerY)

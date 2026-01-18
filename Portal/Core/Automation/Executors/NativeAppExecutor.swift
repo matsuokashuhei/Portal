@@ -7,6 +7,9 @@
 
 import ApplicationServices
 import AppKit
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "NativeAppExecutor")
 
 /// Executor for native macOS applications using standard Accessibility API.
 ///
@@ -53,12 +56,12 @@ final class NativeAppExecutor: ActionExecutor {
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
         #if DEBUG
-        print("[NativeAppExecutor] execute: Starting execution for '\(target.title)'")
+        logger.debug("execute: Starting execution for '\(target.title)'")
         #endif
 
         guard target.isEnabled else {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Target is disabled")
+            logger.debug("execute: Target is disabled")
             #endif
             return .failure(.targetDisabled)
         }
@@ -67,7 +70,7 @@ final class NativeAppExecutor: ActionExecutor {
         let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title, validRoles: Self.validRoles)
         if !elementIsValid {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Element validation failed")
+            logger.debug("execute: Element validation failed")
             #endif
             return .failure(.elementInvalid)
         }
@@ -75,7 +78,7 @@ final class NativeAppExecutor: ActionExecutor {
         // Get role to determine execution strategy
         guard let role = getRole(target.axElement) else {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Failed to get role")
+            logger.warning("execute: Failed to get role")
             #endif
             return .failure(.elementInvalid)
         }
@@ -83,7 +86,7 @@ final class NativeAppExecutor: ActionExecutor {
         // For text fields, set focus instead of pressing
         if Self.rolesRequiringFocus.contains(role) {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Text field detected, setting focus")
+            logger.debug("execute: Text field detected, setting focus")
             #endif
             if setFocus(target.axElement) {
                 return .success(())
@@ -94,7 +97,7 @@ final class NativeAppExecutor: ActionExecutor {
         // For sliders, set focus to allow arrow key control (#132)
         if role == "AXSlider" {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Slider detected, setting focus")
+            logger.debug("execute: Slider detected, setting focus")
             #endif
             if setFocus(target.axElement) {
                 return .success(())
@@ -105,7 +108,7 @@ final class NativeAppExecutor: ActionExecutor {
         // For incrementors, perform AXIncrement action (#132)
         if role == "AXIncrementor" {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Incrementor detected, performing AXIncrement")
+            logger.debug("execute: Incrementor detected, performing AXIncrement")
             #endif
             if performAction(target.axElement, action: "AXIncrement") {
                 return .success(())
@@ -116,7 +119,7 @@ final class NativeAppExecutor: ActionExecutor {
         // Try setting AXSelected attribute first for list/outline rows.
         if Self.rolesSupportingSelectedAttribute.contains(role) {
             #if DEBUG
-            print("[NativeAppExecutor] execute: Trying AXSelected for role '\(role)'")
+            logger.debug("execute: Trying AXSelected for role '\(role)'")
             #endif
             let selectResult = AXUIElementSetAttributeValue(
                 target.axElement,
@@ -124,7 +127,7 @@ final class NativeAppExecutor: ActionExecutor {
                 kCFBooleanTrue
             )
             #if DEBUG
-            print("[NativeAppExecutor] execute: AXSelected result: \(selectResult.rawValue)")
+            logger.debug("execute: AXSelected result: \(selectResult.rawValue)")
             #endif
 
             // Try mouse click as more reliable fallback
@@ -153,7 +156,7 @@ final class NativeAppExecutor: ActionExecutor {
            let subrole = subroleRef as? String {
             if AccessibilityHelper.windowControlSubroles.contains(subrole) {
                 #if DEBUG
-                print("[NativeAppExecutor] execute: Window control button detected, using mouse click")
+                logger.debug("execute: Window control button detected, using mouse click")
                 #endif
                 if performMouseClick(on: target.axElement) {
                     return .success(())
@@ -169,7 +172,7 @@ final class NativeAppExecutor: ActionExecutor {
         for action in Self.preferredActions {
             let result = AXUIElementPerformAction(target.axElement, action as CFString)
             #if DEBUG
-            print("[NativeAppExecutor] execute: Tried action '\(action)' result: \(result.rawValue)")
+            logger.debug("execute: Tried action '\(action)' result: \(result.rawValue)")
             #endif
 
             switch result {
@@ -185,7 +188,7 @@ final class NativeAppExecutor: ActionExecutor {
                 continue
             case .invalidUIElement, .cannotComplete:
                 #if DEBUG
-                print("[NativeAppExecutor] execute: Action failed with \(result.rawValue), trying mouse click fallback")
+                logger.debug("execute: Action failed with \(result.rawValue), trying mouse click fallback")
                 #endif
                 // Try mouse click as fallback before failing
                 if performMouseClick(on: target.axElement) {
@@ -215,7 +218,7 @@ final class NativeAppExecutor: ActionExecutor {
             kCFBooleanTrue
         )
         #if DEBUG
-        print("[NativeAppExecutor] setFocus: Result \(result.rawValue)")
+        logger.debug("setFocus: Result \(result.rawValue)")
         #endif
         return result == .success
     }
@@ -224,7 +227,7 @@ final class NativeAppExecutor: ActionExecutor {
     private func performAction(_ element: AXUIElement, action: String) -> Bool {
         let result = AXUIElementPerformAction(element, action as CFString)
         #if DEBUG
-        print("[NativeAppExecutor] performAction '\(action)': Result \(result.rawValue)")
+        logger.debug("performAction '\(action)': Result \(result.rawValue)")
         #endif
         return result == .success
     }
@@ -232,25 +235,25 @@ final class NativeAppExecutor: ActionExecutor {
     /// Executes checkbox or switch toggle with value verification.
     private func executeCheckboxOrSwitch(_ element: AXUIElement, role: String) -> Bool {
         #if DEBUG
-        print("[NativeAppExecutor] executeCheckboxOrSwitch: Starting for \(role)")
+        logger.debug("executeCheckboxOrSwitch: Starting for \(role)")
         #endif
 
         // Get current value before trying to toggle
         let valueBefore = getCheckboxValue(element)
         #if DEBUG
-        print("[NativeAppExecutor] executeCheckboxOrSwitch: Value before: \(valueBefore?.description ?? "nil")")
+        logger.debug("executeCheckboxOrSwitch: Value before: \(valueBefore?.description ?? "nil")")
         #endif
 
         // Try AXPress first (works for most standard checkboxes)
         let pressResult = AXUIElementPerformAction(element, kAXPressAction as CFString)
         #if DEBUG
-        print("[NativeAppExecutor] executeCheckboxOrSwitch: AXPress result: \(pressResult.rawValue)")
+        logger.debug("executeCheckboxOrSwitch: AXPress result: \(pressResult.rawValue)")
         #endif
 
         if pressResult == .success {
             let valueAfter = getCheckboxValue(element)
             #if DEBUG
-            print("[NativeAppExecutor] executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
+            logger.debug("executeCheckboxOrSwitch: Value after AXPress: \(valueAfter?.description ?? "nil")")
             #endif
 
             if let before = valueBefore, let after = valueAfter {
@@ -268,7 +271,7 @@ final class NativeAppExecutor: ActionExecutor {
             let newValue: CFBoolean = currentValue ? kCFBooleanFalse : kCFBooleanTrue
             let setResult = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             #if DEBUG
-            print("[NativeAppExecutor] executeCheckboxOrSwitch: Direct toggle result: \(setResult.rawValue)")
+            logger.debug("executeCheckboxOrSwitch: Direct toggle result: \(setResult.rawValue)")
             #endif
 
             if setResult == .success {
@@ -284,7 +287,7 @@ final class NativeAppExecutor: ActionExecutor {
         }
 
         #if DEBUG
-        print("[NativeAppExecutor] executeCheckboxOrSwitch: Both approaches failed")
+        logger.warning("executeCheckboxOrSwitch: Both approaches failed")
         #endif
         return false
     }
@@ -333,19 +336,19 @@ final class NativeAppExecutor: ActionExecutor {
 
         guard let point = clickPoint else {
             #if DEBUG
-            print("[NativeAppExecutor] performMouseClick: Failed to get position/size")
+            logger.warning("performMouseClick: Failed to get position/size")
             #endif
             return false
         }
 
         #if DEBUG
-        print("[NativeAppExecutor] performMouseClick: Clicking at \(point)")
+        logger.debug("performMouseClick: Clicking at \(point)")
         #endif
 
         guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
               let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else {
             #if DEBUG
-            print("[NativeAppExecutor] performMouseClick: Failed to create mouse events")
+            logger.warning("performMouseClick: Failed to create mouse events")
             #endif
             return false
         }

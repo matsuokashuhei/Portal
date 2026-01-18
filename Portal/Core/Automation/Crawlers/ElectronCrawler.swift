@@ -7,6 +7,9 @@
 
 import ApplicationServices
 import AppKit
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ElectronCrawler")
 
 /// Crawler specialized for Electron applications.
 ///
@@ -124,7 +127,7 @@ final class ElectronCrawler: ElementCrawler {
         let axApp = AXUIElementCreateApplication(pid)
 
         #if DEBUG
-        print("[ElectronCrawler] Crawling Electron app: \(app.bundleIdentifier ?? "unknown")")
+        logger.info("Crawling Electron app: \(app.bundleIdentifier ?? "unknown")")
         #endif
 
         // Enable enhanced accessibility for Electron apps
@@ -142,7 +145,7 @@ final class ElectronCrawler: ElementCrawler {
         for windowElement in windows {
             let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
-            print("[ElectronCrawler] Crawling window: '\(windowTitle)'")
+            logger.debug("Crawling window: '\(windowTitle)'")
             #endif
 
             // First, try to find and crawl AXWebArea elements (web content)
@@ -150,7 +153,7 @@ final class ElectronCrawler: ElementCrawler {
             allItems.append(contentsOf: webItems)
 
             #if DEBUG
-            print("[ElectronCrawler] Found \(webItems.count) web items")
+            logger.info("Found \(webItems.count) web items")
             #endif
 
             // Also crawl native chrome (toolbars, etc.) using standard approach
@@ -158,7 +161,7 @@ final class ElectronCrawler: ElementCrawler {
             allItems.append(contentsOf: nativeItems)
 
             #if DEBUG
-            print("[ElectronCrawler] Found \(nativeItems.count) native items")
+            logger.info("Found \(nativeItems.count) native items")
             #endif
         }
 
@@ -453,7 +456,7 @@ final class ElectronCrawler: ElementCrawler {
         )
 
         #if DEBUG
-        print("[ElectronCrawler] AXManualAccessibility set result: \(manualResult.rawValue)")
+        logger.debug("AXManualAccessibility set result: \(manualResult.rawValue)")
         #endif
 
         // Also try AXEnhancedUserInterface as fallback
@@ -464,7 +467,7 @@ final class ElectronCrawler: ElementCrawler {
         )
 
         #if DEBUG
-        print("[ElectronCrawler] AXEnhancedUserInterface set result: \(enhancedResult.rawValue)")
+        logger.debug("AXEnhancedUserInterface set result: \(enhancedResult.rawValue)")
         #endif
     }
 
@@ -478,7 +481,7 @@ final class ElectronCrawler: ElementCrawler {
         let webAreas = findWebAreas(in: element, depth: 0)
 
         #if DEBUG
-        print("[ElectronCrawler] Found \(webAreas.count) AXWebArea elements")
+        logger.debug("Found \(webAreas.count) AXWebArea elements")
         Self.roleCountsForDebug.removeAll()
         #endif
 
@@ -490,11 +493,11 @@ final class ElectronCrawler: ElementCrawler {
 
         #if DEBUG
         // Print role distribution summary
-        print("[ElectronCrawler] === Role Distribution Summary ===")
+        logger.debug("=== Role Distribution Summary ===")
         for (role, count) in Self.roleCountsForDebug.sorted(by: { $0.value > $1.value }) {
-            print("[ElectronCrawler]   \(role): \(count)")
+            logger.debug("  \(role): \(count)")
         }
-        print("[ElectronCrawler] ================================")
+        logger.debug("===============================")
         #endif
 
         return results
@@ -577,7 +580,7 @@ final class ElectronCrawler: ElementCrawler {
 
                 #if DEBUG
                 if depth <= 3 {
-                    print("[ElectronCrawler] Adding web item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
+                    logger.debug("Adding web item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
                 }
                 #endif
             }
@@ -639,7 +642,7 @@ final class ElectronCrawler: ElementCrawler {
                 itemCount += 1
 
                 #if DEBUG
-                print("[ElectronCrawler] Adding native item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
+                logger.debug("Adding native item: '\(title)' (role: \(role)) frame=\(frame.debugDescription)")
                 #endif
             }
 
@@ -976,7 +979,7 @@ final class ElectronCrawler: ElementCrawler {
         #if DEBUG
         if source != .axFrame {
             let role = getRole(from: element) ?? "unknown"
-            print("[ElectronCrawler] getFrame: source=\(source.rawValue) role=\(role)")
+            logger.debug("getFrame: source=\(source.rawValue) role=\(role)")
         }
         #endif
 
@@ -1021,7 +1024,7 @@ final class ElectronCrawler: ElementCrawler {
 
         #if DEBUG
         let role = getRole(from: element) ?? "unknown"
-        print("[ElectronCrawler] Native chrome frame fallback used (role: \(role)) parentFrame=\(parentFrame.debugDescription) estimated=\(estimated.debugDescription)")
+        logger.debug("Native chrome frame fallback used (role: \(role)) parentFrame=\(parentFrame.debugDescription) estimated=\(estimated.debugDescription)")
         #endif
 
         return estimated
@@ -1084,7 +1087,7 @@ final class ElectronCrawler: ElementCrawler {
                 result.append(item)
             } else {
                 #if DEBUG
-                print("[ElectronCrawler] Dedup by frame: Skipping '\(item.title)' (overlaps with existing)")
+                logger.debug("Dedup by frame: Skipping '\(item.title)' (overlaps with existing)")
                 #endif
             }
         }

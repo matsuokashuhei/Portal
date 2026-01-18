@@ -6,6 +6,9 @@
 //
 
 import Foundation
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ExcludedAppsConfiguration")
 
 /// Represents an application excluded from Portal's hotkey activation.
 struct ExcludedApp: Codable, Equatable, Identifiable {
@@ -41,7 +44,7 @@ struct ExcludedAppsConfiguration: Equatable {
             return ExcludedAppsConfiguration(excludedApps: excludedApps)
         } catch {
             #if DEBUG
-            print("[ExcludedAppsConfiguration] Failed to decode: \(error)")
+            logger.warning("Failed to decode: \(error)")
             #endif
             return .default
         }
@@ -55,7 +58,7 @@ struct ExcludedAppsConfiguration: Equatable {
             defaults.set(data, forKey: SettingsKey.excludedApps)
         } catch {
             #if DEBUG
-            print("[ExcludedAppsConfiguration] Failed to encode: \(error)")
+            logger.warning("Failed to encode: \(error)")
             #endif
         }
     }

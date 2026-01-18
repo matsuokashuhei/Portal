@@ -8,23 +8,29 @@
 import AppKit
 import ApplicationServices
 import CoreGraphics
+import Logging
+import Tracing
 
-// MARK: - CGEvent Extension
+private let logger = PortalLogger.make("Portal", category: "HintModeController")
+
+// MARK: - CGEvent Extensions
 
 extension CGEvent {
     /// Gets the characters from a keyboard event, ignoring modifiers.
     func keyboardEventCharactersIgnoringModifiers() -> String? {
         var length = 0
         keyboardGetUnicodeString(maxStringLength: 0, actualStringLength: &length, unicodeString: nil)
-
+        
         guard length > 0 else { return nil }
-
+        
         var chars = [UniChar](repeating: 0, count: length)
         keyboardGetUnicodeString(maxStringLength: length, actualStringLength: &length, unicodeString: &chars)
-
+        
         return String(utf16CodeUnits: chars, count: length)
     }
 }
+
+
 
 /// Controls the hint mode for keyboard navigation of UI elements.
 ///
@@ -35,8 +41,13 @@ extension CGEvent {
 /// - Executing the selected element
 @MainActor
 final class HintModeController {
+    //    private let metadataProvider = Logger.MetadataProvider {
+    //        return ["file": #file, "function": #function, "line": "\(#line)"]
+    //    }
+    //    private let logger = Logger(label: "Portal", metadataProvider: metadataProvider)
+    
     // MARK: - Singleton
-
+    
     /// The shared instance of the hint mode controller.
     ///
     /// This instance is used in production and is initialized with default factories.
@@ -44,237 +55,183 @@ final class HintModeController {
     /// to create a separate instance with custom (mock) factories. Test instances are independent
     /// of this shared instance and do not affect its state.
     static let shared = HintModeController()
-
+    
     // MARK: - State
-
+    
     /// Whether hint mode is currently active.
     /// Using nonisolated(unsafe) to allow read access from CGEventTap callbacks
     /// in other controllers (e.g., ScrollModeController). Write access is always
     /// performed on MainActor.
     nonisolated(unsafe) private(set) var isActive: Bool = false
-
+    
     /// The overlay windows displaying hint labels.
     private var overlayWindows: [HintOverlayWindow] = []
-
+    
     /// All hint labels being displayed.
     private var hints: [HintLabel] = []
-
+    
     /// The current input buffer for label matching.
     private var inputBuffer: String = ""
-
+    
     /// The target application being navigated.
     private var targetApp: NSRunningApplication?
-
+    
     /// The CGEventTap for consuming keyboard events during hint mode.
     /// Using nonisolated(unsafe) because this is accessed from the event tap callback
     /// which runs on a different thread, but is only modified on MainActor.
     nonisolated(unsafe) private var eventTap: CFMachPort?
-
+    
     /// The run loop source for the event tap.
     private var runLoopSource: CFRunLoopSource?
-
+    
     /// Fallback keyboard monitor when CGEventTap is not available.
     private var keyboardMonitor: Any?
-
+    
     /// Observer for application activation notifications.
     private var applicationActivationObserver: NSObjectProtocol?
-
+    
     /// The task for crawling UI elements (used for cancellation on ESC).
     private var crawlTask: Task<Void, Never>?
-
+    
     /// Index counter for generating hint labels progressively.
     private var labelIndex: Int = 0
-
+    
     // MARK: - Dependencies
-
+    
     /// Factory for creating crawlers based on application type.
-    private let crawlerFactory: CrawlerFactory
-
+//    private let crawlerFactory: CrawlerFactory
+    
     /// Factory for creating action executors.
     private let executorFactory: ExecutorFactory
-
+    
     // MARK: - Initialization
-
+    
     /// Creates a HintModeController with default factories.
     private init() {
-        self.crawlerFactory = CrawlerFactory()
+//        self.crawlerFactory = CrawlerFactory()
         self.executorFactory = ExecutorFactory()
     }
-
-    /// Creates a HintModeController with custom factories (for testing).
-    ///
-    /// Use this initializer to create a test instance with mock dependencies.
-    /// The test instance is completely independent of `shared` and allows
-    /// full control over the crawler and executor behavior.
-    ///
-    /// Example:
-    /// ```swift
-    /// let mockCrawlerFactory = CrawlerFactory(crawlers: [mockCrawler], defaultCrawler: mockDefault)
-    /// let mockExecutorFactory = ExecutorFactory(executor: mockExecutor)
-    /// let controller = HintModeController(crawlerFactory: mockCrawlerFactory, executorFactory: mockExecutorFactory)
-    /// ```
-    ///
-    /// - Parameters:
-    ///   - crawlerFactory: Factory for creating crawlers.
-    ///   - executorFactory: Factory for creating executors.
-    init(crawlerFactory: CrawlerFactory, executorFactory: ExecutorFactory) {
-        self.crawlerFactory = crawlerFactory
-        self.executorFactory = executorFactory
-    }
-
+    
     // MARK: - Public Methods
-
+    
     /// Activates hint mode for the specified application.
     ///
     /// - Parameter app: The application to navigate. If nil, uses the frontmost application.
-    func activate(for app: NSRunningApplication? = nil) {
-        guard !isActive else {
-            #if DEBUG
-            print("[HintModeController] Already active")
-            #endif
-            return
-        }
-
-        // Get target application (excluding Portal itself)
-        targetApp = app ?? getFrontmostApp()
-        guard let targetApp else {
-            #if DEBUG
-            print("[HintModeController] No target application")
-            #endif
-            return
-        }
-
-        #if DEBUG
-        print("[HintModeController] Activating for \(targetApp.localizedName ?? "unknown")")
-        #endif
-
-        // Start the activation process
+    func activate(for app: NSRunningApplication) {
         Task {
-            await performActivation(for: targetApp)
+            await performActivation(for: app)
         }
     }
-
+    
     /// Deactivates hint mode and dismisses the overlay.
     func deactivate() {
         guard isActive else { return }
-
-        #if DEBUG
-        print("[HintModeController] Deactivating")
-        #endif
-
+        
+        logger.info("Deactivating")
+        
         // Cancel the crawl task if it's still running
         crawlTask?.cancel()
         crawlTask = nil
-
+        
         // Stop keyboard monitoring
         stopKeyboardMonitor()
-
+        
         // Stop observing application activation
         stopApplicationActivationObserver()
-
+        
         // Dismiss overlay windows
-        #if DEBUG
-        print("[HintModeController] Dismissing \(overlayWindows.count) overlay windows")
-        #endif
+        logger.debug("Dismissing \(overlayWindows.count) overlay windows")
         for window in overlayWindows {
             window.dismiss()
         }
         overlayWindows.removeAll()
-        #if DEBUG
-        print("[HintModeController] Overlay windows cleared")
-        #endif
-
+        logger.debug("Overlay windows cleared")
+        
         // Reset state
         hints.removeAll()
         inputBuffer = ""
         targetApp = nil
         labelIndex = 0
         isActive = false
-
+        
         // Post notification
         NotificationCenter.default.post(name: .hintModeDidDeactivate, object: nil)
     }
-
+    
     // MARK: - Private Methods
-
+    
     /// Performs the async activation process with progressive rendering.
     ///
     /// This method uses AsyncStream to crawl UI elements and display hint labels
     /// progressively as they are discovered, improving perceived responsiveness.
     private func performActivation(for app: NSRunningApplication) async {
         // Get the appropriate crawler for this application
-        let crawler = crawlerFactory.crawler(for: app)
-
+        let crawler = CrawlerFactory.crawler(for: app)
+        
+        logger.debug("\(#function) - app: \(app.bundleIdentifier ?? "unknown"), crawler: \(crawler)")
+        
         // Get coordinate system from the crawler
         let coordinateSystem = crawler.coordinateSystem
-
+        
         // Get window frames for filtering (includes main window, popups, dialogs)
         let windowFrames = AccessibilityHelper.getAllWindowFrames(app)
-        #if DEBUG
-        print("[HintModeController] Found \(windowFrames.count) window frames")
-        #endif
-
+        logger.debug("Found \(windowFrames.count) window frames")
+        
         // Create empty overlay windows and show them immediately
         overlayWindows = HintOverlayWindow.createEmptyForAllScreens()
         guard !overlayWindows.isEmpty else {
-            #if DEBUG
-            print("[HintModeController] No screens available for overlay")
-            #endif
+            logger.warning("No screens available for overlay")
             return
         }
         for window in overlayWindows {
             window.show()
         }
-
+        
         // Start keyboard monitoring early so user can input during crawling
         startKeyboardMonitor()
-
+        
         // Start observing application activation
         startApplicationActivationObserver()
-
+        
         isActive = true
-
+        
         // Post notification
         NotificationCenter.default.post(name: .hintModeDidActivate, object: nil)
-
+        
         // Reset label index for progressive generation
         labelIndex = 0
-
+        
         // Track whether we've detected menu items (for menu-only mode)
         var isMenuOnlyMode = false
         var hasDetectedFirstItem = false
-
-        #if DEBUG
-        print("[HintModeController] Starting progressive crawl")
-        #endif
-
+        
+        logger.info("Starting progressive crawl")
+        
         // Start crawling with progressive rendering
         crawlTask = Task {
             do {
                 for try await target in crawler.crawlElementsStream(app) {
                     // Check for cancellation
                     if Task.isCancelled { break }
-
+                    
                     // Get role for filtering
                     let role = AccessibilityHelper.getRole(target.axElement)
                     let isMenuItem = role == "AXMenuItem"
-
+                    
                     // Menu-only mode detection: if first item is a menu item, show only menu items
                     if !hasDetectedFirstItem {
                         hasDetectedFirstItem = true
                         if isMenuItem {
                             isMenuOnlyMode = true
-                            #if DEBUG
-                            print("[HintModeController] Menu-only mode activated")
-                            #endif
+                            logger.info("Menu-only mode activated")
                         }
                     }
-
+                    
                     // Skip non-menu items if in menu-only mode
                     if isMenuOnlyMode && !isMenuItem {
                         continue
                     }
-
+                    
                     // Get frame (use cached for Electron, otherwise fetch)
                     let frame: CGRect
                     if let cached = target.cachedFrame {
@@ -284,23 +241,23 @@ final class HintModeController {
                     } else {
                         continue // Skip items without valid frame
                     }
-
+                    
                     // Validate frame
                     guard frame != .zero, frame.width > 0 else { continue }
-
+                    
                     // Check window bounds (menu items can extend beyond window)
                     if !isMenuItem && !windowFrames.isEmpty {
                         let isInAnyWindow = windowFrames.contains { windowFrame in
                             windowFrame.contains(frame) || windowFrame.intersects(frame)
                         }
                         guard isInAnyWindow else { continue }
-
+                        
                         // Check scroll visibility for non-Electron items
                         if target.cachedFrame == nil {
                             guard AccessibilityHelper.isVisibleInScrollContainers(target.axElement) else { continue }
                         }
                     }
-
+                    
                     // Adjust frame if height is zero
                     let adjustedFrame: CGRect
                     if frame.height <= 0 {
@@ -308,49 +265,36 @@ final class HintModeController {
                     } else {
                         adjustedFrame = frame
                     }
-
+                    
                     // Generate label progressively
                     let label = HintLabelGenerator.generateLabel(at: labelIndex)
                     labelIndex += 1
-
+                    
                     let hintLabel = HintLabel(
                         label: label,
                         frame: adjustedFrame,
                         target: target,
                         coordinateSystem: coordinateSystem
                     )
-
+                    
                     // Add to our hints array
                     hints.append(hintLabel)
-
+                    
                     // Add to overlay windows (they will filter by screen)
                     for window in overlayWindows {
                         window.addHint(hintLabel)
                     }
                 }
             } catch {
-                #if DEBUG
-                print("[HintModeController] Crawl error: \(error)")
-                #endif
+                logger.warning("Crawl error: \(error)")
             }
-
-            #if DEBUG
-            print("[HintModeController] Progressive crawl completed, total hints: \(hints.count)")
-            #endif
+            
+            logger.info("Progressive crawl completed, total hints: \(hints.count)")
         }
     }
-
-    /// Gets the frontmost application excluding Portal.
-    private func getFrontmostApp() -> NSRunningApplication? {
-        guard let frontmost = NSWorkspace.shared.frontmostApplication,
-              frontmost.bundleIdentifier != Bundle.main.bundleIdentifier else {
-            return nil
-        }
-        return frontmost
-    }
-
+    
     // MARK: - Keyboard Handling
-
+    
     /// Starts monitoring keyboard events using CGEventTap.
     ///
     /// CGEventTap is used instead of `addGlobalMonitorForEvents` because:
@@ -359,10 +303,10 @@ final class HintModeController {
     /// - CGEventTap can intercept and consume events by returning nil from the callback
     private func startKeyboardMonitor() {
         let eventMask = (1 << CGEventType.keyDown.rawValue)
-
+        
         // Pass self as userInfo to access in the callback
         let userInfo = Unmanaged.passUnretained(self).toOpaque()
-
+        
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
@@ -372,7 +316,7 @@ final class HintModeController {
                 guard let userInfo else {
                     return Unmanaged.passRetained(event)
                 }
-
+                
                 // Handle tap disabled event (system may disable the tap)
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                     // Re-enable the tap if it was disabled
@@ -382,35 +326,33 @@ final class HintModeController {
                     }
                     return Unmanaged.passRetained(event)
                 }
-
+                
                 // Get the controller from userInfo
                 let controller = Unmanaged<HintModeController>.fromOpaque(userInfo).takeUnretainedValue()
-
+                
                 // Process the key event on MainActor
                 // Note: We process synchronously here to determine whether to consume the event
                 let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
                 let characters = event.keyboardEventCharactersIgnoringModifiers()
-
+                
                 // Dispatch to MainActor for state updates
                 Task { @MainActor in
                     controller.handleKeyEvent(keyCode: keyCode, characters: characters)
                 }
-
+                
                 // Consume the event (return nil) to prevent it from reaching the target app
                 // ESC (53), Backspace (51), and letter keys are all consumed during hint mode
                 let shouldConsume = keyCode == 53 || keyCode == 51 || (characters?.first?.isLetter == true)
                 if shouldConsume {
                     return nil
                 }
-
+                
                 // Pass through other events
                 return Unmanaged.passRetained(event)
             },
             userInfo: userInfo
         ) else {
-            #if DEBUG
-            print("[HintModeController] Failed to create CGEventTap, falling back to global monitor")
-            #endif
+            logger.warning("Failed to create CGEventTap, falling back to global monitor")
             // Fallback to global monitor (events won't be consumed)
             keyboardMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 Task { @MainActor in
@@ -419,19 +361,17 @@ final class HintModeController {
             }
             return
         }
-
+        
         eventTap = tap
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         if let source = runLoopSource {
             CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         }
         CGEvent.tapEnable(tap: tap, enable: true)
-
-        #if DEBUG
-        print("[HintModeController] CGEventTap started successfully")
-        #endif
+        
+        logger.debug("CGEventTap started successfully")
     }
-
+    
     /// Stops monitoring keyboard events.
     private func stopKeyboardMonitor() {
         // Stop CGEventTap
@@ -443,25 +383,23 @@ final class HintModeController {
             CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
             runLoopSource = nil
         }
-
+        
         // Stop fallback monitor if used
         if let monitor = keyboardMonitor {
             NSEvent.removeMonitor(monitor)
             keyboardMonitor = nil
         }
-
-        #if DEBUG
-        print("[HintModeController] Keyboard monitor stopped")
-        #endif
+        
+        logger.debug("Keyboard monitor stopped")
     }
-
+    
     /// Handles a key down event from NSEvent (fallback monitor).
     ///
     /// - Parameter event: The key event.
     private func handleKeyDown(_ event: NSEvent) {
         handleKeyEvent(keyCode: Int64(event.keyCode), characters: event.charactersIgnoringModifiers)
     }
-
+    
     /// Handles a key event from CGEventTap or NSEvent.
     ///
     /// - Parameters:
@@ -473,7 +411,7 @@ final class HintModeController {
             deactivate()
             return
         }
-
+        
         // Backspace - clear input
         if keyCode == 51 {
             if !inputBuffer.isEmpty {
@@ -482,7 +420,7 @@ final class HintModeController {
             }
             return
         }
-
+        
         // Letter keys (A-Z)
         guard let characters = characters?.uppercased(),
               characters.count == 1,
@@ -490,14 +428,14 @@ final class HintModeController {
               char.isLetter else {
             return
         }
-
+        
         // Add to input buffer
         inputBuffer.append(char)
-
+        
         // Check for match
         processInput()
     }
-
+    
     /// Processes the current input to find matches.
     ///
     /// Uses Vimium-style matching: only executes when the input uniquely identifies
@@ -506,66 +444,56 @@ final class HintModeController {
     private func processInput() {
         // Filter hints that match the current input
         let filtered = HintLabelGenerator.filterHints(hints, by: inputBuffer)
-
+        
         // No matches - reset input
         if filtered.isEmpty {
-            #if DEBUG
-            print("[HintModeController] No matches for '\(inputBuffer)', resetting")
-            #endif
+            logger.debug("No matches for '\(inputBuffer)', resetting")
             inputBuffer = ""
             updateOverlay()
             return
         }
-
+        
         // Exactly one match - execute
         if filtered.count == 1 {
             executeHint(filtered[0])
             return
         }
-
+        
         // Multiple matches - update overlay and wait for more input
-        #if DEBUG
-        print("[HintModeController] Multiple matches (\(filtered.count)) for '\(inputBuffer)', waiting for more input")
-        #endif
+        logger.debug("Multiple matches (\(filtered.count)) for '\(inputBuffer)', waiting for more input")
         updateOverlay()
     }
-
+    
     /// Updates the overlay windows with the current input.
     private func updateOverlay() {
         for window in overlayWindows {
             window.updateVisibleHints(for: inputBuffer)
         }
     }
-
+    
     /// Executes the action for the selected hint.
     ///
     /// - Parameter hint: The hint to execute.
     private func executeHint(_ hint: HintLabel) {
-        #if DEBUG
-        print("[HintModeController] Executing hint '\(hint.label)' for '\(hint.target.title)'")
-        #endif
-
+        logger.info("Executing hint '\(hint.label)' for '\(hint.target.title)'")
+        
         // Get executor based on target type and execute the action
         let executor = executorFactory.executor(for: hint.target)
         let result = executor.execute(hint.target)
-
+        
         switch result {
         case .success:
-            #if DEBUG
-            print("[HintModeController] Execution successful")
-            #endif
+            logger.info("Execution successful")
         case .failure(let error):
-            #if DEBUG
-            print("[HintModeController] Execution failed: \(error)")
-            #endif
+            logger.warning("Execution failed: \(error)")
         }
-
+        
         // Deactivate after execution (success or failure)
         deactivate()
     }
-
+    
     // MARK: - Application Activation Observation
-
+    
     /// Starts observing application activation to auto-deactivate hint mode when the target app is deactivated.
     private func startApplicationActivationObserver() {
         // Note: NSWorkspace notifications are posted to NSWorkspace.shared.notificationCenter,
@@ -576,26 +504,24 @@ final class HintModeController {
             queue: .main
         ) { [weak self] notification in
             guard let self, self.isActive else { return }
-
+            
             // Get the newly activated application
             guard let userInfo = notification.userInfo,
                   let activatedApp = userInfo[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else {
                 return
             }
-
+            
             // Ensure we have a valid target application before comparing
             guard let targetApp = self.targetApp else { return }
-
+            
             // If the activated app is different from our target, deactivate hint mode
             if activatedApp.processIdentifier != targetApp.processIdentifier {
-                #if DEBUG
-                print("[HintModeController] App switched to \(activatedApp.localizedName ?? "unknown"), deactivating")
-                #endif
+                logger.info("App switched to \(activatedApp.localizedName ?? "unknown"), deactivating")
                 self.deactivate()
             }
         }
     }
-
+    
     /// Stops observing application activation.
     private func stopApplicationActivationObserver() {
         if let observer = applicationActivationObserver {

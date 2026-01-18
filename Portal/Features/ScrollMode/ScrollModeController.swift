@@ -8,6 +8,9 @@
 import AppKit
 import ApplicationServices
 import CoreGraphics
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ScrollModeController")
 
 /// Controls Vimium-style keyboard scrolling.
 ///
@@ -58,7 +61,7 @@ final class ScrollModeController {
     func start() {
         guard !isRunning else {
             #if DEBUG
-            print("[ScrollModeController] Already running")
+            logger.debug("Already running")
             #endif
             return
         }
@@ -67,7 +70,7 @@ final class ScrollModeController {
         isRunning = true
 
         #if DEBUG
-        print("[ScrollModeController] Started")
+        logger.info("Started")
         #endif
     }
 
@@ -81,7 +84,7 @@ final class ScrollModeController {
         isRunning = false
 
         #if DEBUG
-        print("[ScrollModeController] Stopped")
+        logger.info("Stopped")
         #endif
     }
 
@@ -138,7 +141,7 @@ final class ScrollModeController {
             userInfo: userInfo
         ) else {
             #if DEBUG
-            print("[ScrollModeController] Failed to create CGEventTap")
+            logger.warning("Failed to create CGEventTap")
             #endif
             return
         }
@@ -151,7 +154,7 @@ final class ScrollModeController {
         CGEvent.tapEnable(tap: tap, enable: true)
 
         #if DEBUG
-        print("[ScrollModeController] CGEventTap started successfully")
+        logger.debug("CGEventTap started successfully")
         #endif
     }
 
@@ -167,7 +170,7 @@ final class ScrollModeController {
         }
 
         #if DEBUG
-        print("[ScrollModeController] CGEventTap stopped")
+        logger.debug("CGEventTap stopped")
         #endif
     }
 

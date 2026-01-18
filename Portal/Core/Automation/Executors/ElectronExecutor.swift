@@ -6,6 +6,9 @@
 //
 
 import ApplicationServices
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ElectronExecutor")
 
 /// Executor for Electron-based applications (Slack, VS Code, Discord, etc.).
 ///
@@ -53,12 +56,12 @@ final class ElectronExecutor: ActionExecutor {
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
         #if DEBUG
-        print("[ElectronExecutor] execute: Starting execution for '\(target.title)'")
+        logger.debug("execute: Starting execution for '\(target.title)'")
         #endif
 
         guard target.isEnabled else {
             #if DEBUG
-            print("[ElectronExecutor] execute: Target is disabled")
+            logger.debug("execute: Target is disabled")
             #endif
             return .failure(.targetDisabled)
         }
@@ -75,22 +78,22 @@ final class ElectronExecutor: ActionExecutor {
 
         if !elementIsValid {
             #if DEBUG
-            print("[ElectronExecutor] execute: Element validation failed")
+            logger.debug("execute: Element validation failed")
             #endif
             // For Electron apps, AXUIElement may become invalid but we have cachedFrame.
             // Try mouse click as fallback when we have a cached frame.
             if let cachedFrame = target.cachedFrame {
                 #if DEBUG
-                print("[ElectronExecutor] execute: Trying mouse click with cachedFrame: \(cachedFrame)")
+                logger.debug("execute: Trying mouse click with cachedFrame: \(cachedFrame)")
                 #endif
                 if performMouseClickAtFrame(cachedFrame) {
                     #if DEBUG
-                    print("[ElectronExecutor] execute: Mouse click with cachedFrame succeeded")
+                    logger.debug("execute: Mouse click with cachedFrame succeeded")
                     #endif
                     return .success(())
                 }
                 #if DEBUG
-                print("[ElectronExecutor] execute: Mouse click with cachedFrame failed")
+                logger.debug("execute: Mouse click with cachedFrame failed")
                 #endif
             }
             return .failure(.elementInvalid)
@@ -102,7 +105,7 @@ final class ElectronExecutor: ActionExecutor {
         // Try setting AXSelected attribute first for list/outline rows.
         if let role = role, Self.rolesSupportingSelectedAttribute.contains(role) {
             #if DEBUG
-            print("[ElectronExecutor] execute: Trying AXSelected for role '\(role)'")
+            logger.debug("execute: Trying AXSelected for role '\(role)'")
             #endif
             let selectResult = AXUIElementSetAttributeValue(
                 target.axElement,
@@ -110,7 +113,7 @@ final class ElectronExecutor: ActionExecutor {
                 kCFBooleanTrue
             )
             #if DEBUG
-            print("[ElectronExecutor] execute: AXSelected result: \(selectResult.rawValue)")
+            logger.debug("execute: AXSelected result: \(selectResult.rawValue)")
             #endif
 
             // AXSelected may return success but not actually work in Electron apps
@@ -157,7 +160,7 @@ final class ElectronExecutor: ActionExecutor {
         // Finally try cached frame
         if let cachedFrame = target.cachedFrame {
             #if DEBUG
-            print("[ElectronExecutor] execute: Trying final cachedFrame fallback")
+            logger.debug("execute: Trying final cachedFrame fallback")
             #endif
             if performMouseClickAtFrame(cachedFrame) {
                 return .success(())
@@ -178,7 +181,7 @@ final class ElectronExecutor: ActionExecutor {
     private func performAction(_ element: AXUIElement, action: String) -> Bool {
         let result = AXUIElementPerformAction(element, action as CFString)
         #if DEBUG
-        print("[ElectronExecutor] performAction '\(action)': Result \(result.rawValue)")
+        logger.debug("performAction '\(action)': Result \(result.rawValue)")
         #endif
         return result == .success
     }
@@ -192,13 +195,13 @@ final class ElectronExecutor: ActionExecutor {
         )
 
         #if DEBUG
-        print("[ElectronExecutor] performMouseClickAtFrame: Clicking at \(clickPoint) for frame \(frame)")
+        logger.debug("performMouseClickAtFrame: Clicking at \(clickPoint) for frame \(frame)")
         #endif
 
         guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
               let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
             #if DEBUG
-            print("[ElectronExecutor] performMouseClickAtFrame: Failed to create mouse events")
+            logger.warning("performMouseClickAtFrame: Failed to create mouse events")
             #endif
             return false
         }
@@ -217,7 +220,7 @@ final class ElectronExecutor: ActionExecutor {
         guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
               AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success else {
             #if DEBUG
-            print("[ElectronExecutor] performMouseClick: Failed to get position/size")
+            logger.warning("performMouseClick: Failed to get position/size")
             #endif
             return false
         }
@@ -238,13 +241,13 @@ final class ElectronExecutor: ActionExecutor {
         )
 
         #if DEBUG
-        print("[ElectronExecutor] performMouseClick: Clicking at \(clickPoint)")
+        logger.debug("performMouseClick: Clicking at \(clickPoint)")
         #endif
 
         guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
               let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
             #if DEBUG
-            print("[ElectronExecutor] performMouseClick: Failed to create mouse events")
+            logger.warning("performMouseClick: Failed to create mouse events")
             #endif
             return false
         }

@@ -7,6 +7,9 @@
 
 import ApplicationServices
 import Foundation
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "ActionExecutor")
 
 /// Protocol for executing actions on hint targets.
 ///
@@ -159,7 +162,7 @@ extension ActionExecutor {
         titleMatchMode: TitleMatchMode = .exact
     ) -> Bool {
         #if DEBUG
-        print("[ActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
+        logger.debug("isElementValid: Checking element for '\(expectedTitle)'")
         #endif
 
         // Verify role matches expected type first
@@ -167,18 +170,18 @@ extension ActionExecutor {
         let roleResult = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
         guard roleResult == .success, let role = roleRef as? String else {
             #if DEBUG
-            print("[ActionExecutor] isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
+            logger.warning("isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
             #endif
             return false
         }
 
         #if DEBUG
-        print("[ActionExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
+        logger.debug("isElementValid: Got role '\(role)' for '\(expectedTitle)'")
         #endif
 
         guard validRoles.contains(role) else {
             #if DEBUG
-            print("[ActionExecutor] isElementValid: Role '\(role)' not in validRoles \(validRoles)")
+            logger.debug("isElementValid: Role '\(role)' not in validRoles \(validRoles)")
             #endif
             return false
         }
@@ -271,7 +274,7 @@ extension ActionExecutor {
             )
             if !matches {
                 #if DEBUG
-                print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles) (mode: \(titleMatchMode))")
+                logger.debug("isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles) (mode: \(titleMatchMode))")
                 #endif
             }
         }

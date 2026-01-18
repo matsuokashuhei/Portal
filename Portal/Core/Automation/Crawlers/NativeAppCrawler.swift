@@ -8,6 +8,9 @@
 
 import ApplicationServices
 import AppKit
+import Logging
+
+private let logger = PortalLogger.make("Portal", category: "NativeAppCrawler")
 
 /// Error types for native app crawling operations.
 enum NativeAppCrawlerError: Error, LocalizedError {
@@ -155,7 +158,7 @@ final class NativeAppCrawler: ElementCrawler {
             let controlButtons = getWindowControlButtons(from: windowElement)
             #if DEBUG
             if !controlButtons.isEmpty {
-                print("[NativeAppCrawler] Found \(controlButtons.count) window control buttons")
+                logger.debug("Found \(controlButtons.count) window control buttons")
             }
             #endif
             allItems.append(contentsOf: controlButtons)
@@ -163,7 +166,7 @@ final class NativeAppCrawler: ElementCrawler {
 
             let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
             #if DEBUG
-            print("[NativeAppCrawler] Crawling window: '\(windowTitle)'")
+            logger.debug("Crawling window: '\(windowTitle)'")
             #endif
             allItems.append(contentsOf: crawlWindowInElement(windowElement, path: [windowTitle], depth: 0, itemCount: &itemCount))
         }
@@ -172,16 +175,16 @@ final class NativeAppCrawler: ElementCrawler {
         // In that case, detect it via the system-wide focused element and crawl the AXMenu directly.
         if let openMenu = getOpenMenuForApp(pid: pid) {
             #if DEBUG
-            print("[NativeAppCrawler] Detected open AXMenu via SystemWide for pid=\(pid)")
+            logger.debug("Detected open AXMenu via SystemWide for pid=\(pid)")
             #endif
             let menuItems = crawlOpenMenu(openMenu, itemCount: &itemCount)
             #if DEBUG
-            print("[NativeAppCrawler] Crawled \(menuItems.count) menu items from open AXMenu")
+            logger.debug("Crawled \(menuItems.count) menu items from open AXMenu")
             #endif
             allItems.append(contentsOf: menuItems)
         } else {
             #if DEBUG
-            print("[NativeAppCrawler] No open AXMenu detected via SystemWide for pid=\(pid)")
+            logger.debug("No open AXMenu detected via SystemWide for pid=\(pid)")
             #endif
         }
 
@@ -705,7 +708,7 @@ final class NativeAppCrawler: ElementCrawler {
             AXUIElementGetPid(element, &elementPid)
             #if DEBUG
             let role = getRole(from: element) ?? "unknown"
-            print("[NativeAppCrawler] SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
+            logger.debug("SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
             #endif
 
             if let role = getRole(from: element), role == "AXMenu" {
@@ -714,7 +717,7 @@ final class NativeAppCrawler: ElementCrawler {
                 var menuPid: pid_t = 0
                 AXUIElementGetPid(element, &menuPid)
                 #if DEBUG
-                print("[NativeAppCrawler] Found AXMenu in focus chain (menuPid=\(menuPid), targetPid=\(pid))")
+                logger.debug("Found AXMenu in focus chain (menuPid=\(menuPid), targetPid=\(pid))")
                 #endif
                 return element
             }
@@ -876,7 +879,7 @@ final class NativeAppCrawler: ElementCrawler {
             // Log all elements at depth 1-2 to see contents
             if depth <= 2 {
                 let pathStr = path.joined(separator: " > ")
-                print("[NativeAppCrawler] depth=\(depth) role=\(role) title='\(title ?? "")' desc='\(desc ?? "")' help='\(help ?? "")' path=\(pathStr)")
+                logger.debug("depth=\(depth) role=\(role) title='\(title ?? "")' desc='\(desc ?? "")' help='\(help ?? "")' path=\(pathStr)")
             }
             #endif
 
@@ -911,13 +914,13 @@ final class NativeAppCrawler: ElementCrawler {
                     // These have AXPress action but don't actually do anything
                     if isSectionHeader(child, role: role) {
                         #if DEBUG
-                        print("[NativeAppCrawler] Skipping section header: '\(itemTitle)' (role: \(role))")
+                        logger.debug("Skipping section header: '\(itemTitle)' (role: \(role))")
                         #endif
                         continue
                     }
 
                     #if DEBUG
-                    print("[NativeAppCrawler] Adding item: '\(itemTitle)' (role: \(role))")
+                    logger.debug("Adding item: '\(itemTitle)' (role: \(role))")
                     #endif
 
                     let isEnabled = getIsEnabled(from: child)
@@ -946,7 +949,7 @@ final class NativeAppCrawler: ElementCrawler {
 
             #if DEBUG
             if (role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox"), hasChildElements {
-                print("[NativeAppCrawler] Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
+                logger.debug("Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
             }
             #endif
 
@@ -1042,7 +1045,7 @@ final class NativeAppCrawler: ElementCrawler {
                         &disclosingRef
                     ) == .success, let isDisclosing = disclosingRef as? Bool {
                         #if DEBUG
-                        print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
+                        logger.debug("isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
                         #endif
                         // Only skip if actually expanded (showing children)
                         if isDisclosing {
@@ -1055,19 +1058,19 @@ final class NativeAppCrawler: ElementCrawler {
                     // Also check for disclosure triangle child element
                     if hasDisclosureTriangle(element) {
                         #if DEBUG
-                        print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle → section header")
+                        logger.debug("isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle -> section header")
                         #endif
                         return true
                     }
 
                     #if DEBUG
-                    print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level 0 without disclosure → navigation item")
+                    logger.debug("isSectionHeader: '\(elementTitle)' level 0 without disclosure -> navigation item")
                     #endif
                     return false
                 }
 
                 #if DEBUG
-                print("[NativeAppCrawler] isSectionHeader: '\(elementTitle)' level \(level) → not a section header")
+                logger.debug("isSectionHeader: '\(elementTitle)' level \(level) -> not a section header")
                 #endif
             }
             return false

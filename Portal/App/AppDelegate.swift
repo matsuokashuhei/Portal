@@ -7,27 +7,33 @@
 
 import AppKit
 import SwiftUI
+import Logging
+
+//private let logger = PortalLogger.make("Portal", category: "AppDelegate")
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    let logger = Logger(label: "AppDelegate");
+    
     private var statusItem: NSStatusItem?
     private var hintModeHotkeyManager: HotkeyManager?
     private var settingsWindow: NSWindow?
     private var settingsWindowObserver: ObserverToken?
     private let notificationBindings = AppNotificationBindings()
-
+    
     private var permissionMenuItem: NSMenuItem?
     private var permissionSeparator: NSMenuItem?
-
+    
     private var lastPermissionRequestTime: Date?
     private let permissionRequestCooldown: TimeInterval = 5.0
     private var permissionCheckTimer: Timer?
     private var wasPermissionGranted = false
     private var isCheckingPermission = false
     private var isRecreatingHotkeyManager = false
-
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
+//        PortalLogger.configure()
         setupStatusItem()
-
+        
         // Skip accessibility check in test mode to avoid permission dialogs
         if !TestConfiguration.shouldSkipAccessibilityCheck {
             checkAccessibilityPermission()
@@ -36,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 startPermissionCheckTimer()
             }
         }
-
+        
         wasPermissionGranted = AccessibilityService.isGranted
         setupHintModeHotkeyManager()
         setupScrollMode()
@@ -45,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.handleAppNotificationEvent(event)
         }
     }
-
+    
     private func setupScrollMode() {
         // Start scroll mode if accessibility permission is granted
         // If not granted, it will be started when permission is granted
@@ -53,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             ScrollModeController.shared.start()
         }
     }
-
+    
     private func handleAppNotificationEvent(_ event: AppNotificationBindings.Event) {
         switch event {
         case .applicationDidBecomeActive:
@@ -66,13 +72,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             openSettings()
         }
     }
-
+    
     private func applicationDidBecomeActive() {
         dispatchPrecondition(condition: .onQueue(.main))
         checkAndHandlePermissionChange()
         updatePermissionMenuItemIfNeeded()
     }
-
+    
     private func startPermissionCheckTimer() {
         // Poll every 1 second to detect permission changes
         // Timer.scheduledTimer runs on main run loop, callback is guaranteed to be on main thread
@@ -80,20 +86,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.checkAndHandlePermissionChange()
         }
     }
-
+    
     private func stopPermissionCheckTimer() {
         permissionCheckTimer?.invalidate()
         permissionCheckTimer = nil
     }
-
+    
     private func checkAndHandlePermissionChange() {
         // Prevent concurrent execution from timer and applicationDidBecomeActive
         guard !isCheckingPermission else { return }
         isCheckingPermission = true
         defer { isCheckingPermission = false }
-
+        
         let isNowGranted = AccessibilityService.isGranted
-
+        
         // Always stop timer when permission is granted to ensure it doesn't run indefinitely
         if isNowGranted {
             stopPermissionCheckTimer()
@@ -103,20 +109,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 updatePermissionMenuItemIfNeeded()
             }
         }
-
+        
         // Only update state when it actually changes
         if wasPermissionGranted != isNowGranted {
             wasPermissionGranted = isNowGranted
         }
     }
-
+    
     private func restartHotkeyManager() {
         // stop() must be called before start() because start() is not idempotent
         // (it adds monitors without checking if they already exist)
         hintModeHotkeyManager?.stop()
         hintModeHotkeyManager?.start()
     }
-
+    
     private func checkAccessibilityPermission() {
         if !AccessibilityService.isGranted {
             AccessibilityService.requestPermission()
@@ -124,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         updatePermissionMenuItemIfNeeded()
     }
-
+    
     private func setupHintModeHotkeyManager() {
         // Load hint mode hotkey configuration from UserDefaults
         let config = HotkeyConfiguration.load()
@@ -133,7 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         hintModeHotkeyManager?.start()
     }
-
+    
     private func hotkeyConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
@@ -143,14 +149,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard !self.isRecreatingHotkeyManager else { return }
             self.isRecreatingHotkeyManager = true
             defer { self.isRecreatingHotkeyManager = false }
-
+            
             // Recreate HintModeHotkeyManager with new configuration
             self.hintModeHotkeyManager?.stop()
             self.hintModeHotkeyManager = nil
             self.setupHintModeHotkeyManager()
         }
     }
-
+    
     private func excludedAppsConfigurationDidChange() {
         // Ensure we're on the main thread since hotkeyManager manages
         // UI-related event monitors and run loop sources
@@ -160,57 +166,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard !self.isRecreatingHotkeyManager else { return }
             self.isRecreatingHotkeyManager = true
             defer { self.isRecreatingHotkeyManager = false }
-
+            
             // Recreate HintModeHotkeyManager with new excluded apps configuration
             self.hintModeHotkeyManager?.stop()
             self.hintModeHotkeyManager = nil
             self.setupHintModeHotkeyManager()
         }
     }
-
+    
     private func handleHintModeHotkeyPressed() {
-        // Toggle hint mode if already active
-        guard !HintModeController.shared.isActive else {
-            HintModeController.shared.deactivate()
+        guard AccessibilityService.isGranted else {
+            NSSound.beep()
             return
         }
-
-        if AccessibilityService.isGranted {
-            // Capture the frontmost app BEFORE activating hint mode
-            let frontmostApp = NSWorkspace.shared.frontmostApplication
-            let targetApp: NSRunningApplication?
-            if let app = frontmostApp,
-               app.bundleIdentifier != Bundle.main.bundleIdentifier {
-                targetApp = app
-            } else {
-                targetApp = nil
-            }
-
-            // Ignore when no active app
-            guard let targetApp else { return }
-
-            HintModeController.shared.activate(for: targetApp)
-        } else {
-            // Beep if permission not granted
-            NSSound.beep()
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
+              frontmostApp.bundleIdentifier != Bundle.main.bundleIdentifier
+        else {
+            return
         }
+        if HintModeController.shared.isActive {
+            HintModeController.shared.deactivate()
+        }
+        HintModeController.shared.activate(for: frontmostApp)
     }
-
+    
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
+        
         // Initialize icon based on current permission state to avoid flicker
         updateStatusBarIcon(isGranted: AccessibilityService.isGranted)
-
+        
         // Add accessibility identifier to status item button
         if let button = statusItem?.button {
             button.setAccessibilityIdentifier("PortalStatusBarButton")
         }
-
+        
         let menu = NSMenu()
         menu.delegate = self
         menu.setAccessibilityIdentifier("PortalStatusBarMenu")
-
+        
         let permissionItem = NSMenuItem(
             title: "Grant Accessibility Permission...",
             action: #selector(openAccessibilityPermissions),
@@ -221,57 +215,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         permissionItem.setAccessibilityIdentifier("GrantPermissionMenuItem")
         menu.addItem(permissionItem)
         self.permissionMenuItem = permissionItem
-
+        
         let separator = NSMenuItem.separator()
         separator.isHidden = AccessibilityService.isGranted
         menu.addItem(separator)
         self.permissionSeparator = separator
-
+        
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.setAccessibilityIdentifier("SettingsMenuItem")
         menu.addItem(settingsItem)
-
+        
         menu.addItem(NSMenuItem.separator())
-
+        
         let quitItem = NSMenuItem(title: "Quit Portal", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         quitItem.setAccessibilityIdentifier("QuitMenuItem")
         menu.addItem(quitItem)
-
+        
         statusItem?.menu = menu
     }
-
+    
     // MARK: - NSMenuDelegate
-
+    
     func menuWillOpen(_ menu: NSMenu) {
         updatePermissionMenuItemIfNeeded()
     }
-
+    
     private func updatePermissionMenuItemIfNeeded() {
         let isGranted = AccessibilityService.isGranted
         permissionMenuItem?.isHidden = isGranted
         permissionSeparator?.isHidden = isGranted
-
+        
         // Reset cooldown when permission is granted
         if isGranted {
             lastPermissionRequestTime = nil
         }
-
+        
         updateStatusBarIcon(isGranted: isGranted)
     }
-
+    
     private func updateStatusBarIcon(isGranted: Bool) {
         guard let button = statusItem?.button else { return }
         let symbolName = isGranted ? "command" : "exclamationmark.triangle"
         let description = isGranted ? "Portal Menu" : "Portal - Permission Required"
         button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)
     }
-
+    
     @objc private func openAccessibilityPermissions() {
         AccessibilityService.openAccessibilitySettings()
     }
-
+    
     @objc private func openSettings() {
         // If window already exists, just bring it to front
         if let window = settingsWindow {
@@ -279,23 +273,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-
+        
         // Create custom SettingsWindow with NSHostingController
         // This approach allows ESC key handling via cancelOperation(_:)
         let settingsView = SettingsView()
         let hostingController = NSHostingController(rootView: settingsView)
-
+        
         let window = SettingsWindow(contentViewController: hostingController)
         window.title = "Portal Settings"
         window.styleMask = [.titled, .closable]
         window.setContentSize(NSSize(width: 450, height: 350))
         window.center()
-
+        
         window.isReleasedWhenClosed = false
-
+        
         // Remove previous observer if exists (handles rapid open/close cycles)
         settingsWindowObserver = nil
-
+        
         // Observe window close to cleanup references
         // Block-based observers must be explicitly removed; `ObserverToken` does so on deinit.
         settingsWindowObserver = ObserverToken(
@@ -309,16 +303,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.settingsWindowObserver = nil
             }
         )
-
+        
         self.settingsWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-
+    
     @objc private func quitApp() {
         NSApp.terminate(nil)
     }
-
+    
     deinit {
         notificationBindings.stop()
         stopPermissionCheckTimer()
