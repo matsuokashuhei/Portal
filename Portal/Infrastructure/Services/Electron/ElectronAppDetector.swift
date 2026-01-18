@@ -173,7 +173,7 @@ final class ElectronAppDetector {
         }
 
         var result = AXScanResult()
-        var visitedHashes = Set<Int>()
+        var visitedHashes = Set<CFHashCode>()
         for window in windows {
             scanAXTree(
                 window,
@@ -197,7 +197,7 @@ final class ElectronAppDetector {
         _ element: AXUIElement,
         depth: Int,
         config: AXScanConfig,
-        visited: inout Set<Int>,
+        visited: inout Set<CFHashCode>,
         result: inout AXScanResult
     ) {
         guard depth <= config.maxDepth, result.nodesScanned < config.maxNodes else {
@@ -247,7 +247,7 @@ final class ElectronAppDetector {
             return
         }
 
-        var visitedHashes = Set<Int>()
+        var visitedHashes = Set<CFHashCode>()
         var nodesLogged = 0
         for window in windows {
             logAXNode(
@@ -270,7 +270,7 @@ final class ElectronAppDetector {
         _ element: AXUIElement,
         depth: Int,
         config: AXScanConfig,
-        visited: inout Set<Int>,
+        visited: inout Set<CFHashCode>,
         nodesLogged: inout Int
     ) {
         guard depth <= config.maxDepth, nodesLogged < config.maxNodes else {
