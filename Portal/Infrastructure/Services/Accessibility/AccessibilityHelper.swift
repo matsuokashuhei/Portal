@@ -170,7 +170,7 @@ enum AccessibilityHelper {
     ///
     /// - Parameter axRect: A rect in Accessibility API coordinates (top-left origin).
     /// - Returns: The rect in AppKit screen coordinates (bottom-left origin).
-    private static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
+    static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
         guard let primaryScreen = NSScreen.screens.first else {
             return axRect
         }

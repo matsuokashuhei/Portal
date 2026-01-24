@@ -115,7 +115,7 @@ final class ElectronCrawler: ElementCrawler {
         return detector.isElectronApp(app)
     }
 
-    func crawlElements(_ app: NSRunningApplication) async throws -> [HintTarget] {
+    func crawlElements(_ window: Window) async throws -> [HintTarget] {
         guard AccessibilityService.isGranted else {
             throw NativeAppCrawlerError.accessibilityNotGranted
         }
@@ -123,48 +123,48 @@ final class ElectronCrawler: ElementCrawler {
         // Load maxDepth once at the start of crawl for consistent behavior and performance
         cachedMaxDepth = CrawlConfiguration.load().maxDepth
 
-        let pid = app.processIdentifier
-        let axApp = AXUIElementCreateApplication(pid)
-
-        #if DEBUG
-        logger.info("Crawling Electron app: \(app.bundleIdentifier ?? "unknown")")
-        #endif
+//        let pid = app.processIdentifier
+//        let axApp = AXUIElementCreateApplication(pid)
+//
+//        #if DEBUG
+//        logger.info("Crawling Electron app: \(app.bundleIdentifier ?? "unknown")")
+//        #endif
 
         // Enable enhanced accessibility for Electron apps
-        enableAccessibility(for: axApp)
+//        enableAccessibility(for: axApp)
 
         var itemCount = 0
         var allItems: [HintTarget] = []
 
         // Get all windows
-        let windows = getAllWindows(from: axApp)
-        guard !windows.isEmpty else {
-            throw NativeAppCrawlerError.mainWindowNotAccessible
-        }
+//        let windows = getAllWindows(from: axApp)
+//        guard !windows.isEmpty else {
+//            throw NativeAppCrawlerError.mainWindowNotAccessible
+//        }
 
-        for windowElement in windows {
-            let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
-            #if DEBUG
-            logger.debug("Crawling window: '\(windowTitle)'")
-            #endif
-
-            // First, try to find and crawl AXWebArea elements (web content)
-            let webItems = crawlWebAreas(in: windowElement, itemCount: &itemCount)
-            allItems.append(contentsOf: webItems)
-
-            #if DEBUG
-            logger.info("Found \(webItems.count) web items")
-            #endif
-
-            // Also crawl native chrome (toolbars, etc.) using standard approach
-            let nativeItems = crawlNativeChrome(in: windowElement, itemCount: &itemCount)
-            allItems.append(contentsOf: nativeItems)
-
-            #if DEBUG
-            logger.info("Found \(nativeItems.count) native items")
-            #endif
-        }
-
+//        for windowElement in windows {
+//            let windowTitle = getTitle(from: windowElement) ?? app.localizedName ?? "Window"
+//            #if DEBUG
+//            logger.debug("Crawling window: '\(windowTitle)'")
+//            #endif
+//
+//            // First, try to find and crawl AXWebArea elements (web content)
+//            let webItems = crawlWebAreas(in: windowElement, itemCount: &itemCount)
+//            allItems.append(contentsOf: webItems)
+//
+//            #if DEBUG
+//            logger.info("Found \(webItems.count) web items")
+//            #endif
+//
+//            // Also crawl native chrome (toolbars, etc.) using standard approach
+//            let nativeItems = crawlNativeChrome(in: windowElement, itemCount: &itemCount)
+//            allItems.append(contentsOf: nativeItems)
+//
+//            #if DEBUG
+//            logger.info("Found \(nativeItems.count) native items")
+//            #endif
+//        }
+//
         // Deduplicate based on AXUIElement reference
         return deduplicateItems(allItems)
     }
@@ -177,7 +177,7 @@ final class ElectronCrawler: ElementCrawler {
     ///
     /// - Parameter app: The application to crawl elements from.
     /// - Returns: An async stream of discovered hint targets.
-    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error> {
+    func crawlElementsStream(_ window: Window) -> AsyncThrowingStream<HintTarget, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 guard AccessibilityService.isGranted else {
@@ -188,61 +188,61 @@ final class ElectronCrawler: ElementCrawler {
                 // Load maxDepth once at the start of crawl for consistent behavior and performance
                 self.cachedMaxDepth = CrawlConfiguration.load().maxDepth
 
-                let pid = app.processIdentifier
-                let axApp = AXUIElementCreateApplication(pid)
-
-                // Enable enhanced accessibility for Electron apps
-                self.enableAccessibility(for: axApp)
+//                let pid = app.processIdentifier
+//                let axApp = AXUIElementCreateApplication(pid)
+//
+//                // Enable enhanced accessibility for Electron apps
+//                self.enableAccessibility(for: axApp)
 
                 // Track seen elements and frames for deduplication during streaming
                 var seenElements: [AXUIElement] = []
                 var seenFrames: [CGRect] = []
                 var itemCount = 0
 
-                let windows = self.getAllWindows(from: axApp)
-                guard !windows.isEmpty else {
-                    continuation.finish(throwing: NativeAppCrawlerError.mainWindowNotAccessible)
-                    return
-                }
+//                let windows = self.getAllWindows(from: axApp)
+//                guard !windows.isEmpty else {
+//                    continuation.finish(throwing: NativeAppCrawlerError.mainWindowNotAccessible)
+//                    return
+//                }
 
-                for windowElement in windows {
-                    if Task.isCancelled {
-                        continuation.finish()
-                        return
-                    }
-
-                    // First, crawl AXWebArea elements (web content)
-                    let webAreas = self.findWebAreas(in: windowElement, depth: 0)
-                    for webArea in webAreas {
-                        guard itemCount < Self.maxItems else { break }
-                        if Task.isCancelled {
-                            continuation.finish()
-                            return
-                        }
-                        await self.crawlWebElementStreaming(
-                            webArea,
-                            depth: 0,
-                            itemCount: &itemCount,
-                            seenElements: &seenElements,
-                            seenFrames: &seenFrames,
-                            continuation: continuation
-                        )
-                    }
-
-                    // Also crawl native chrome (toolbars, etc.)
-                    if Task.isCancelled {
-                        continuation.finish()
-                        return
-                    }
-                    await self.crawlNativeChromeStreaming(
-                        in: windowElement,
-                        itemCount: &itemCount,
-                        seenElements: &seenElements,
-                        seenFrames: &seenFrames,
-                        continuation: continuation
-                    )
-                }
-
+//                for windowElement in windows {
+//                    if Task.isCancelled {
+//                        continuation.finish()
+//                        return
+//                    }
+//
+//                    // First, crawl AXWebArea elements (web content)
+//                    let webAreas = self.findWebAreas(in: windowElement, depth: 0)
+//                    for webArea in webAreas {
+//                        guard itemCount < Self.maxItems else { break }
+//                        if Task.isCancelled {
+//                            continuation.finish()
+//                            return
+//                        }
+//                        await self.crawlWebElementStreaming(
+//                            webArea,
+//                            depth: 0,
+//                            itemCount: &itemCount,
+//                            seenElements: &seenElements,
+//                            seenFrames: &seenFrames,
+//                            continuation: continuation
+//                        )
+//                    }
+//
+//                    // Also crawl native chrome (toolbars, etc.)
+//                    if Task.isCancelled {
+//                        continuation.finish()
+//                        return
+//                    }
+//                    await self.crawlNativeChromeStreaming(
+//                        in: windowElement,
+//                        itemCount: &itemCount,
+//                        seenElements: &seenElements,
+//                        seenFrames: &seenFrames,
+//                        continuation: continuation
+//                    )
+//                }
+//
                 continuation.finish()
             }
         }
@@ -330,11 +330,7 @@ final class ElectronCrawler: ElementCrawler {
 
                         let isEnabled = getIsEnabled(from: child)
                         let target = HintTarget(
-                            title: title,
-                            axElement: child,
-                            isEnabled: isEnabled,
-                            cachedFrame: frame,
-                            targetType: .electron
+                            element: Element(element: child)
                         )
                         continuation.yield(target)
                         itemCount += 1
@@ -400,11 +396,7 @@ final class ElectronCrawler: ElementCrawler {
 
                         let isEnabled = getIsEnabled(from: child)
                         let target = HintTarget(
-                            title: title,
-                            axElement: child,
-                            isEnabled: isEnabled,
-                            cachedFrame: frame,
-                            targetType: .electron
+                            element: Element(element: child)
                         )
                         continuation.yield(target)
                         itemCount += 1
@@ -569,11 +561,7 @@ final class ElectronCrawler: ElementCrawler {
                frame.height > 0 {
                 let isEnabled = getIsEnabled(from: child)
                 let target = HintTarget(
-                    title: title,
-                    axElement: child,
-                    isEnabled: isEnabled,
-                    cachedFrame: frame,
-                    targetType: .electron
+                    element: Element(element: child)
                 )
                 items.append(target)
                 itemCount += 1
@@ -631,13 +619,7 @@ final class ElectronCrawler: ElementCrawler {
                frame.width > 0,
                frame.height > 0 {
                 let isEnabled = getIsEnabled(from: child)
-                let target = HintTarget(
-                    title: title,
-                    axElement: child,
-                    isEnabled: isEnabled,
-                    cachedFrame: frame,
-                    targetType: .electron
-                )
+                let target = HintTarget(element: Element(element: child))
                 items.append(target)
                 itemCount += 1
 

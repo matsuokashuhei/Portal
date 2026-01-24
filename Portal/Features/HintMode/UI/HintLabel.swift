@@ -63,6 +63,16 @@ struct HintLabel: Identifiable {
     var displayPosition: CGPoint {
         CGPoint(x: frame.minX, y: frame.maxY)
     }
+    
+    func log() {
+        let element = target.element
+        print("label: \(label), element: \(element.toString())")
+    }
+    
+    
+    
+    
+    
 }
 
 // MARK: - Equatable

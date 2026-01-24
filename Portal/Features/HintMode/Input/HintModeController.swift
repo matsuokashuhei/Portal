@@ -164,7 +164,6 @@ final class HintModeController {
     /// This method uses AsyncStream to crawl UI elements and display hint labels
     /// progressively as they are discovered, improving perceived responsiveness.
     private func performActivation(for app: NSRunningApplication) async {
-        guard let windowFrame = AccessibilityHelper.getMainWindowFrame(app) else { return }
         
         // Create empty overlay windows and show them immediately
         overlayWindows = HintOverlayWindow.createEmptyForAllScreens()
@@ -172,6 +171,7 @@ final class HintModeController {
         for window in overlayWindows {
             window.show()
         }
+        
         
         // Start keyboard monitoring early so user can input during crawling
         startKeyboardMonitor()
@@ -193,16 +193,21 @@ final class HintModeController {
         
         logger.info("Starting progressive crawl")
         
-        let crawler = CrawlerFactory.crawler(for: app)
-        logger.debug("\(#function) - app: \(app.bundleIdentifier ?? "unknown"), crawler: \(crawler)")
-        
-        // Get coordinate system from the crawler
-        let coordinateSystem = crawler.coordinateSystem
         
         // Start crawling with progressive rendering
         crawlTask = Task {
             do {
-                for try await target in crawler.crawlElementsStream(app) {
+                guard
+                    let window = Window(app),
+                    let windowFrame = window.frame else {
+                    return
+                }
+//                guard let windowFrame = AccessibilityHelper.getMainWindowFrame(app) else { return }
+                let crawler = CrawlerFactory.crawler(for: app)
+                
+                // Get coordinate system from the crawler
+                let coordinateSystem = crawler.coordinateSystem
+                for try await target in crawler.crawlElementsStream(window) {
                     // Check for cancellation
                     if Task.isCancelled { break }
                     
@@ -269,6 +274,7 @@ final class HintModeController {
                         target: target,
                         coordinateSystem: coordinateSystem
                     )
+                    hintLabel.log()
                     
                     // Add to our hints array
                     hints.append(hintLabel)

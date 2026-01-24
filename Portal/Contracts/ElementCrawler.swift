@@ -39,7 +39,7 @@ protocol ElementCrawler {
     ///
     /// - Parameter app: The application to crawl elements from.
     /// - Returns: An async stream of discovered hint targets.
-    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error>
+    func crawlElementsStream(_ window: Window) -> AsyncThrowingStream<HintTarget, Error>
 
     /// Determines whether this crawler can handle the specified application.
     ///
