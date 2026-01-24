@@ -23,8 +23,11 @@ import CoreGraphics
 /// Marked as `@unchecked Sendable` because instances are created/executed on the main thread
 /// via `WindowCrawler` and `AXUIElementPerformAction`.
 struct HintTarget: Identifiable, @unchecked Sendable {
-    /// Unique identifier using UUID to ensure uniqueness even for duplicate titles.
-    let id: String = UUID().uuidString
+    /// Unique identifier derived from the AXUIElement reference.
+    ///
+    /// This identifier is unique within the target app's process for the lifetime
+    /// of the AXUIElement instance, and is not stable across app launches.
+    let id: String
 
     /// Display title of the target UI element.
     let title: String
@@ -43,11 +46,16 @@ struct HintTarget: Identifiable, @unchecked Sendable {
     let targetType: HintTargetType
 
     init(title: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil, targetType: HintTargetType = .native) {
+        self.id = AccessibilityHelper.elementIdentifier(axElement)
         self.title = title
         self.axElement = axElement
         self.isEnabled = isEnabled
         self.cachedFrame = cachedFrame
         self.targetType = targetType
+    }
+
+    init(nativeTitle: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil) {
+        self.init(title: nativeTitle, axElement: axElement, isEnabled: isEnabled, cachedFrame: cachedFrame, targetType: .native)
     }
 }
 

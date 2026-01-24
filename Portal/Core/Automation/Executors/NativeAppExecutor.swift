@@ -56,7 +56,7 @@ final class NativeAppExecutor: ActionExecutor {
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
         #if DEBUG
-        logger.debug("execute: Starting execution for '\(target.title)'")
+        logger.debug("execute: Starting execution for id=\(target.id) title='\(target.title)'")
         #endif
 
         guard target.isEnabled else {
@@ -66,14 +66,22 @@ final class NativeAppExecutor: ActionExecutor {
             return .failure(.targetDisabled)
         }
 
-        // Validate that the axElement still references the expected item.
-        let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title, validRoles: Self.validRoles)
-        if !elementIsValid {
+        let currentId = AccessibilityHelper.elementIdentifier(target.axElement)
+        guard currentId == target.id else {
             #if DEBUG
-            logger.debug("execute: Element validation failed")
+            logger.debug("execute: Element id mismatch (expected=\(target.id), actual=\(currentId))")
             #endif
             return .failure(.elementInvalid)
         }
+
+        // Validate that the axElement still references the expected item.
+//        let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title, validRoles: Self.validRoles)
+//        if !elementIsValid {
+//            #if DEBUG
+//            logger.debug("execute: Element validation failed")
+//            #endif
+//            return .failure(.elementInvalid)
+//        }
 
         // Get role to determine execution strategy
         guard let role = getRole(target.axElement) else {

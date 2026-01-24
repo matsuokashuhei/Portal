@@ -17,23 +17,21 @@ struct HintTargetTests {
     }
 
     @Test
-    func testIdIsUUID() {
+    func testIdMatchesAccessibilityHelper() {
         let element = createDummyElement()
         let target = HintTarget(title: "Test", axElement: element, isEnabled: true)
 
-        // ID should be a valid UUID string (36 characters with hyphens)
-        #expect(target.id.count == 36)
-        #expect(UUID(uuidString: target.id) != nil)
+        #expect(target.id == AccessibilityHelper.elementIdentifier(element))
     }
 
     @Test
-    func testIdUniqueness() {
+    func testIdIsStableForSameElement() {
         let element = createDummyElement()
 
         let target1 = HintTarget(title: "Same", axElement: element, isEnabled: true)
         let target2 = HintTarget(title: "Same", axElement: element, isEnabled: true)
 
-        #expect(target1.id != target2.id)
+        #expect(target1.id == target2.id)
     }
 
     @Test
@@ -43,12 +41,12 @@ struct HintTargetTests {
         let target1 = HintTarget(title: "Same", axElement: element, isEnabled: true)
         let target2 = HintTarget(title: "Same", axElement: element, isEnabled: true)
 
-        // Each HintTarget has a unique UUID, so they are NOT equal even with same title/element.
-        #expect(target1 != target2)
+        // Same AXUIElement should yield the same identifier, so targets are equal.
+        #expect(target1 == target2)
 
         var set: Set<HintTarget> = [target1]
         set.insert(target2)
-        #expect(set.count == 2)
+        #expect(set.count == 1)
     }
 
     // MARK: - HintTargetType Tests

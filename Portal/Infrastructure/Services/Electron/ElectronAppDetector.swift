@@ -291,9 +291,10 @@ final class ElectronAppDetector {
         let value = getStringAttribute(element, kAXValueAttribute as String) ?? ""
         let help = getStringAttribute(element, kAXHelpAttribute as String) ?? ""
         let subrole = getStringAttribute(element, kAXSubroleAttribute as String) ?? ""
+        let identifier = getStringAttribute(element, kAXIdentifierAttribute as String) ?? ""
 
         let indent = String(repeating: "  ", count: depth)
-        print("[ElectronAppDetector] \(indent)\(role) title='\(title)' desc='\(desc)' description='\(description)' value='\(value)' help='\(help)' subrole='\(subrole)'")
+        print("[ElectronAppDetector] \(indent)\(role) title='\(title)' desc='\(desc)' description='\(description)' value='\(value)' help='\(help)' subrole='\(subrole)' identifier='\(identifier)'")
 
         let children = getChildren(of: element)
         if children.isEmpty || depth >= config.maxDepth {

@@ -50,6 +50,20 @@ enum AccessibilityHelper {
         }
     }
 
+    // MARK: - Element Identification
+
+    /// Builds a readable identifier for an accessibility element.
+    ///
+    /// The identifier is stable for the lifetime of the AXUIElement instance and
+    /// unique within the target application's process.
+    /// Format: "<pid>-0x<pointer>" (e.g., "1234-0x10afc1").
+    static func elementIdentifier(_ element: AXUIElement) -> String {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        let pointerValue = UInt(bitPattern: Unmanaged.passUnretained(element).toOpaque())
+        return "\(pid)-0x\(String(pointerValue, radix: 16))"
+    }
+
     // MARK: - Frame Methods
 
     /// Retrieves the screen frame of an accessibility element.
@@ -200,6 +214,43 @@ enum AccessibilityHelper {
         return title
     }
 
+
+    /// Gets the AXLabel attribute from an accessibility element.
+    /// This is different from the title: some elements (like Xcode's toggle buttons)
+    /// have an empty title but a populated label.
+    static func getLabel(_ element: AXUIElement) -> String? {
+        var labelRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty else {
+            return nil
+        }
+        return label
+    }
+    
+    static func getIsEnabled(_ element: AXUIElement) -> Bool {
+        var enabledRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &enabledRef) == .success else {
+            return true  // Default to enabled if we can't determine
+        }
+        return (enabledRef as? Bool) ?? true
+    }
+
+    static func getAttributeValueAsString(_ element: AXUIElement, attribute: String) -> String? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &valueRef) == .success else {
+            return nil
+        }
+        return valueRef as? String
+    }
+    
+    static func getAttributeValueAsBool(_ element: AXUIElement, attribute: String) -> Bool? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &valueRef) == .success else {
+            return nil
+        }
+        return valueRef as? Bool
+    }
+
     /// Gets the role of an accessibility element.
     /// https://developer.apple.com/documentation/applicationservices/kaxroledescriptionattribute
     ///
@@ -233,7 +284,7 @@ enum AccessibilityHelper {
         return mainWindow
 
     }
-    
+
     /// Gets the main window frame of an application.
     ///
     /// - Parameter app: The running application to get the main window frame from.

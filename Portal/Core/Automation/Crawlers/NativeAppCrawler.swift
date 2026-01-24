@@ -17,7 +17,7 @@ enum NativeAppCrawlerError: Error, LocalizedError {
     case accessibilityNotGranted
     case noActiveApplication
     case mainWindowNotAccessible
-    
+
     var errorDescription: String? {
         switch self {
         case .accessibilityNotGranted:
@@ -60,21 +60,21 @@ enum NativeAppCrawlerError: Error, LocalizedError {
 @MainActor
 final class NativeAppCrawler: ElementCrawler {
     // MARK: - ElementCrawler Protocol
-    
+
     /// Native macOS apps use Accessibility API coordinates (top-left origin).
     let coordinateSystem: HintCoordinateSystem = .native
-    
+
     // MARK: - Constants
-    
+
     /// Cached maximum depth for the current crawl operation.
     /// Updated at the start of each crawl to pick up setting changes.
     private var cachedMaxDepth: Int = CrawlConfiguration.defaultMaxDepth
-    
+
     /// Maximum number of items to return (performance safeguard).
     /// Increased from 200 to 500 to ensure player controls and other UI elements
     /// are crawled even when there are many content items (e.g., search results).
     private static let maxItems = 500
-    
+
     /// Accessibility roles for container elements that should be traversed.
     private static let containerRoles: Set<String> = [
         "AXOutline",
@@ -88,7 +88,7 @@ final class NativeAppCrawler: ElementCrawler {
         // Needed to crawl popup/select menus (e.g., System Settings select boxes)
         "AXMenu"
     ]
-    
+
     /// Accessibility roles for actionable items we can interact with.
     private static let itemRoles: Set<String> = [
         "AXRow",
@@ -112,9 +112,9 @@ final class NativeAppCrawler: ElementCrawler {
         "AXTab",                 // Tab selection
         "AXSegment"              // Individual segment buttons
     ]
-    
+
     // MARK: - ElementCrawler Protocol
-    
+
     /// Crawls UI elements from the specified application as an async stream.
     ///
     /// This method yields elements as they are discovered, enabling progressive
@@ -130,21 +130,21 @@ final class NativeAppCrawler: ElementCrawler {
                     continuation.finish(throwing: NativeAppCrawlerError.accessibilityNotGranted)
                     return
                 }
-                
+
                 guard let windowElement = AccessibilityHelper.getMainWindow(app) else {
                     continuation.finish(throwing: NativeAppCrawlerError.mainWindowNotAccessible)
                     return
                 }
-                
+
                 // Check for cancellation
                 if Task.isCancelled {
                     continuation.finish()
                     return
                 }
-                
+
                 // Load maxDepth once at the start of crawl for consistent behavior and performance
                 self.cachedMaxDepth = CrawlConfiguration.load().maxDepth
-                
+
 
                 // Get window control buttons and yield them immediately
                 var seenElements: [AXUIElement] = []
@@ -160,121 +160,86 @@ final class NativeAppCrawler: ElementCrawler {
                         await Task.yield()
                     }
                 }
-                
-                
+
+
                 // Crawl window elements with streaming
-                let windowTitle = AccessibilityHelper.getTitle(windowElement) ?? app.localizedName ?? "Window"
+//                let windowTitle = AccessibilityHelper.getTitle(windowElement) ?? app.localizedName ?? "Window"
                 await self.crawlWindowInElementStreaming(
                     windowElement,
-                    path: [windowTitle],
+//                    path: [windowTitle],
                     depth: 0,
                     itemCount: &itemCount,
                     seenElements: &seenElements,
                     continuation: continuation
                 )
-                
+
                 // Check for open menu (popup/select menus)
-                let pid = app.processIdentifier
-                if let openMenu = self.getOpenMenuForApp(pid: pid) {
-                    await self.crawlOpenMenuStreaming(
-                        openMenu,
-                        itemCount: &itemCount,
-                        seenElements: &seenElements,
-                        continuation: continuation
-                    )
-                }
-                
+//                let pid = app.processIdentifier
+//                if let openMenu = self.getOpenMenuForApp(pid: pid) {
+//                    await self.crawlOpenMenuStreaming(
+//                        openMenu,
+//                        itemCount: &itemCount,
+//                        seenElements: &seenElements,
+//                        continuation: continuation
+//                    )
+//                }
+
                 continuation.finish()
             }
         }
     }
-    
+
     /// Checks if an element is a duplicate.
     private func isDuplicate(_ element: AXUIElement, in seenElements: [AXUIElement]) -> Bool {
         return seenElements.contains { existing in
             CFEqual(existing, element)
         }
     }
-    
+
     /// Recursively crawls an element for actionable window items, yielding results via continuation.
     private func crawlWindowInElementStreaming(
         _ element: AXUIElement,
-        path: [String],
+//        path: [String],
         depth: Int,
         itemCount: inout Int,
         seenElements: inout [AXUIElement],
         continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
     ) async {
+//        print("path: \(path)")
         // Prevent infinite recursion and enforce item limit
         guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return }
-        
+
         // Check for cancellation
         if Task.isCancelled { return }
-        
+
         // Get children
         let children = AccessibilityHelper.getChildren(element)
-        
+
         for child in children {
             guard itemCount < Self.maxItems else { break }
             if Task.isCancelled { return }
-            
+
             // Get role
             guard let role = AccessibilityHelper.getRole(child) else { continue }
-            
-            // Get title or description
-            let title = getTitle(from: child)
-            let label = getLabel(from: child)
-            let desc = getDescription(from: child)
-            let value = getValue(from: child)
-            let help = getHelp(from: child)
-            var displayTitle: String? = nil
-            if let t = title, !t.isEmpty { displayTitle = t }
-            else if let l = label, !l.isEmpty { displayTitle = l }
-            else if let d = desc, !d.isEmpty { displayTitle = d }
-            else if let v = value, !v.isEmpty { displayTitle = v }
-            else if let h = help, !h.isEmpty { displayTitle = h }
-            
-            // For row-type elements without a direct title, look in children
-            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-                (role == "AXRow" || role == "AXOutlineRow" || role == "AXCell") {
-                displayTitle = getTitleFromRowChildren(child)
-            }
-            
-            // For toggle switches and checkboxes, look in sibling elements for labels
-            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-                (role == "AXSwitch" || role == "AXCheckBox") {
-                displayTitle = getTitleFromSiblings(child)
-            }
-            
-            // For text fields, try placeholder value first
-            if (displayTitle == nil || displayTitle?.isEmpty == true) && role == "AXTextField" {
-                displayTitle = getPlaceholderValue(from: child)
-                if displayTitle == nil || displayTitle?.isEmpty == true {
-                    displayTitle = getTitleFromSiblings(child)
-                }
-            }
-            
+
             // Check if this is an actionable item
-            var pathForChildren = path
+//            var pathForChildren = path
             if Self.itemRoles.contains(role) {
                 let canAct = canPerformAction(on: child)
-                if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
-                    if isSectionHeader(child, role: role) {
-                        continue
-                    }
-                    
+                if canAct {
+//                    if isSectionHeader(child, role: role) {
+//                        continue
+//                    }
+
                     // Check for duplicates
                     if !isDuplicate(child, in: seenElements) {
                         seenElements.append(child)
-                        let isEnabled = getIsEnabled(from: child)
-                        let currentPath = path + [itemTitle]
-                        pathForChildren = currentPath
-                        
+                        let isEnabled = AccessibilityHelper.getIsEnabled(child)
+
                         let target = HintTarget(
-                            title: itemTitle,
+                            nativeTitle: "",
                             axElement: child,
-                            isEnabled: isEnabled,
-                            targetType: .native
+                            isEnabled: isEnabled
                         )
                         continuation.yield(target)
                         itemCount += 1
@@ -283,180 +248,73 @@ final class NativeAppCrawler: ElementCrawler {
                     }
                 }
             }
+
+//            // Recurse into containers or elements with children
+//            let hasChildElements = hasChildren(child)
+//            let isLeafItem = (role == "AXCheckBox" || role == "AXSwitch" || role == "AXTextField") ||
+//            ((role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox") && !hasChildElements)
+//
+//            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildElements) {
+//                await crawlWindowInElementStreaming(
+//                    child,
+//                    depth: depth + 1,
+//                    itemCount: &itemCount,
+//                    seenElements: &seenElements,
+//                    continuation: continuation
+//                )
+//            }
             
-            // Recurse into containers or elements with children
-            let hasChildElements = hasChildren(child)
-            let isLeafItem = (role == "AXCheckBox" || role == "AXSwitch" || role == "AXTextField") ||
-            ((role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox") && !hasChildElements)
-            
-            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildElements) {
-                var pathForContainer = pathForChildren
-                if Self.containerRoles.contains(role) {
-                    if let containerName = getContainerName(child, role: role), !containerName.isEmpty {
-                        pathForContainer = pathForChildren + [containerName]
-                    }
-                }
+//            if hasChildElements(child) {
                 await crawlWindowInElementStreaming(
                     child,
-                    path: pathForContainer,
                     depth: depth + 1,
                     itemCount: &itemCount,
                     seenElements: &seenElements,
                     continuation: continuation
                 )
-            }
+//            }
         }
     }
-    
-    /// Crawls menu items from an open AXMenu element, yielding results via continuation.
-    private func crawlOpenMenuStreaming(
-        _ menu: AXUIElement,
-        itemCount: inout Int,
-        seenElements: inout [AXUIElement],
-        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
-    ) async {
-        if Task.isCancelled { return }
-        
-        var childrenRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(menu, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-              let children = childrenRef as? [AXUIElement] else {
-            return
-        }
-        
-        for child in children {
-            guard itemCount < Self.maxItems else { break }
-            if Task.isCancelled { return }
-            
-            guard let role = getRole(from: child) else { continue }
-            
-            if role == "AXMenuItem" {
-                let title = getTitle(from: child)
-                let label = getLabel(from: child)
-                let desc = getDescription(from: child)
-                let value = getValue(from: child)
-                let help = getHelp(from: child)
-                
-                var displayTitle: String? = nil
-                if let t = title, !t.isEmpty { displayTitle = t }
-                else if let l = label, !l.isEmpty { displayTitle = l }
-                else if let d = desc, !d.isEmpty { displayTitle = d }
-                else if let v = value, !v.isEmpty { displayTitle = v }
-                else if let h = help, !h.isEmpty { displayTitle = h }
-                
-                if let itemTitle = displayTitle, !itemTitle.isEmpty {
-                    if !isDuplicate(child, in: seenElements) {
-                        seenElements.append(child)
-                        let isEnabled = getIsEnabled(from: child)
-                        continuation.yield(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
-                        itemCount += 1
-                        // Yield to allow UI updates
-                        await Task.yield()
-                    }
-                }
-                
-                if hasChildren(child) {
-                    await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: 1, continuation: continuation)
-                }
-            } else if role == "AXMenu" {
-                await crawlOpenMenuStreaming(child, itemCount: &itemCount, seenElements: &seenElements, continuation: continuation)
-            } else if hasChildren(child) {
-                await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: 1, continuation: continuation)
-            }
-        }
-    }
-    
-    /// Crawls nested menu items, yielding results via continuation.
-    private func crawlNestedMenuItemsStreaming(
-        in element: AXUIElement,
-        itemCount: inout Int,
-        seenElements: inout [AXUIElement],
-        depth: Int,
-        continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
-    ) async {
-        guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return }
-        if Task.isCancelled { return }
-        
-        var childrenRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-              let children = childrenRef as? [AXUIElement] else {
-            return
-        }
-        
-        for child in children {
-            guard itemCount < Self.maxItems else { break }
-            if Task.isCancelled { return }
-            
-            if let role = getRole(from: child), role == "AXMenuItem" {
-                let title = getTitle(from: child)
-                let label = getLabel(from: child)
-                let desc = getDescription(from: child)
-                let value = getValue(from: child)
-                let help = getHelp(from: child)
-                
-                var displayTitle: String? = nil
-                if let t = title, !t.isEmpty { displayTitle = t }
-                else if let l = label, !l.isEmpty { displayTitle = l }
-                else if let d = desc, !d.isEmpty { displayTitle = d }
-                else if let v = value, !v.isEmpty { displayTitle = v }
-                else if let h = help, !h.isEmpty { displayTitle = h }
-                
-                if let itemTitle = displayTitle, !itemTitle.isEmpty {
-                    if !isDuplicate(child, in: seenElements) {
-                        seenElements.append(child)
-                        let isEnabled = getIsEnabled(from: child)
-                        continuation.yield(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
-                        itemCount += 1
-                        // Yield to allow UI updates
-                        await Task.yield()
-                    }
-                }
-            }
-            
-            if hasChildren(child) {
-                await crawlNestedMenuItemsStreaming(in: child, itemCount: &itemCount, seenElements: &seenElements, depth: depth + 1, continuation: continuation)
-            }
-        }
-    }
-    
+
     /// Removes duplicate items based on their AXUIElement reference.
     ///
-    /// Since `HintTarget.id` is UUID-based (to support elements with the same title),
-    /// we need to compare AXUIElement references to detect true duplicates.
+    /// Since `HintTarget.id` is derived from the AXUIElement reference,
+    /// we compare AXUIElement references to detect true duplicates.
     /// Two targets pointing to the same AXUIElement are considered duplicates.
     private func deduplicateItems(_ items: [HintTarget]) -> [HintTarget] {
         var seenElements: [AXUIElement] = []
         var uniqueItems: [HintTarget] = []
-        
+
         for item in items {
             // Check if we've already seen this AXUIElement
             let isDuplicate = seenElements.contains { existing in
                 CFEqual(existing, item.axElement)
             }
-            
+
             if !isDuplicate {
                 seenElements.append(item.axElement)
                 uniqueItems.append(item)
             }
         }
-        
+
         return uniqueItems
     }
-    
+
     // MARK: - Private Methods
-    
+
     /// Gets the frontmost application, excluding Portal.
     private func getFrontmostApp() -> NSRunningApplication? {
         let workspace = NSWorkspace.shared
         let apps = workspace.runningApplications
         let portalBundleID = Bundle.main.bundleIdentifier
-        
+
         // First try the frontmost application
         if let frontmost = workspace.frontmostApplication,
            frontmost.bundleIdentifier != portalBundleID,
            frontmost.activationPolicy == .regular {
             return frontmost
         }
-        
+
         // Fallback: find any regular app that's not Portal
         return apps.first {
             $0.bundleIdentifier != portalBundleID &&
@@ -464,7 +322,7 @@ final class NativeAppCrawler: ElementCrawler {
             $0.isActive
         }
     }
-    
+
     /// Gets window control buttons (close, minimize, zoom, fullscreen) from a window.
     ///
     /// These buttons are special macOS system UI elements that need to be fetched
@@ -475,14 +333,14 @@ final class NativeAppCrawler: ElementCrawler {
     /// - Returns: An array of HintTargets for the available control buttons.
     private func getWindowControlButtons(from window: AXUIElement) -> [HintTarget] {
         var buttons: [HintTarget] = []
-        
+
         let buttonAttributes: [(String, String)] = [
             (kAXCloseButtonAttribute, "Close"),
             (kAXMinimizeButtonAttribute, "Minimize"),
             (kAXZoomButtonAttribute, "Zoom"),
             (kAXFullScreenButtonAttribute, "Full Screen")
         ]
-        
+
         for (attribute, title) in buttonAttributes {
             var buttonRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(window, attribute as CFString, &buttonRef) == .success,
@@ -493,20 +351,19 @@ final class NativeAppCrawler: ElementCrawler {
                 let axButton = button as! AXUIElement
                 // Only add if frame can be retrieved (with fallback)
                 if AccessibilityHelper.getFrameWithFallback(axButton) != nil {
-                    let isEnabled = getIsEnabled(from: axButton)
+                    let isEnabled = AccessibilityHelper.getIsEnabled(axButton)
                     buttons.append(HintTarget(
-                        title: title,
+                        nativeTitle: title,
                         axElement: axButton,
-                        isEnabled: isEnabled,
-                        targetType: .native
+                        isEnabled: isEnabled
                     ))
                 }
             }
         }
-        
+
         return buttons
     }
-    
+
     /// Detects an open AXMenu for the given app pid using the SystemWide focused element.
     ///
     /// Some popup/select menus are not exposed under `kAXWindowsAttribute` of the app.
@@ -518,25 +375,25 @@ final class NativeAppCrawler: ElementCrawler {
               let focused = focusedRef else {
             return nil
         }
-        
+
         // swiftlint:disable:next force_cast
         var current: AXUIElement? = focused as! AXUIElement
         var depth = 0
-        
+
         while let element = current, depth < cachedMaxDepth {
             depth += 1
-            
+
             // Note: For some system popups (e.g., System Settings select menus),
             // the focused UI element may not have the same pid as the target app.
             // We still traverse parents to find an AXMenu, but we'll validate at the end.
             var elementPid: pid_t = 0
             AXUIElementGetPid(element, &elementPid)
 #if DEBUG
-            let role = getRole(from: element) ?? "unknown"
+            let role = AccessibilityHelper.getRole(element) ?? "unknown"
             logger.debug("SystemWide focus chain depth=\(depth) role=\(role) pid=\(elementPid)")
 #endif
-            
-            if let role = getRole(from: element), role == "AXMenu" {
+
+            if let role = AccessibilityHelper.getRole(element), role == "AXMenu" {
                 // Prefer menus that belong to the target pid, but allow mismatches when
                 // the popup is hosted by a helper/system process.
                 var menuPid: pid_t = 0
@@ -546,7 +403,7 @@ final class NativeAppCrawler: ElementCrawler {
 #endif
                 return element
             }
-            
+
             // Walk up to parent
             var parentRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success,
@@ -556,48 +413,48 @@ final class NativeAppCrawler: ElementCrawler {
             // swiftlint:disable:next force_cast
             current = parent as! AXUIElement
         }
-        
+
         return nil
     }
-    
+
     /// Crawls menu items from an already detected open AXMenu element.
     ///
     /// This intentionally treats AXMenuItem as actionable even if action names are not readable.
     private func crawlOpenMenu(_ menu: AXUIElement, itemCount: inout Int) -> [HintTarget] {
         var results: [HintTarget] = []
-        
+
         var childrenRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(menu, kAXChildrenAttribute as CFString, &childrenRef) == .success,
               let children = childrenRef as? [AXUIElement] else {
             return results
         }
-        
+
         for child in children {
             guard itemCount < Self.maxItems else { break }
-            
-            guard let role = getRole(from: child) else { continue }
-            
+
+            guard let role = AccessibilityHelper.getRole(child) else { continue }
+
             if role == "AXMenuItem" {
                 // Priority: title > label > description > value > help
-                let title = getTitle(from: child)
-                let label = getLabel(from: child)
-                let desc = getDescription(from: child)
-                let value = getValue(from: child)
-                let help = getHelp(from: child)
-                
+                let title = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXTitleAttribute)
+                let label = AccessibilityHelper.getAttributeValueAsString(child, attribute: "AXLabel")
+                let desc = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXDescriptionAttribute)
+                let value = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXValueAttribute)
+                let help = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXHelpAttribute)
+
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
                 else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }
-                
+
                 if let itemTitle = displayTitle, !itemTitle.isEmpty {
-                    let isEnabled = getIsEnabled(from: child)
-                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
+                    let isEnabled = AccessibilityHelper.getIsEnabled(child)
+                    results.append(HintTarget(nativeTitle: itemTitle, axElement: child, isEnabled: isEnabled))
                     itemCount += 1
                 }
-                
+
                 // Some menus can be nested; recurse into children to find deeper AXMenuItem.
                 if hasChildren(child) {
                     results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: 1))
@@ -608,199 +465,57 @@ final class NativeAppCrawler: ElementCrawler {
                 results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: 1))
             }
         }
-        
+
         return results
     }
-    
+
     private func crawlNestedMenuItems(in element: AXUIElement, itemCount: inout Int, depth: Int) -> [HintTarget] {
         guard depth < cachedMaxDepth, itemCount < Self.maxItems else { return [] }
         var results: [HintTarget] = []
-        
+
         var childrenRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
               let children = childrenRef as? [AXUIElement] else {
             return results
         }
-        
+
         for child in children {
             guard itemCount < Self.maxItems else { break }
-            if let role = getRole(from: child), role == "AXMenuItem" {
+            if let role = AccessibilityHelper.getRole(child), role == "AXMenuItem" {
                 // Priority: title > label > description > value > help
-                let title = getTitle(from: child)
-                let label = getLabel(from: child)
-                let desc = getDescription(from: child)
-                let value = getValue(from: child)
-                let help = getHelp(from: child)
-                
+                let title = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXTitleAttribute)
+                let label = AccessibilityHelper.getAttributeValueAsString(child, attribute: "AXLabel")
+                let desc = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXDescriptionAttribute)
+                let value = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXValueAttribute)
+                let help = AccessibilityHelper.getAttributeValueAsString(child, attribute: kAXHelpAttribute)
+
                 var displayTitle: String? = nil
                 if let t = title, !t.isEmpty { displayTitle = t }
                 else if let l = label, !l.isEmpty { displayTitle = l }
                 else if let d = desc, !d.isEmpty { displayTitle = d }
                 else if let v = value, !v.isEmpty { displayTitle = v }
                 else if let h = help, !h.isEmpty { displayTitle = h }
-                
+
                 if let itemTitle = displayTitle, !itemTitle.isEmpty {
-                    let isEnabled = getIsEnabled(from: child)
-                    results.append(HintTarget(title: itemTitle, axElement: child, isEnabled: isEnabled, targetType: .native))
+                    let isEnabled = AccessibilityHelper.getIsEnabled(child)
+                    results.append(HintTarget(nativeTitle: itemTitle, axElement: child, isEnabled: isEnabled))
                     itemCount += 1
                 }
             }
-            
+
             if hasChildren(child) {
                 results.append(contentsOf: crawlNestedMenuItems(in: child, itemCount: &itemCount, depth: depth + 1))
             }
         }
-        
+
         return results
-    }
-    
-    /// Recursively crawls an element for actionable window items.
-    private func crawlWindowInElement(
-        _ element: AXUIElement,
-        path: [String],
-        depth: Int,
-        itemCount: inout Int
-    ) -> [HintTarget] {
-        // Prevent infinite recursion and enforce item limit
-        guard depth < cachedMaxDepth, itemCount < Self.maxItems else {
-            return []
-        }
-        
-        var items: [HintTarget] = []
-        
-        // Get children
-        var childrenRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-              let children = childrenRef as? [AXUIElement] else {
-            return items
-        }
-        
-        for child in children {
-            guard itemCount < Self.maxItems else { break }
-            
-            // Get role
-            var roleRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef) == .success,
-                  let role = roleRef as? String else {
-                continue
-            }
-            
-            // Get title or description - try multiple attributes for buttons
-            // Use first non-empty value (empty string is different from nil)
-            // Priority: title > label > description > value > help
-            let title = getTitle(from: child)
-            let label = getLabel(from: child)
-            let desc = getDescription(from: child)
-            let value = getValue(from: child)
-            let help = getHelp(from: child)
-            var displayTitle: String? = nil
-            if let t = title, !t.isEmpty { displayTitle = t }
-            else if let l = label, !l.isEmpty { displayTitle = l }
-            else if let d = desc, !d.isEmpty { displayTitle = d }
-            else if let v = value, !v.isEmpty { displayTitle = v }
-            else if let h = help, !h.isEmpty { displayTitle = h }
-            
-#if DEBUG
-            // Log all elements at depth 1-2 to see contents
-            if depth <= 2 {
-                let pathStr = path.joined(separator: " > ")
-                logger.debug("depth=\(depth) role=\(role) title='\(title ?? "")' desc='\(desc ?? "")' help='\(help ?? "")' path=\(pathStr)")
-            }
-#endif
-            
-            // For row-type elements without a direct title, look in children
-            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-                (role == "AXRow" || role == "AXOutlineRow" || role == "AXCell") {
-                displayTitle = getTitleFromRowChildren(child)
-            }
-            
-            // For toggle switches and checkboxes, look in sibling elements for labels
-            // These elements typically have their label in a sibling AXStaticText element
-            if (displayTitle == nil || displayTitle?.isEmpty == true) &&
-                (role == "AXSwitch" || role == "AXCheckBox") {
-                displayTitle = getTitleFromSiblings(child)
-            }
-            
-            // For text fields, try placeholder value first (e.g., "Find in Songs"),
-            // then fall back to sibling labels
-            if (displayTitle == nil || displayTitle?.isEmpty == true) && role == "AXTextField" {
-                displayTitle = getPlaceholderValue(from: child)
-                if displayTitle == nil || displayTitle?.isEmpty == true {
-                    displayTitle = getTitleFromSiblings(child)
-                }
-            }
-            
-            // Check if this is an actionable item
-            var pathForChildren = path
-            if Self.itemRoles.contains(role) {
-                let canAct = canPerformAction(on: child)
-                if let itemTitle = displayTitle, !itemTitle.isEmpty, canAct {
-                    // Skip section headers (like "Library", "Store", "Playlists" in Music app)
-                    // These have AXPress action but don't actually do anything
-                    if isSectionHeader(child, role: role) {
-#if DEBUG
-                        logger.debug("Skipping section header: '\(itemTitle)' (role: \(role))")
-#endif
-                        continue
-                    }
-                    
-#if DEBUG
-                    logger.debug("Adding item: '\(itemTitle)' (role: \(role))")
-#endif
-                    
-                    let isEnabled = getIsEnabled(from: child)
-                    let currentPath = path + [itemTitle]
-                    pathForChildren = currentPath
-                    
-                    let target = HintTarget(
-                        title: itemTitle,
-                        axElement: child,
-                        isEnabled: isEnabled,
-                        targetType: .native
-                    )
-                    items.append(target)
-                    itemCount += 1
-                }
-            }
-            
-            // Recurse into containers or elements with children.
-            //
-            // Most actionable controls are "leaf" items, but some (notably AXPopUpButton / AXMenuButton / AXComboBox)
-            // can expose their opened menu as child elements. If they have children, we MUST crawl them to capture
-            // popup/select menu options as Hint Targets.
-            let hasChildElements = hasChildren(child)
-            let isLeafItem = (role == "AXCheckBox" || role == "AXSwitch" || role == "AXTextField") ||
-            ((role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox") && !hasChildElements)
-            
-#if DEBUG
-            if (role == "AXPopUpButton" || role == "AXMenuButton" || role == "AXComboBox"), hasChildElements {
-                logger.debug("Crawling children for opened control role=\(role) title='\(displayTitle ?? "")' depth=\(depth)")
-            }
-#endif
-            
-            if !isLeafItem && (Self.containerRoles.contains(role) || hasChildElements) {
-                // For containers, include the container name in the path to differentiate
-                // items with the same title in different locations (e.g., "iTunes Store" in
-                // both sidebar and toolbar)
-                var pathForContainer = pathForChildren
-                if Self.containerRoles.contains(role) {
-                    if let containerName = getContainerName(child, role: role), !containerName.isEmpty {
-                        pathForContainer = pathForChildren + [containerName]
-                    }
-                }
-                let subItems = crawlWindowInElement(child, path: pathForContainer, depth: depth + 1, itemCount: &itemCount)
-                items.append(contentsOf: subItems)
-            }
-        }
-        
-        return items
     }
     
     /// Checks if an element has children.
     private func hasChildren(_ element: AXUIElement) -> Bool {
         return !getChildren(element).isEmpty
     }
-    
+
     /// Gets children of an element.
     private func getChildren(_ element: AXUIElement) -> [AXUIElement] {
         var childrenRef: CFTypeRef?
@@ -810,7 +525,7 @@ final class NativeAppCrawler: ElementCrawler {
         }
         return []
     }
-    
+
     /// Checks if we can perform an action on this element.
     private func canPerformAction(on element: AXUIElement) -> Bool {
         var actionsRef: CFArray?
@@ -818,7 +533,7 @@ final class NativeAppCrawler: ElementCrawler {
               let actions = actionsRef as? [String] else {
             return false
         }
-        
+
         // Check for press, select, or show UI action
         return actions.contains(kAXPressAction as String) ||
         actions.contains("AXSelect") ||
@@ -830,7 +545,7 @@ final class NativeAppCrawler: ElementCrawler {
         actions.contains("AXIncrement") ||
         actions.contains("AXDecrement")
     }
-    
+
     /// Checks if an element is a section header that should be excluded.
     ///
     /// Section headers are elements that:
@@ -847,8 +562,9 @@ final class NativeAppCrawler: ElementCrawler {
     /// - Returns: `true` if this is a section header that should be excluded.
     private func isSectionHeader(_ element: AXUIElement, role: String) -> Bool {
         // Get element title for debugging
-        let elementTitle = getTitle(from: element) ?? getValue(from: element) ?? "unknown"
-        
+        let elementTitle = AccessibilityHelper.getTitle(element) ?? AccessibilityHelper.getValue(element)
+        ?? "unknown"
+
         // For AXRow and AXOutlineRow, check if it's an expandable section header
         if role == "AXRow" || role == "AXOutlineRow" {
             // Check disclosure level - section headers typically have level 0
@@ -869,9 +585,9 @@ final class NativeAppCrawler: ElementCrawler {
                         "AXDisclosing" as CFString,
                         &disclosingRef
                     ) == .success, let isDisclosing = disclosingRef as? Bool {
-#if DEBUG
-                        logger.debug("isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
-#endif
+//#if DEBUG
+//                        logger.debug("isSectionHeader: '\(elementTitle)' level 0, AXDisclosing=\(isDisclosing)")
+//#endif
                         // Only skip if actually expanded (showing children)
                         if isDisclosing {
                             return true
@@ -879,28 +595,28 @@ final class NativeAppCrawler: ElementCrawler {
                         // AXDisclosing = false means it's a navigation item, not a section header
                         return false
                     }
-                    
+
                     // Also check for disclosure triangle child element
                     if hasDisclosureTriangle(element) {
-#if DEBUG
-                        logger.debug("isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle -> section header")
-#endif
+//#if DEBUG
+//                        logger.debug("isSectionHeader: '\(elementTitle)' level 0 with disclosure triangle -> section header")
+//#endif
                         return true
                     }
-                    
-#if DEBUG
-                    logger.debug("isSectionHeader: '\(elementTitle)' level 0 without disclosure -> navigation item")
-#endif
+
+//#if DEBUG
+//                    logger.debug("isSectionHeader: '\(elementTitle)' level 0 without disclosure -> navigation item")
+//#endif
                     return false
                 }
-                
+
 #if DEBUG
                 logger.debug("isSectionHeader: '\(elementTitle)' level \(level) -> not a section header")
 #endif
             }
             return false
         }
-        
+
         // For AXStaticText, check if parent is interactive
         if role == "AXStaticText" {
             var parentRef: CFTypeRef?
@@ -911,29 +627,29 @@ final class NativeAppCrawler: ElementCrawler {
             ) == .success else {
                 return true
             }
-            
+
             // swiftlint:disable:next force_cast
             let parent = parentRef as! AXUIElement
-            guard let parentRole = getRole(from: parent) else {
+            guard let parentRole = AccessibilityHelper.getRole(parent) else {
                 return true
             }
-            
+
             let interactiveParentRoles: Set<String> = [
                 "AXRow", "AXCell", "AXOutlineRow", "AXButton"
             ]
             return !interactiveParentRoles.contains(parentRole)
         }
-        
+
         return false
     }
-    
+
     /// Checks if an element has a disclosure triangle child.
     ///
     /// Disclosure triangles are used to expand/collapse section headers.
     private func hasDisclosureTriangle(_ element: AXUIElement) -> Bool {
         let children = getChildren(element)
         for child in children {
-            if let role = getRole(from: child) {
+            if let role = AccessibilityHelper.getRole(child) {
                 // Check for disclosure triangle or button that controls disclosure
                 if role == "AXDisclosureTriangle" || role == "AXOutline" {
                     return true
@@ -949,93 +665,74 @@ final class NativeAppCrawler: ElementCrawler {
         }
         return false
     }
-    
-    /// Gets the title attribute from an accessibility element.
-    private func getTitle(from element: AXUIElement) -> String? {
-        var titleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success else {
-            return nil
-        }
-        return titleRef as? String
-    }
-    
-    /// Gets the AXLabel attribute from an accessibility element.
-    /// This is different from the title: some elements (like Xcode's toggle buttons)
-    /// have an empty title but a populated label.
-    private func getLabel(from element: AXUIElement) -> String? {
-        var labelRef: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
-           let label = labelRef as? String, !label.isEmpty {
-            return label
-        }
-        return nil
-    }
-    
+
     /// Gets the title from a row element by searching its children.
     private func getTitleFromRowChildren(_ element: AXUIElement) -> String? {
         let children = getChildren(element)
-        
+
         // First pass: Look for AXStaticText elements which usually contain the actual label
         for child in children {
-            let role = getRole(from: child)
-            
+            let role = AccessibilityHelper.getRole(child)
+
             if role == "AXStaticText" {
-                if let value = getValue(from: child), !value.isEmpty {
+                if let value = AccessibilityHelper.getValue(child), !value.isEmpty {
                     return value
                 }
-                if let title = getTitle(from: child), !title.isEmpty {
+                if let title = AccessibilityHelper.getTitle(child), !title.isEmpty {
                     return title
                 }
             }
-            
+
             // Check grandchildren for AXStaticText
             let grandchildren = getChildren(child)
             for grandchild in grandchildren {
-                let grandRole = getRole(from: grandchild)
+                let grandRole = AccessibilityHelper.getRole(grandchild)
                 if grandRole == "AXStaticText" {
-                    if let value = getValue(from: grandchild), !value.isEmpty {
+                    if let value = AccessibilityHelper.getValue(grandchild), !value.isEmpty {
                         return value
                     }
-                    if let title = getTitle(from: grandchild), !title.isEmpty {
+                    if let title = AccessibilityHelper.getTitle(grandchild), !title.isEmpty {
                         return title
                     }
                 }
             }
         }
-        
+
         // Second pass: Look for AXCell with title
         for child in children {
-            let role = getRole(from: child)
+            let role = AccessibilityHelper.getRole(child)
             if role == "AXCell" {
-                if let title = getTitle(from: child), !title.isEmpty {
+                if let title = AccessibilityHelper.getTitle(child), !title.isEmpty {
                     return title
                 }
             }
         }
-        
+
         // Third pass: Fallback to any title/value
         for child in children {
-            if let title = getTitle(from: child), !title.isEmpty {
+            if let title = AccessibilityHelper.getTitle(child), !title.isEmpty {
                 return title
             }
-            if let value = getValue(from: child), !value.isEmpty {
+            if let value = AccessibilityHelper.getValue(child)
+                , !value.isEmpty {
                 return value
             }
-            
+
             let grandchildren = getChildren(child)
             for grandchild in grandchildren {
-                if let title = getTitle(from: grandchild), !title.isEmpty {
+                if let title = AccessibilityHelper.getTitle(grandchild), !title.isEmpty {
                     return title
                 }
-                if let value = getValue(from: grandchild), !value.isEmpty {
+                if let value = AccessibilityHelper.getValue(grandchild)
+                    , !value.isEmpty {
                     return value
                 }
             }
         }
-        
+
         return nil
     }
-    
+
     /// Gets the title from sibling elements (for toggle switches and checkboxes).
     ///
     /// AXSwitch and AXCheckBox elements typically don't have their own title attribute.
@@ -1055,30 +752,30 @@ final class NativeAppCrawler: ElementCrawler {
         }
         // swiftlint:disable:next force_cast
         let parent = parentRef as! AXUIElement
-        
+
         // Get parent's role for grandparent search decision
-        let parentRole = getRole(from: parent)
-        
+        let parentRole = AccessibilityHelper.getRole(parent)
+
         // Get sibling elements (children of parent)
         let siblings = getChildren(parent)
-        
+
         // Look for AXStaticText siblings that contain the label
         for sibling in siblings {
             // Skip the element itself
             if CFEqual(sibling, element) {
                 continue
             }
-            
-            if let role = getRole(from: sibling), role == "AXStaticText" {
-                if let value = getValue(from: sibling), !value.isEmpty {
+
+            if let role = AccessibilityHelper.getRole(sibling), role == "AXStaticText" {
+                if let value = AccessibilityHelper.getValue(sibling), !value.isEmpty {
                     return value
                 }
-                if let title = getTitle(from: sibling), !title.isEmpty {
+                if let title = AccessibilityHelper.getTitle(sibling), !title.isEmpty {
                     return title
                 }
             }
         }
-        
+
         // If parent is AXCell or AXGroup, look in grandparent's children (uncle elements).
         // This handles cases like System Settings tables where:
         // AXRow > AXCell (label) > AXStaticText "App Store"
@@ -1088,52 +785,24 @@ final class NativeAppCrawler: ElementCrawler {
                 return uncleTitle
             }
         }
-        
+
         // Fallback: try the parent's description
-        if let desc = getDescription(from: parent), !desc.isEmpty {
+        if let desc = AccessibilityHelper.getAttributeValueAsString(parent, attribute: kAXDescriptionAttribute), !desc.isEmpty {
             return desc
         }
-        
+
         return nil
     }
-    
-    /// Gets the role attribute from an accessibility element.
-    private func getRole(from element: AXUIElement) -> String? {
-        var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success else {
-            return nil
-        }
-        return roleRef as? String
-    }
-    
-    /// Gets the description attribute from an accessibility element.
-    private func getDescription(from element: AXUIElement) -> String? {
-        var descRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descRef) == .success else {
-            return nil
-        }
-        return descRef as? String
-    }
-    
-    /// Gets the value attribute from an accessibility element.
-    private func getValue(from element: AXUIElement) -> String? {
-        var valueRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success else {
-            return nil
-        }
-        return valueRef as? String
-    }
-    
-    /// Gets the help attribute from an accessibility element.
-    /// This is often used for button tooltips/accessibility labels.
-    private func getHelp(from element: AXUIElement) -> String? {
-        var helpRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXHelpAttribute as CFString, &helpRef) == .success else {
-            return nil
-        }
-        return helpRef as? String
-    }
-    
+
+    //    /// Gets the role attribute from an accessibility element.
+    //    private func getRole(from element: AXUIElement) -> String? {
+    //        var roleRef: CFTypeRef?
+    //        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success else {
+    //            return nil
+    //        }
+    //        return roleRef as? String
+    //    }
+
     /// Gets the placeholder value attribute from an accessibility element.
     /// This is typically used for text fields to show hint text (e.g., "Find in Songs").
     private func getPlaceholderValue(from element: AXUIElement) -> String? {
@@ -1143,16 +812,16 @@ final class NativeAppCrawler: ElementCrawler {
         }
         return placeholderRef as? String
     }
-    
-    /// Gets the enabled state from an element.
-    private func getIsEnabled(from element: AXUIElement) -> Bool {
-        var enabledRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &enabledRef) == .success else {
-            return true  // Default to enabled if we can't determine
-        }
-        return (enabledRef as? Bool) ?? true
-    }
-    
+
+//    /// Gets the enabled state from an element.
+//    private func getIsEnabled(from element: AXUIElement) -> Bool {
+//        var enabledRef: CFTypeRef?
+//        guard AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &enabledRef) == .success else {
+//            return true  // Default to enabled if we can't determine
+//        }
+//        return (enabledRef as? Bool) ?? true
+//    }
+
     /// Gets a display name for a container element to include in item paths.
     ///
     /// This ensures that items with the same title but in different containers
@@ -1164,10 +833,10 @@ final class NativeAppCrawler: ElementCrawler {
     /// - Returns: A name for the container, or nil if no name should be added.
     private func getContainerName(_ element: AXUIElement, role: String) -> String? {
         // First, try the element's description (e.g., "Sidebar" for AXOutline)
-        if let desc = getDescription(from: element), !desc.isEmpty {
+        if let desc = AccessibilityHelper.getAttributeValueAsString(element, attribute: kAXDescriptionAttribute), !desc.isEmpty {
             return desc
         }
-        
+
         // Fall back to default names for certain container types
         switch role {
         case "AXToolbar":
