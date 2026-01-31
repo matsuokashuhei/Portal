@@ -68,6 +68,15 @@ extension AXUIElementable {
         return Self.convertToScreenCoordinates(rect)
     }
     
+    func isInside(child: Element) -> Bool {
+        guard
+            let frame = self.frame,
+            let childFrame = child.frame else {
+            return false
+        }
+        return frame.contains(childFrame.origin)
+    }
+    
     static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
         guard let primaryScreen = NSScreen.screens.first else {
             return axRect

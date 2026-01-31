@@ -143,7 +143,7 @@ final class NativeAppCrawler: ElementCrawler {
                 let root = Element(element: window.element)
                 
                 if let menu = findMenu(root) {
-                    print("menu.frame: \(menu.frame)")
+//                    print("menu.frame: \(menu.frame)")
                     // menu.frame: Optional((3581.0, 927.0, 150.0, 82.0))
                     // menu.frame: Optional((3398.0, 855.0, 250.0, 152.0))
                     // menu.frame: Optional((3461.0, 206.0, 274.0, 1042.0))
@@ -161,29 +161,13 @@ final class NativeAppCrawler: ElementCrawler {
                 
                 // Get window control buttons and yield them immediately
                 var itemCount = 0
-                if
-                    let closeButton = window.closeButton,
-                    let minimizeButton = window.minimizeButton,
-                    let zoomButton = window.zoomButton,
-                    let fullScreenButton = window.fullScreenButton
-                {
-                    for button in [closeButton, minimizeButton, zoomButton, fullScreenButton] {
-                        let target = HintTarget(element: button)
-                        continuation.yield(target)
-                        itemCount += 1
-                        await Task.yield()
-                    }
-                    
-                }
-                
-                // Crawl window elements with streaming
                 await self.crawlWindowInElementStreaming(
+                    window,
                     root,
                     depth: 0,
                     itemCount: &itemCount,
                     continuation: continuation
                 )
-                
                 continuation.finish()
             }
         }
@@ -214,7 +198,7 @@ final class NativeAppCrawler: ElementCrawler {
             guard itemCount < Self.maxItems else { return }
             if Task.isCancelled { return }
             
-            if child.role == "AXMenuItem" && child.title?.isEmpty == false {
+            if child.role == "AXMenuItem" && child.title?.isEmpty == false && menu.isInside(child: child) {
                 let target = HintTarget(element: child)
                 continuation.yield(target)
                 itemCount += 1
@@ -226,6 +210,7 @@ final class NativeAppCrawler: ElementCrawler {
     
     /// Recursively crawls an element for actionable window items, yielding results via continuation.
     private func crawlWindowInElementStreaming(
+        _ window: Window,
         _ element: Element,
         depth: Int,
         itemCount: inout Int,
@@ -243,7 +228,7 @@ final class NativeAppCrawler: ElementCrawler {
             if Task.isCancelled { return }
             
             // Get role
-            if child.hasActions {
+            if child.hasActions && window.isInside(child: child) {
                 let target = HintTarget(element: child)
                 continuation.yield(target)
                 itemCount += 1
@@ -251,6 +236,7 @@ final class NativeAppCrawler: ElementCrawler {
             }
             
             await crawlWindowInElementStreaming(
+                window,
                 child,
                 depth: depth + 1,
                 itemCount: &itemCount,

@@ -188,18 +188,13 @@ final class HintModeController {
         labelIndex = 0
         
         // Track whether we've detected menu items (for menu-only mode)
-        var isMenuOnlyMode = false
-        var hasDetectedFirstItem = false
-        
         logger.info("Starting progressive crawl")
         
         
         // Start crawling with progressive rendering
         crawlTask = Task {
             do {
-                guard
-                    let window = Window(app),
-                    let windowFrame = window.frame else {
+                guard let window = Window(app) else {
                     return
                 }
 //                guard let windowFrame = AccessibilityHelper.getMainWindowFrame(app) else { return }
