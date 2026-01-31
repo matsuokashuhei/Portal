@@ -59,6 +59,8 @@ final class NativeAppExecutor: ActionExecutor {
         logger.debug("execute: Starting execution for id=\(target.id) title='\(target.title)'")
         #endif
 
+        target.element.performAction()
+        return .success(())
         guard target.isEnabled else {
             #if DEBUG
             logger.debug("execute: Target is disabled")
@@ -66,13 +68,13 @@ final class NativeAppExecutor: ActionExecutor {
             return .failure(.targetDisabled)
         }
 
-        let currentId = AccessibilityHelper.elementIdentifier(target.axElement)
-        guard currentId == target.id else {
-            #if DEBUG
-            logger.debug("execute: Element id mismatch (expected=\(target.id), actual=\(currentId))")
-            #endif
-            return .failure(.elementInvalid)
-        }
+//        let currentId = AccessibilityHelper.elementIdentifier(target.axElement)
+//        guard currentId == target.id else {
+//            #if DEBUG
+//            logger.debug("execute: Element id mismatch (expected=\(target.id), actual=\(currentId))")
+//            #endif
+//            return .failure(.elementInvalid)
+//        }
 
         // Validate that the axElement still references the expected item.
 //        let elementIsValid = isElementValid(target.axElement, expectedTitle: target.title, validRoles: Self.validRoles)
@@ -84,7 +86,7 @@ final class NativeAppExecutor: ActionExecutor {
 //        }
 
         // Get role to determine execution strategy
-        guard let role = getRole(target.axElement) else {
+        guard let role = target.element.role else {
             #if DEBUG
             logger.warning("execute: Failed to get role")
             #endif

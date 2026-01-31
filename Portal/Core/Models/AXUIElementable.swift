@@ -11,6 +11,13 @@ protocol AXUIElementable {
 }
 
 extension AXUIElementable {
+    static func generateID(element: AXUIElement) -> String {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        let pointerValue = UInt(bitPattern: Unmanaged.passUnretained(element).toOpaque())
+        return  "\(pid)-0x\(String(pointerValue, radix: 16))"
+    }
+    
     func getAttributeValueAsString(attribute: CFString) -> String? {
         var ref: CFTypeRef?
         guard
@@ -41,13 +48,6 @@ extension AXUIElementable {
         return ref
     }
     
-    static func generateID(element: AXUIElement) -> String {
-        var pid: pid_t = 0
-        AXUIElementGetPid(element, &pid)
-        let pointerValue = UInt(bitPattern: Unmanaged.passUnretained(element).toOpaque())
-        return  "\(pid)-0x\(String(pointerValue, radix: 16))"
-    }
-    
     static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
         guard let primaryScreen = NSScreen.screens.first else {
             return axRect
@@ -64,5 +64,19 @@ extension AXUIElementable {
             width: axRect.size.width,
             height: axRect.size.height
         )
+    }
+    
+    // No used
+    static func getFocusedUIElement() -> Element? {
+        var ref: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(
+                AXUIElementCreateSystemWide(),
+                kAXFocusedUIElementAttribute as CFString,
+                &ref
+            ) == .success else {
+            return nil
+        }
+        return Element(element: ref as! AXUIElement)
     }
 }

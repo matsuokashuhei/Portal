@@ -215,19 +215,19 @@ final class HintModeController {
                     let role = AccessibilityHelper.getRole(target.axElement)
                     let isMenuItem = role == "AXMenuItem"
                     
-                    // Menu-only mode detection: if first item is a menu item, show only menu items
-                    if !hasDetectedFirstItem {
-                        hasDetectedFirstItem = true
-                        if isMenuItem {
-                            isMenuOnlyMode = true
-                            logger.info("Menu-only mode activated")
-                        }
-                    }
-                    
-                    // Skip non-menu items if in menu-only mode
-                    if isMenuOnlyMode && !isMenuItem {
-                        continue
-                    }
+//                    // Menu-only mode detection: if first item is a menu item, show only menu items
+//                    if !hasDetectedFirstItem {
+//                        hasDetectedFirstItem = true
+//                        if isMenuItem {
+//                            isMenuOnlyMode = true
+//                            logger.info("Menu-only mode activated")
+//                        }
+//                    }
+//                    
+//                    // Skip non-menu items if in menu-only mode
+//                    if isMenuOnlyMode && !isMenuItem {
+//                        continue
+//                    }
                     
                     // Get frame (use cached for Electron, otherwise fetch)
                     let frame: CGRect
@@ -248,7 +248,7 @@ final class HintModeController {
                     //                            windowFrame.contains(frame) || windowFrame.intersects(frame)
                     //                        }
                     //                        guard isInAnyWindow else { continue }
-                    guard windowFrame.contains(frame), windowFrame.intersects(frame) else { continue }
+//                    guard windowFrame.contains(frame), windowFrame.intersects(frame) else { continue }
                     
                     // Check scroll visibility for non-Electron items
                     if target.cachedFrame == nil {

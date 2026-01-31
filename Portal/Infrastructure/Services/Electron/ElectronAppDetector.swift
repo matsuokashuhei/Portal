@@ -285,16 +285,18 @@ final class ElectronAppDetector {
         nodesLogged += 1
 
         let role = getStringAttribute(element, kAXRoleAttribute as String) ?? "unknown"
-        let title = getStringAttribute(element, kAXTitleAttribute as String) ?? ""
-        let desc = getStringAttribute(element, kAXRoleDescriptionAttribute as String) ?? ""
-        let description = getStringAttribute(element, kAXDescriptionAttribute as String) ?? ""
+//        let title = getStringAttribute(element, kAXTitleAttribute as String) ?? ""
+//        let desc = getStringAttribute(element, kAXRoleDescriptionAttribute as String) ?? ""
+//        let description = getStringAttribute(element, kAXDescriptionAttribute as String) ?? ""
         let value = getStringAttribute(element, kAXValueAttribute as String) ?? ""
         let help = getStringAttribute(element, kAXHelpAttribute as String) ?? ""
         let subrole = getStringAttribute(element, kAXSubroleAttribute as String) ?? ""
         let identifier = getStringAttribute(element, kAXIdentifierAttribute as String) ?? ""
+        let focused = Element(element: element).focused
+        let actions = Element(element: element).actions
 
         let indent = String(repeating: "  ", count: depth)
-        print("[ElectronAppDetector] \(indent)\(role) title='\(title)' desc='\(desc)' description='\(description)' value='\(value)' help='\(help)' subrole='\(subrole)' identifier='\(identifier)'")
+        print("[ElectronAppDetector] \(indent)\(role) value='\(value)' help='\(help)' subrole='\(subrole)' identifier='\(identifier)' actions='\(actions)' focused='\(focused)'")
 
         let children = getChildren(of: element)
         if children.isEmpty || depth >= config.maxDepth {

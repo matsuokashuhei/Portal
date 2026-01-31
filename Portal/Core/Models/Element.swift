@@ -40,6 +40,15 @@ struct Element: Identifiable, AXUIElementable {
         return ref as? Bool
     }
     
+    var focused: Bool? {
+        var ref: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(element, kAXFocusedAttribute as CFString, &ref) == .success else {
+            return nil
+        }
+        return ref as? Bool
+    }
+    
     var role: String? {
         guard let role = getAttributeValueAsString(attribute: kAXRoleAttribute as CFString) else {
             return nil
@@ -72,6 +81,7 @@ struct Element: Identifiable, AXUIElementable {
             Element(element: child)
         }
     }
+    
     var actions: [String] {
         var ref: CFArray?
         guard
@@ -95,7 +105,52 @@ struct Element: Identifiable, AXUIElementable {
         return "title: \(title.debugDescription), role: \(role.debugDescription), subrole: \(subrole.debugDescription), value: \(value.debugDescription), enabled: \(enabled.debugDescription), actions: \(actions.debugDescription), children: \(children.count))"
     }
     
+    func focus() -> Bool {
+        let result = AXUIElementSetAttributeValue(
+            element,
+            kAXFocusedAttribute as CFString,
+            kCFBooleanTrue
+        )
+        return result == .success
+    }
+    
+    func select() -> Bool {
+        let result = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedAttribute as CFString,
+            kCFBooleanTrue
+        )
+        return result == .success
+    }
+    
     var hasActions: Bool {
-        !actions.isEmpty && enabled ?? true
+        guard enabled ?? true else {
+            return false
+        }
+        return actions
+//            .filter { $0 != "AXShowDefaultUI" }
+            .filter {$0 != "AXShowMenu"}
+//            .filter {$0 != "AXShowAlternateUI"}
+            .count > 0
+    }
+    
+    func performAction() {
+        guard let role = role else {
+            return
+        }
+        print(self.toString())
+        switch role {
+        case "AXTextField":
+            focus()
+        case "AXRow":
+            select()
+        case "AXStaticText":
+            AXUIElementPerformAction(element, "AXShowMenu" as CFString)
+//            select()
+        default :
+            // AXButton
+            // AXCheckBox
+            AXUIElementPerformAction(element, kAXPressAction as CFString)
+        }
     }
 }
