@@ -6,7 +6,7 @@
 //
 import AppKit
 
-struct Window {
+struct Window: AXUIElementable {
     let element: AXUIElement
     init?(_ runningApplication: NSRunningApplication) {
         let app = AXUIElementCreateApplication(runningApplication.processIdentifier)
@@ -61,26 +61,6 @@ struct Window {
             return nil
         }
         let rect = CGRect(origin: position, size: size)
-        return AccessibilityHelper.convertToScreenCoordinates(rect)
-    }
-
-    private func getAttributeValueAsUIElement(attribute: CFString) -> AXUIElement? {
-        var ref: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(element, attribute, &ref) == .success,
-            let button = ref
-        else {
-            return nil
-        }
-        return button as! AXUIElement
-    }
-
-    private func getAttributeValueAsRef(attribute: CFString) -> CFTypeRef? {
-        var ref: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(element, attribute, &ref) == .success else {
-            return nil
-        }
-        return ref
+        return Window.convertToScreenCoordinates(rect)
     }
 }

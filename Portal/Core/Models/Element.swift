@@ -6,33 +6,31 @@
 //
 
 import ApplicationServices
+import AppKit
 
-struct Element: Identifiable {
+struct Element: Identifiable, AXUIElementable {
     let id: String
     let element: AXUIElement
-
+    
     init(element: AXUIElement) {
-        var pid: pid_t = 0
-        AXUIElementGetPid(element, &pid)
-        let pointerValue = UInt(bitPattern: Unmanaged.passUnretained(element).toOpaque())
-        self.id = "\(pid)-0x\(String(pointerValue, radix: 16))"
+        self.id = Element.generateID(element: element)
         self.element = element
     }
-
+    
     var title: String? {
         guard let title = getAttributeValueAsString(attribute: kAXTitleAttribute as CFString) else {
             return nil
         }
         return title
     }
-
+    
     var label: String? {
         guard let label = getAttributeValueAsString(attribute: "AXLabel" as CFString) else {
             return nil
         }
         return label
     }
-
+    
     var enabled: Bool? {
         var ref: CFTypeRef?
         guard
@@ -41,28 +39,28 @@ struct Element: Identifiable {
         }
         return ref as? Bool
     }
-
+    
     var role: String? {
         guard let role = getAttributeValueAsString(attribute: kAXRoleAttribute as CFString) else {
             return nil
         }
         return role
     }
-
+    
     var subrole: String? {
         guard let role = getAttributeValueAsString(attribute: kAXSubroleAttribute as CFString) else {
             return nil
         }
         return role
     }
-
+    
     var value: String? {
         guard let value = getAttributeValueAsString(attribute: kAXValueAttribute as CFString) else {
-           return nil
+            return nil
         }
         return value
     }
-
+    
     var children: [Element] {
         var ref: CFTypeRef?
         guard
@@ -83,27 +81,21 @@ struct Element: Identifiable {
         }
         return actions
     }
-
+    
     func toString() -> String {
-//        [
-//            ("title", title),
-//            ("role", role),
-//            ("subrole", subrole),
-//            ("value", value)
-//        ].compactMap { key, value -> (String, String)? in
-//            guard let value else { return nil }
-//            return (key, value)
-//        }
+        //        [
+        //            ("title", title),
+        //            ("role", role),
+        //            ("subrole", subrole),
+        //            ("value", value)
+        //        ].compactMap { key, value -> (String, String)? in
+        //            guard let value else { return nil }
+        //            return (key, value)
+        //        }
         return "title: \(title.debugDescription), role: \(role.debugDescription), subrole: \(subrole.debugDescription), value: \(value.debugDescription), enabled: \(enabled.debugDescription), actions: \(actions.debugDescription), children: \(children.count))"
     }
-
-    private func getAttributeValueAsString(attribute: CFString) -> String? {
-        var ref: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(element, attribute, &ref) == .success,
-            let value = ref as? String else {
-            return nil
-        }
-        return value
+    
+    var hasActions: Bool {
+        !actions.isEmpty && enabled ?? true
     }
 }
