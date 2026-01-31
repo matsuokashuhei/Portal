@@ -211,58 +211,6 @@ final class HintModeController {
                     // Check for cancellation
                     if Task.isCancelled { break }
                     
-                    // Get role for filtering
-                    let role = AccessibilityHelper.getRole(target.axElement)
-                    let isMenuItem = role == "AXMenuItem"
-                    
-//                    // Menu-only mode detection: if first item is a menu item, show only menu items
-//                    if !hasDetectedFirstItem {
-//                        hasDetectedFirstItem = true
-//                        if isMenuItem {
-//                            isMenuOnlyMode = true
-//                            logger.info("Menu-only mode activated")
-//                        }
-//                    }
-//                    
-//                    // Skip non-menu items if in menu-only mode
-//                    if isMenuOnlyMode && !isMenuItem {
-//                        continue
-//                    }
-                    
-                    // Get frame (use cached for Electron, otherwise fetch)
-                    let frame: CGRect
-                    if let cached = target.cachedFrame {
-                        frame = cached
-                    } else if let f = AccessibilityHelper.getFrameWithFallback(target.axElement) {
-                        frame = f
-                    } else {
-                        continue // Skip items without valid frame
-                    }
-                    
-                    // Validate frame
-                    guard frame != .zero, frame.width > 0 else { continue }
-                    
-                    // Check window bounds (menu items can extend beyond window)
-                    //                    if !isMenuItem && !windowFrames.isEmpty {
-                    //                        let isInAnyWindow = windowFrames.contains { windowFrame in
-                    //                            windowFrame.contains(frame) || windowFrame.intersects(frame)
-                    //                        }
-                    //                        guard isInAnyWindow else { continue }
-//                    guard windowFrame.contains(frame), windowFrame.intersects(frame) else { continue }
-                    
-                    // Check scroll visibility for non-Electron items
-                    if target.cachedFrame == nil {
-                        guard AccessibilityHelper.isVisibleInScrollContainers(target.axElement) else { continue }
-                    }
-                    //                    }
-                    
-                    // Adjust frame if height is zero
-                    let adjustedFrame: CGRect
-                    if frame.height <= 0 {
-                        adjustedFrame = CGRect(x: frame.origin.x, y: frame.origin.y, width: frame.width, height: 20.0)
-                    } else {
-                        adjustedFrame = frame
-                    }
                     
                     // Generate label progressively
                     let label = HintLabelGenerator.generateLabel(at: labelIndex)
@@ -270,7 +218,7 @@ final class HintModeController {
                     
                     let hintLabel = HintLabel(
                         label: label,
-                        frame: adjustedFrame,
+                        frame: target.element.frame!,
                         target: target,
                         coordinateSystem: coordinateSystem
                     )

@@ -139,9 +139,14 @@ final class NativeAppCrawler: ElementCrawler {
                 
                 // Load maxDepth once at the start of crawl for consistent behavior and performance
                 self.cachedMaxDepth = CrawlConfiguration.load().maxDepth
+                
                 let root = Element(element: window.element)
                 
                 if let menu = findMenu(root) {
+                    print("menu.frame: \(menu.frame)")
+                    // menu.frame: Optional((3581.0, 927.0, 150.0, 82.0))
+                    // menu.frame: Optional((3398.0, 855.0, 250.0, 152.0))
+                    // menu.frame: Optional((3461.0, 206.0, 274.0, 1042.0))
                     var itemCount = 0
                     
                     await crawlMenuOnly(

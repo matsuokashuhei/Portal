@@ -44,23 +44,23 @@ struct Window: AXUIElementable {
         guard let button = getAttributeValueAsUIElement(attribute: kAXFullScreenButtonAttribute as CFString) else { return nil }
         return Element(element: button)
     }
-    
-    var frame: CGRect? {
-        var position = CGPoint.zero
-        guard
-            let ref = getAttributeValueAsRef(attribute: kAXPositionAttribute as CFString),
-            CFGetTypeID(ref) == AXValueGetTypeID(),
-            AXValueGetValue(ref as! AXValue, .cgPoint, &position) else {
-            return nil
-        }
-        var size = CGSize.zero
-        guard
-            let ref = getAttributeValueAsRef(attribute: kAXSizeAttribute as CFString),
-            CFGetTypeID(ref) == AXValueGetTypeID(),
-            AXValueGetValue(ref as! AXValue, .cgSize, &size) else {
-            return nil
-        }
-        let rect = CGRect(origin: position, size: size)
-        return Window.convertToScreenCoordinates(rect)
-    }
+//    
+//    var frame: CGRect? {
+//        var position = CGPoint.zero
+//        guard
+//            let ref = getAttributeValueAsRef(attribute: kAXPositionAttribute as CFString),
+//            CFGetTypeID(ref) == AXValueGetTypeID(),
+//            AXValueGetValue(ref as! AXValue, .cgPoint, &position) else {
+//            return nil
+//        }
+//        var size = CGSize.zero
+//        guard
+//            let ref = getAttributeValueAsRef(attribute: kAXSizeAttribute as CFString),
+//            CFGetTypeID(ref) == AXValueGetTypeID(),
+//            AXValueGetValue(ref as! AXValue, .cgSize, &size) else {
+//            return nil
+//        }
+//        let rect = CGRect(origin: position, size: size)
+//        return Window.convertToScreenCoordinates(rect)
+//    }
 }
