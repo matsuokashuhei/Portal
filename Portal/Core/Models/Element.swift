@@ -11,26 +11,26 @@ import AppKit
 struct Element: Identifiable, AXUIElementable {
     let id: String
     let element: AXUIElement
-    
+
     init(element: AXUIElement) {
         self.id = Element.generateID(element: element)
         self.element = element
     }
-    
+
     var title: String? {
         guard let title = getAttributeValueAsString(attribute: kAXTitleAttribute as CFString) else {
             return nil
         }
         return title
     }
-    
+
     var label: String? {
         guard let label = getAttributeValueAsString(attribute: "AXLabel" as CFString) else {
             return nil
         }
         return label
     }
-    
+
     var enabled: Bool? {
         var ref: CFTypeRef?
         guard
@@ -39,7 +39,7 @@ struct Element: Identifiable, AXUIElementable {
         }
         return ref as? Bool
     }
-    
+
     var focused: Bool? {
         var ref: CFTypeRef?
         guard
@@ -48,28 +48,28 @@ struct Element: Identifiable, AXUIElementable {
         }
         return ref as? Bool
     }
-    
+
     var role: String? {
         guard let role = getAttributeValueAsString(attribute: kAXRoleAttribute as CFString) else {
             return nil
         }
         return role
     }
-    
+
     var subrole: String? {
         guard let role = getAttributeValueAsString(attribute: kAXSubroleAttribute as CFString) else {
             return nil
         }
         return role
     }
-    
+
     var value: String? {
         guard let value = getAttributeValueAsString(attribute: kAXValueAttribute as CFString) else {
             return nil
         }
         return value
     }
-    
+
     var children: [Element] {
         var ref: CFTypeRef?
         guard
@@ -81,7 +81,7 @@ struct Element: Identifiable, AXUIElementable {
             Element(element: child)
         }
     }
-    
+
     var actions: [String] {
         var ref: CFArray?
         guard
@@ -89,7 +89,7 @@ struct Element: Identifiable, AXUIElementable {
             let actions = ref as? [String] else {
             return []
         }
-        return actions.filter {
+        let filteredActions = Set(actions).filter {
             [
                 "AXPress",
                 "AXIncrement",
@@ -104,6 +104,11 @@ struct Element: Identifiable, AXUIElementable {
                 "AXShowDefaultUI",
             ].contains($0)
         }
+        // AXPressとAXShowMenuの両方がある場合、AXPressのみに絞る
+        if filteredActions.contains("AXPress") && filteredActions.contains("AXShowMenu") {
+            return filteredActions.filter { $0 != "AXShowMenu" }
+        }
+        return Array(filteredActions)
     }
 //    var action: String? {
 //        guard actions.count > 0 else { return nil }
@@ -126,7 +131,7 @@ struct Element: Identifiable, AXUIElementable {
 //        }
 //        return nil
 //    }
-    
+
     func toString() -> String {
         //        [
         //            ("title", title),
@@ -139,7 +144,7 @@ struct Element: Identifiable, AXUIElementable {
         //        }
         return "title: \(title.debugDescription), role: \(role.debugDescription), subrole: \(subrole.debugDescription), value: \(value.debugDescription), enabled: \(enabled.debugDescription), actions: \(actions.debugDescription), children: \(children.count))"
     }
-    
+
     func focus() -> Bool {
         let result = AXUIElementSetAttributeValue(
             element,
@@ -148,7 +153,7 @@ struct Element: Identifiable, AXUIElementable {
         )
         return result == .success
     }
-    
+
     func select() -> Bool {
         let result = AXUIElementSetAttributeValue(
             element,
@@ -157,7 +162,7 @@ struct Element: Identifiable, AXUIElementable {
         )
         return result == .success
     }
-    
+
     var hasActions: Bool {
         guard enabled ?? true else {
             return false
@@ -174,7 +179,7 @@ struct Element: Identifiable, AXUIElementable {
         //            .filter {$0 != "AXShowAlternateUI"}
             .count > 0
     }
-    
+
     func performAction(action: String) -> Bool {
         guard let role = role else {
             return false
@@ -190,7 +195,7 @@ struct Element: Identifiable, AXUIElementable {
         let result = AXUIElementPerformAction(element, action as CFString)
         return result == .success
     }
-    
+
     func performAction() {
         performAction(named: nil)
     }
