@@ -159,7 +159,7 @@ struct InputBufferView: View {
     HintLabelView(
         hint: HintLabel(
             label: "AB",
-            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
+//            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
             target: HintTarget(element: Element(element: AXUIElementCreateSystemWide())),
             coordinateSystem: .native
         ),
@@ -173,7 +173,7 @@ struct InputBufferView: View {
     HintLabelView(
         hint: HintLabel(
             label: "AB",
-            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
+//            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
             target: HintTarget(element: Element(element: AXUIElementCreateSystemWide())),
             coordinateSystem: .native
         ),
@@ -187,7 +187,7 @@ struct InputBufferView: View {
     HintLabelView(
         hint: HintLabel(
             label: "AB",
-            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
+//            frame: CGRect(x: 100, y: 100, width: 80, height: 24),
             target: HintTarget(element: Element(element: AXUIElementCreateSystemWide())),
             coordinateSystem: .native
         ),

@@ -75,44 +75,6 @@ final class NativeAppCrawler: ElementCrawler {
     /// are crawled even when there are many content items (e.g., search results).
     private static let maxItems = 500
     
-    /// Accessibility roles for container elements that should be traversed.
-    private static let containerRoles: Set<String> = [
-        "AXOutline",
-        "AXList",
-        "AXTable",
-        "AXScrollArea",
-        "AXSplitGroup",
-        "AXGroup",
-        "AXToolbar",
-        "AXSegmentedControl",
-        // Needed to crawl popup/select menus (e.g., System Settings select boxes)
-        "AXMenu"
-    ]
-    
-    /// Accessibility roles for actionable items we can interact with.
-    private static let itemRoles: Set<String> = [
-        "AXRow",
-        "AXCell",
-        "AXOutlineRow",
-        "AXStaticText",
-        "AXButton",
-        "AXRadioButton",
-        // Needed to support popup/select menus
-        "AXMenuItem",
-        "AXCheckBox",
-        "AXMenuButton",
-        "AXSwitch",
-        "AXPopUpButton",
-        "AXComboBox",
-        "AXTextField",
-        // Additional controls (#132)
-        "AXSlider",              // Volume, brightness sliders
-        "AXIncrementor",         // Numeric steppers
-        "AXDisclosureTriangle",  // Expand/collapse triangles
-        "AXTab",                 // Tab selection
-        "AXSegment"              // Individual segment buttons
-    ]
-    
     // MARK: - ElementCrawler Protocol
     
     /// Crawls UI elements from the specified application as an async stream.
@@ -143,18 +105,10 @@ final class NativeAppCrawler: ElementCrawler {
                 let root = Element(element: window.element)
                 
                 if let menu = findMenu(root) {
-//                    print("menu.frame: \(menu.frame)")
-                    // menu.frame: Optional((3581.0, 927.0, 150.0, 82.0))
-                    // menu.frame: Optional((3398.0, 855.0, 250.0, 152.0))
-                    // menu.frame: Optional((3461.0, 206.0, 274.0, 1042.0))
-                    var itemCount = 0
-                    
                     await crawlMenuOnly(
                         menu,
-                        itemCount: &itemCount,
                         continuation: continuation
                     )
-                    
                     continuation.finish()
                     return
                 }
@@ -191,17 +145,14 @@ final class NativeAppCrawler: ElementCrawler {
     
     private func crawlMenuOnly(
         _ menu: Element,
-        itemCount: inout Int,
         continuation: AsyncThrowingStream<HintTarget, Error>.Continuation
     ) async {
         for child in menu.children {
-            guard itemCount < Self.maxItems else { return }
             if Task.isCancelled { return }
             
             if child.role == "AXMenuItem" && child.title?.isEmpty == false && menu.isInside(child: child) {
                 let target = HintTarget(element: child)
                 continuation.yield(target)
-                itemCount += 1
                 await Task.yield()
             }
         }

@@ -94,18 +94,4 @@ extension AXUIElementable {
             height: axRect.size.height
         )
     }
-    
-    // No used
-    static func getFocusedUIElement() -> Element? {
-        var ref: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(
-                AXUIElementCreateSystemWide(),
-                kAXFocusedUIElementAttribute as CFString,
-                &ref
-            ) == .success else {
-            return nil
-        }
-        return Element(element: ref as! AXUIElement)
-    }
 }

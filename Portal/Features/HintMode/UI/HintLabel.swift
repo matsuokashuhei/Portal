@@ -69,7 +69,12 @@ struct HintLabel: Identifiable {
         print("label: \(label), element: \(element.toString())")
     }
     
-    
+    init(label: String, target: HintTarget, coordinateSystem: HintCoordinateSystem) {
+        self.label = label
+        self.frame = target.element.frame!
+        self.target = target
+        self.coordinateSystem = coordinateSystem
+    }
     
     
     

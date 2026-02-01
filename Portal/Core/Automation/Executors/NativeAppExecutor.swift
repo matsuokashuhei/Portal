@@ -25,29 +25,6 @@ private let logger = PortalLogger.make("Portal", category: "NativeAppExecutor")
 /// All methods must be called on the main thread due to Accessibility API requirements.
 @MainActor
 final class NativeAppExecutor: ActionExecutor {
-
-    // MARK: - Role Definitions
-
-    /// Valid accessibility roles for native macOS applications.
-    static let validRoles: Set<String> = [
-        "AXRow", "AXCell", "AXOutlineRow", "AXStaticText", "AXButton", "AXRadioButton",
-        "AXGroup", "AXMenuItem", "AXCheckBox", "AXMenuButton", "AXSwitch", "AXPopUpButton",
-        "AXComboBox", "AXTextField", "AXTextArea", "AXLink", "AXImage",
-        // Additional controls (#132)
-        "AXSlider", "AXIncrementor", "AXDisclosureTriangle", "AXTab", "AXSegment"
-    ]
-
-    /// Actions to try for window elements, in order of preference.
-    private static let preferredActions: [String] = [
-        kAXPressAction as String, "AXSelect", "AXConfirm", "AXShowDefaultUI"
-    ]
-
-    /// Roles that require focus action instead of press.
-    private static let rolesRequiringFocus: Set<String> = ["AXTextField"]
-
-    /// Roles where setting `kAXSelectedAttribute` is a reliable primary interaction.
-    private static let rolesSupportingSelectedAttribute: Set<String> = ["AXRow", "AXCell", "AXOutlineRow"]
-
     // MARK: - ActionExecutor Protocol
 
     /// Executes a Hint Mode target by performing the appropriate action on its AXUIElement.
@@ -55,10 +32,6 @@ final class NativeAppExecutor: ActionExecutor {
     /// - Parameter target: The target to execute.
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
     func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
-        #if DEBUG
-        logger.debug("execute: Starting execution for id=\(target.id) title='\(target.title)'")
-        #endif
-
         target.element.performAction()
         return .success(())
     }
