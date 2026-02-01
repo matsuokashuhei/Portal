@@ -54,7 +54,7 @@ final class ElectronExecutor: ActionExecutor {
     ///
     /// - Parameter target: The target to execute.
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError> {
         #if DEBUG
         logger.debug("execute: Starting execution for '\(target.title)'")
         #endif
@@ -125,6 +125,26 @@ final class ElectronExecutor: ActionExecutor {
             // Try AXPress as fallback
             if performAction(target.axElement, action: kAXPressAction as String) {
                 return .success(())
+            }
+        }
+
+        // If a specific action was selected, try it first.
+        if let actionName {
+            let result = AXUIElementPerformAction(target.axElement, actionName as CFString)
+            switch result {
+            case .success:
+                return .success(())
+            case .invalidUIElement, .cannotComplete:
+                if let cachedFrame = target.cachedFrame {
+                    if performMouseClickAtFrame(cachedFrame) {
+                        return .success(())
+                    }
+                }
+                return .failure(.elementInvalid)
+            case .actionUnsupported:
+                break
+            default:
+                break
             }
         }
 

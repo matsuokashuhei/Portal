@@ -139,6 +139,18 @@ final class HintOverlayWindow: NSWindow {
         refreshView()
     }
 
+    /// Replaces all hint labels in the window.
+    ///
+    /// - Parameter newHints: The new hint labels to display.
+    func setHints(_ newHints: [HintLabel]) {
+        guard let screen = screen else { return }
+
+        hints = newHints.filter { hint in
+            screen.frame.intersects(hint.frame)
+        }
+        refreshView()
+    }
+
     /// Returns all hint labels currently in this window.
     var allHints: [HintLabel] {
         return hints

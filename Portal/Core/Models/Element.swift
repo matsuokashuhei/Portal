@@ -89,8 +89,43 @@ struct Element: Identifiable, AXUIElementable {
             let actions = ref as? [String] else {
             return []
         }
-        return actions
+        return actions.filter {
+            [
+                "AXPress",
+                "AXIncrement",
+                "AXDecrement",
+                "AXConfirm",
+                "AXPick",
+                "AXCancel",
+                "AXRaise",
+                "AXShowMenu",
+                "AXDelete",
+                // "AXShowAlternateUI",
+                "AXShowDefaultUI",
+            ].contains($0)
+        }
     }
+//    var action: String? {
+//        guard actions.count > 0 else { return nil }
+//        for action in [
+//            "AXPress",
+//            "AXIncrement",
+//            "AXDecrement",
+//            "AXConfirm",
+//            "AXPick",
+//            "AXCancel",
+//            "AXRaise",
+//            "AXShowMenu",
+//            "AXDelete",
+//            "AXShowAlternateUI",
+//            "AXShowDefaultUI",
+//        ] {
+//            if actions.contains(action) {
+//                return action
+//            }
+//        }
+//        return nil
+//    }
     
     func toString() -> String {
         //        [
@@ -127,30 +162,59 @@ struct Element: Identifiable, AXUIElementable {
         guard enabled ?? true else {
             return false
         }
+        guard let role = role else {
+            return false
+        }
+        if role == "AXStaticText" && actions == ["AXShowMenu"] {
+            return false
+        }
         return actions
-//            .filter { $0 != "AXShowDefaultUI" }
-            .filter {$0 != "AXShowMenu"}
-//            .filter {$0 != "AXShowAlternateUI"}
+        //            .filter { $0 != "AXShowDefaultUI" }
+        //            .filter {$0 != "AXShowMenu"}
+        //            .filter {$0 != "AXShowAlternateUI"}
             .count > 0
     }
     
+    func performAction(action: String) -> Bool {
+        guard let role = role else {
+            return false
+        }
+        switch role {
+        case "AXTextField":
+            return focus()
+        case "AXRow":
+            let _ = select()
+        default:
+            break
+        }
+        let result = AXUIElementPerformAction(element, action as CFString)
+        return result == .success
+    }
+    
     func performAction() {
+        performAction(named: nil)
+    }
+
+    func performAction(named actionName: String?) {
         guard let role = role else {
             return
         }
-        print(self.toString())
+
+        let action = actionName ?? actions.first
+        guard let action else {
+            return
+        }
+
+        print("self: \(self.toString()), role: \(role), action: \(action)")
         switch role {
         case "AXTextField":
-            focus()
+            let _ = focus()
         case "AXRow":
-            select()
-        case "AXStaticText":
-            AXUIElementPerformAction(element, "AXShowMenu" as CFString)
-//            select()
-        default :
-            // AXButton
-            // AXCheckBox
-            AXUIElementPerformAction(element, kAXPressAction as CFString)
+            AXUIElementPerformAction(element, action as CFString)
+            let _ = select()
+        default:
+            AXUIElementPerformAction(element, action as CFString)
+            let _ = select()
         }
     }
 }

@@ -31,8 +31,8 @@ final class NativeAppExecutor: ActionExecutor {
     ///
     /// - Parameter target: The target to execute.
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
-        target.element.performAction()
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError> {
+        target.element.performAction(named: actionName)
         return .success(())
     }
 

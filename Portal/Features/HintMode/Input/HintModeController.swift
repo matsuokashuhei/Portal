@@ -417,21 +417,61 @@ final class HintModeController {
     ///
     /// - Parameter hint: The hint to execute.
     private func executeHint(_ hint: HintLabel) {
+        if let actionName = hint.actionName {
+            logger.info("Executing action hint '\(hint.label)' -> '\(actionName)'")
+            executeTarget(hint.target, actionName: actionName)
+            return
+        }
+
+        let actions = hint.target.element.actions
+        if actions.count > 1 {
+            logger.info("Multiple actions detected (\(actions.count)), presenting action selection")
+            presentActionSelection(for: hint, actions: actions)
+            return
+        }
+
         logger.info("Executing hint '\(hint.label)' for '\(hint.target.title)'")
-        
-        // Get executor based on target type and execute the action
-        let executor = executorFactory.executor(for: hint.target)
-        let result = executor.execute(hint.target)
-        
+        executeTarget(hint.target, actionName: actions.first)
+    }
+
+    private func executeTarget(_ target: HintTarget, actionName: String?) {
+        let executor = executorFactory.executor(for: target)
+        let result = executor.execute(target, actionName: actionName)
+
         switch result {
         case .success:
             logger.info("Execution successful")
         case .failure(let error):
             logger.warning("Execution failed: \(error)")
         }
-        
+
         // Deactivate after execution (success or failure)
         deactivate()
+    }
+
+    private func presentActionSelection(for hint: HintLabel, actions: [String]) {
+        crawlTask?.cancel()
+        crawlTask = nil
+
+        inputBuffer = ""
+        labelIndex = 0
+
+        let actionHints = actions.enumerated().map { index, actionName in
+            HintLabel(
+                label: HintLabelGenerator.generateLabel(at: index),
+                target: hint.target,
+                coordinateSystem: hint.coordinateSystem,
+                actionName: actionName,
+                actionIndex: index
+            )
+        }
+
+        hints = actionHints
+
+        for window in overlayWindows {
+            window.setHints(actionHints)
+            window.updateVisibleHints(for: inputBuffer)
+        }
     }
     
     // MARK: - Application Activation Observation

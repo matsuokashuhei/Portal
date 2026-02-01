@@ -22,6 +22,9 @@ struct HintOverlayView: View {
     /// The screen bounds for coordinate conversion.
     let screenBounds: CGRect
 
+    private let actionBadgeHeight: CGFloat = 26
+    private let actionStackSpacing: CGFloat = 4
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -37,7 +40,7 @@ struct HintOverlayView: View {
                     HintLabelView(hint: hint, input: currentInput)
                         .position(
                             x: hint.frame.minX - screenBounds.minX + 10,
-                            y: calculateY(for: hint)
+                            y: calculateY(for: hint) - actionOffset(for: hint)
                         )
                 }
             }
@@ -81,6 +84,11 @@ struct HintOverlayView: View {
             return hint.frame.minY - screenBounds.minY + 10
         }
     }
+
+    private func actionOffset(for hint: HintLabel) -> CGFloat {
+        guard let index = hint.actionIndex else { return 0 }
+        return CGFloat(index) * (actionBadgeHeight + actionStackSpacing)
+    }
 }
 
 /// A single hint label badge displayed at an element's position.
@@ -92,21 +100,30 @@ struct HintLabelView: View {
     let input: String
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Matched portion (dimmed)
-            if !input.isEmpty {
-                Text(matchedPortion)
-                    .foregroundColor(.primary.opacity(0.5))
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 0) {
+                // Matched portion (dimmed)
+                if !input.isEmpty {
+                    Text(matchedPortion)
+                        .foregroundColor(.primary.opacity(0.5))
+                }
+
+                // Remaining portion (bright)
+                Text(remainingPortion)
+                    .foregroundColor(.primary)
             }
 
-            // Remaining portion (bright)
-            Text(remainingPortion)
-                .foregroundColor(.primary)
+            if let actionName = hint.actionName {
+                Text(actionName)
+                    .foregroundColor(.primary)
+            }
         }
-        .font(.system(size: 12, weight: .bold, design: .rounded))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+        .font(.system(size: 14, weight: .bold, design: .rounded))
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 10))
     }
 
     /// The portion of the label that matches the current input.

@@ -49,6 +49,12 @@ struct HintLabel: Identifiable {
     /// Contains the `axElement` reference for execution.
     let target: HintTarget
 
+    /// Optional action name when the hint represents a specific AX action.
+    let actionName: String?
+
+    /// Optional index for stacking multiple action hints without overlap.
+    let actionIndex: Int?
+
     /// The coordinate system used by this hint's frame.
     /// Determines how to transform coordinates for display.
     let coordinateSystem: HintCoordinateSystem
@@ -69,11 +75,13 @@ struct HintLabel: Identifiable {
         print("label: \(label), element: \(element.toString())")
     }
     
-    init(label: String, target: HintTarget, coordinateSystem: HintCoordinateSystem) {
+    init(label: String, target: HintTarget, coordinateSystem: HintCoordinateSystem, actionName: String? = nil, actionIndex: Int? = nil) {
         self.label = label
         self.frame = target.element.frame!
         self.target = target
         self.coordinateSystem = coordinateSystem
+        self.actionName = actionName
+        self.actionIndex = actionIndex
     }
     
     

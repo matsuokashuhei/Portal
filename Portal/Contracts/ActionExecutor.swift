@@ -26,7 +26,13 @@ protocol ActionExecutor {
     /// - Parameter target: The target to execute an action on.
     /// - Returns: `.success(())` if the action was performed successfully,
     ///            `.failure(HintExecutionError)` otherwise.
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError>
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError>
+}
+
+extension ActionExecutor {
+    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
+        execute(target, actionName: nil)
+    }
 }
 
 enum TitleMatchMode {
