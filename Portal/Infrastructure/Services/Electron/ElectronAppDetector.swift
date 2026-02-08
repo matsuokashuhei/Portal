@@ -103,6 +103,7 @@ final class ElectronAppDetector {
     /// - Parameter app: The application to check.
     /// - Returns: `true` if the app is an Electron app, `false` otherwise.
     func isElectronApp(_ app: NSRunningApplication) -> Bool {
+        logAXTree(for: app, config: AXHeuristic.logConfig)
         // Fast path: check known Bundle IDs
         if let bundleID = app.bundleIdentifier,
            Self.knownElectronBundleIDs.contains(bundleID) {
@@ -122,12 +123,12 @@ final class ElectronAppDetector {
 
         // Fallback: check Accessibility tree for Electron-like structure
         let axScore = accessibilityHeuristicScore(app)
-        #if DEBUG
-        print("[ElectronAppDetector] Electron AX score \(axScore) for \(app.bundleIdentifier ?? "unknown")")
-        if axScore < AXHeuristic.detectionThreshold {
-            logAXTree(for: app, config: AXHeuristic.logConfig)
-        }
-        #endif
+//        #if DEBUG
+//        print("[ElectronAppDetector] Electron AX score \(axScore) for \(app.bundleIdentifier ?? "unknown")")
+//        if axScore < AXHeuristic.detectionThreshold {
+//            logAXTree(for: app, config: AXHeuristic.logConfig)
+//        }
+//        #endif
 
         return axScore >= AXHeuristic.detectionThreshold
     }
