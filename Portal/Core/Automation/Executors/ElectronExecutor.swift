@@ -51,15 +51,8 @@ final class ElectronExecutor: ActionExecutor {
     ///
     /// - Parameter target: The target to execute.
     /// - Returns: `.success(())` if execution succeeded, `.failure(HintExecutionError)` otherwise.
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
-        #if DEBUG
-        print("[ElectronExecutor] execute: Starting execution for '\(target.title)'")
-        #endif
-
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError> {
         guard target.isEnabled else {
-            #if DEBUG
-            print("[ElectronExecutor] execute: Target is disabled")
-            #endif
             return .failure(.targetDisabled)
         }
 
@@ -74,24 +67,12 @@ final class ElectronExecutor: ActionExecutor {
         )
 
         if !elementIsValid {
-            #if DEBUG
-            print("[ElectronExecutor] execute: Element validation failed")
-            #endif
             // For Electron apps, AXUIElement may become invalid but we have cachedFrame.
             // Try mouse click as fallback when we have a cached frame.
             if let cachedFrame = target.cachedFrame {
-                #if DEBUG
-                print("[ElectronExecutor] execute: Trying mouse click with cachedFrame: \(cachedFrame)")
-                #endif
                 if performMouseClickAtFrame(cachedFrame) {
-                    #if DEBUG
-                    print("[ElectronExecutor] execute: Mouse click with cachedFrame succeeded")
-                    #endif
                     return .success(())
                 }
-                #if DEBUG
-                print("[ElectronExecutor] execute: Mouse click with cachedFrame failed")
-                #endif
             }
             return .failure(.elementInvalid)
         }
@@ -101,17 +82,11 @@ final class ElectronExecutor: ActionExecutor {
 
         // Try setting AXSelected attribute first for list/outline rows.
         if let role = role, Self.rolesSupportingSelectedAttribute.contains(role) {
-            #if DEBUG
-            print("[ElectronExecutor] execute: Trying AXSelected for role '\(role)'")
-            #endif
-            let selectResult = AXUIElementSetAttributeValue(
+            _ = AXUIElementSetAttributeValue(
                 target.axElement,
                 kAXSelectedAttribute as CFString,
                 kCFBooleanTrue
             )
-            #if DEBUG
-            print("[ElectronExecutor] execute: AXSelected result: \(selectResult.rawValue)")
-            #endif
 
             // AXSelected may return success but not actually work in Electron apps
             // Try mouse click as more reliable approach
@@ -122,6 +97,26 @@ final class ElectronExecutor: ActionExecutor {
             // Try AXPress as fallback
             if performAction(target.axElement, action: kAXPressAction as String) {
                 return .success(())
+            }
+        }
+
+        // If a specific action was selected, try it first.
+        if let actionName {
+            let result = AXUIElementPerformAction(target.axElement, actionName as CFString)
+            switch result {
+            case .success:
+                return .success(())
+            case .invalidUIElement, .cannotComplete:
+                if let cachedFrame = target.cachedFrame {
+                    if performMouseClickAtFrame(cachedFrame) {
+                        return .success(())
+                    }
+                }
+                return .failure(.elementInvalid)
+            case .actionUnsupported:
+                break
+            default:
+                break
             }
         }
 
@@ -156,9 +151,6 @@ final class ElectronExecutor: ActionExecutor {
 
         // Finally try cached frame
         if let cachedFrame = target.cachedFrame {
-            #if DEBUG
-            print("[ElectronExecutor] execute: Trying final cachedFrame fallback")
-            #endif
             if performMouseClickAtFrame(cachedFrame) {
                 return .success(())
             }
@@ -177,9 +169,6 @@ final class ElectronExecutor: ActionExecutor {
     /// Performs an accessibility action on an element.
     private func performAction(_ element: AXUIElement, action: String) -> Bool {
         let result = AXUIElementPerformAction(element, action as CFString)
-        #if DEBUG
-        print("[ElectronExecutor] performAction '\(action)': Result \(result.rawValue)")
-        #endif
         return result == .success
     }
 
@@ -191,15 +180,8 @@ final class ElectronExecutor: ActionExecutor {
             y: frame.minY + frame.height / 2
         )
 
-        #if DEBUG
-        print("[ElectronExecutor] performMouseClickAtFrame: Clicking at \(clickPoint) for frame \(frame)")
-        #endif
-
         guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
               let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
-            #if DEBUG
-            print("[ElectronExecutor] performMouseClickAtFrame: Failed to create mouse events")
-            #endif
             return false
         }
 
@@ -216,9 +198,6 @@ final class ElectronExecutor: ActionExecutor {
 
         guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
               AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success else {
-            #if DEBUG
-            print("[ElectronExecutor] performMouseClick: Failed to get position/size")
-            #endif
             return false
         }
 
@@ -237,15 +216,8 @@ final class ElectronExecutor: ActionExecutor {
             y: position.y + size.height / 2
         )
 
-        #if DEBUG
-        print("[ElectronExecutor] performMouseClick: Clicking at \(clickPoint)")
-        #endif
-
         guard let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: clickPoint, mouseButton: .left),
               let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: clickPoint, mouseButton: .left) else {
-            #if DEBUG
-            print("[ElectronExecutor] performMouseClick: Failed to create mouse events")
-            #endif
             return false
         }
 

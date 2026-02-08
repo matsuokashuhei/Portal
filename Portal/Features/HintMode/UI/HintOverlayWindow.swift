@@ -66,12 +66,6 @@ final class HintOverlayWindow: NSWindow {
         isReleasedWhenClosed = false
     }
 
-    deinit {
-        #if DEBUG
-        print("[HintOverlayWindow] deinit")
-        #endif
-    }
-
     /// Sets up the SwiftUI content view.
     private func setupContent(screen: NSScreen) {
         let overlayView = HintOverlayView(
@@ -136,6 +130,18 @@ final class HintOverlayWindow: NSWindow {
         refreshView()
     }
 
+    /// Replaces all hint labels in the window.
+    ///
+    /// - Parameter newHints: The new hint labels to display.
+    func setHints(_ newHints: [HintLabel]) {
+        guard let screen = screen else { return }
+
+        hints = newHints.filter { hint in
+            screen.frame.intersects(hint.frame)
+        }
+        refreshView()
+    }
+
     /// Returns all hint labels currently in this window.
     var allHints: [HintLabel] {
         return hints
@@ -155,10 +161,6 @@ final class HintOverlayWindow: NSWindow {
 
     /// Dismisses the overlay window.
     func dismiss() {
-        #if DEBUG
-        print("[HintOverlayWindow] dismiss called")
-        #endif
-
         // Clear content view to release SwiftUI hosting view
         contentView = nil
         hostingView = nil

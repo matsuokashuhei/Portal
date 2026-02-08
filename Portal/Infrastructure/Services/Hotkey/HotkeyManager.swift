@@ -127,9 +127,6 @@ final class HotkeyManager {
             userInfo: refcon
         ) else {
             // Fall back to global monitor if event tap fails (e.g., no accessibility permission)
-            #if DEBUG
-            print("[HotkeyManager] CGEventTap creation failed, falling back to global monitor")
-            #endif
             startGlobalMonitorFallback()
             return
         }
@@ -226,19 +223,11 @@ final class HotkeyManager {
         if let frontmostApp = NSWorkspace.shared.frontmostApplication,
            let bundleIdentifier = frontmostApp.bundleIdentifier,
            excludedAppsConfiguration.isExcluded(bundleIdentifier: bundleIdentifier) {
-            #if DEBUG
-            print("[HotkeyManager] Skipping hotkey: excluded app \(bundleIdentifier)")
-            #endif
             return true
         }
 
         // 2. Check if a text input element has focus
         if AccessibilityHelper.isTextInputElementFocused() {
-            #if DEBUG
-            let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown"
-            let role = AccessibilityHelper.focusedElementRole() ?? "unknown"
-            print("[HotkeyManager] Skipping hotkey: focused text input (app=\(appName), role=\(role))")
-            #endif
             return true
         }
 

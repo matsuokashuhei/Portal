@@ -40,9 +40,6 @@ struct ExcludedAppsConfiguration: Equatable {
             let excludedApps = try JSONDecoder().decode([ExcludedApp].self, from: data)
             return ExcludedAppsConfiguration(excludedApps: excludedApps)
         } catch {
-            #if DEBUG
-            print("[ExcludedAppsConfiguration] Failed to decode: \(error)")
-            #endif
             return .default
         }
     }
@@ -54,9 +51,7 @@ struct ExcludedAppsConfiguration: Equatable {
             let data = try JSONEncoder().encode(excludedApps)
             defaults.set(data, forKey: SettingsKey.excludedApps)
         } catch {
-            #if DEBUG
-            print("[ExcludedAppsConfiguration] Failed to encode: \(error)")
-            #endif
+            // Encoding failure is silently ignored
         }
     }
 

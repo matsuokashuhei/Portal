@@ -57,18 +57,11 @@ final class ScrollModeController {
     /// Should be called when accessibility permission is granted.
     func start() {
         guard !isRunning else {
-            #if DEBUG
-            print("[ScrollModeController] Already running")
-            #endif
             return
         }
 
         startEventTap()
         isRunning = true
-
-        #if DEBUG
-        print("[ScrollModeController] Started")
-        #endif
     }
 
     /// Stops the scroll mode controller.
@@ -79,10 +72,6 @@ final class ScrollModeController {
 
         stopEventTap()
         isRunning = false
-
-        #if DEBUG
-        print("[ScrollModeController] Stopped")
-        #endif
     }
 
     // MARK: - Event Tap
@@ -137,9 +126,6 @@ final class ScrollModeController {
             },
             userInfo: userInfo
         ) else {
-            #if DEBUG
-            print("[ScrollModeController] Failed to create CGEventTap")
-            #endif
             return
         }
 
@@ -149,10 +135,6 @@ final class ScrollModeController {
             CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         }
         CGEvent.tapEnable(tap: tap, enable: true)
-
-        #if DEBUG
-        print("[ScrollModeController] CGEventTap started successfully")
-        #endif
     }
 
     /// Removes the CGEventTap.
@@ -165,10 +147,6 @@ final class ScrollModeController {
             CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
             runLoopSource = nil
         }
-
-        #if DEBUG
-        print("[ScrollModeController] CGEventTap stopped")
-        #endif
     }
 
     // MARK: - Event Handling

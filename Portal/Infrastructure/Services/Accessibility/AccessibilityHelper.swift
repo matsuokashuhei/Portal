@@ -50,6 +50,20 @@ enum AccessibilityHelper {
         }
     }
 
+    // MARK: - Element Identification
+
+    /// Builds a readable identifier for an accessibility element.
+    ///
+    /// The identifier is stable for the lifetime of the AXUIElement instance and
+    /// unique within the target application's process.
+    /// Format: "<pid>-0x<pointer>" (e.g., "1234-0x10afc1").
+    static func elementIdentifier(_ element: AXUIElement) -> String {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        let pointerValue = UInt(bitPattern: Unmanaged.passUnretained(element).toOpaque())
+        return "\(pid)-0x\(String(pointerValue, radix: 16))"
+    }
+
     // MARK: - Frame Methods
 
     /// Retrieves the screen frame of an accessibility element.
@@ -105,15 +119,6 @@ enum AccessibilityHelper {
         return convertToScreenCoordinates(axRect)
     }
 
-    /// Retrieves frames for multiple accessibility elements.
-    ///
-    /// - Parameter elements: The accessibility elements to get frames for.
-    /// - Returns: An array of frames. Elements whose frames cannot be retrieved
-    ///            will have `.zero` as their frame.
-    static func getFrames(_ elements: [AXUIElement]) -> [CGRect] {
-        elements.map { getFrame($0) ?? .zero }
-    }
-
     /// Retrieves the screen frame of an accessibility element with fallback.
     ///
     /// If the element's frame cannot be retrieved directly, this method attempts
@@ -156,7 +161,7 @@ enum AccessibilityHelper {
     ///
     /// - Parameter axRect: A rect in Accessibility API coordinates (top-left origin).
     /// - Returns: The rect in AppKit screen coordinates (bottom-left origin).
-    private static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
+    static func convertToScreenCoordinates(_ axRect: CGRect) -> CGRect {
         guard let primaryScreen = NSScreen.screens.first else {
             return axRect
         }
@@ -200,7 +205,37 @@ enum AccessibilityHelper {
         return title
     }
 
+
+    /// Gets the AXLabel attribute from an accessibility element.
+    /// This is different from the title: some elements (like Xcode's toggle buttons)
+    /// have an empty title but a populated label.
+    static func getLabel(_ element: AXUIElement) -> String? {
+        var labelRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, "AXLabel" as CFString, &labelRef) == .success,
+           let label = labelRef as? String, !label.isEmpty else {
+            return nil
+        }
+        return label
+    }
+    
+    static func getIsEnabled(_ element: AXUIElement) -> Bool {
+        var enabledRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &enabledRef) == .success else {
+            return true  // Default to enabled if we can't determine
+        }
+        return (enabledRef as? Bool) ?? true
+    }
+
+    static func getAttributeValueAsString(_ element: AXUIElement, attribute: String) -> String? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &valueRef) == .success else {
+            return nil
+        }
+        return valueRef as? String
+    }
+    
     /// Gets the role of an accessibility element.
+    /// https://developer.apple.com/documentation/applicationservices/kaxroledescriptionattribute
     ///
     /// - Parameter element: The element to get the role from.
     /// - Returns: The role string (e.g., "AXButton"), or `nil` if not available.
@@ -217,24 +252,28 @@ enum AccessibilityHelper {
         return role
     }
 
+    static func getMainWindow(_ app: NSRunningApplication) -> AXUIElement? {
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        var mainWindowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            axApp,
+            kAXFocusedWindowAttribute as CFString,
+            &mainWindowRef
+        ) == .success else {
+            return nil
+        }
+        // swiftlint:disable:next force_cast
+        let mainWindow = mainWindowRef as! AXUIElement
+        return mainWindow
+
+    }
+
     /// Gets the main window frame of an application.
     ///
     /// - Parameter app: The running application to get the main window frame from.
     /// - Returns: The main window's frame in screen coordinates, or `nil` if unavailable.
     static func getMainWindowFrame(_ app: NSRunningApplication) -> CGRect? {
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-
-        var mainWindowRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            axApp,
-            kAXMainWindowAttribute as CFString,
-            &mainWindowRef
-        ) == .success else {
-            return nil
-        }
-
-        // swiftlint:disable:next force_cast
-        let mainWindow = mainWindowRef as! AXUIElement
+        guard let mainWindow = getMainWindow(app) else { return nil }
         return getFrame(mainWindow)
     }
 
@@ -289,34 +328,6 @@ enum AccessibilityHelper {
         return frames
     }
 
-    /// Checks if an element is visible within all its parent scroll containers.
-    ///
-    /// Elements inside scroll areas may have valid frames but be scrolled out of view.
-    /// This method walks up the parent hierarchy and checks if the element's frame
-    /// intersects with any parent AXScrollArea's visible bounds.
-    ///
-    /// - Parameter element: The element to check visibility for.
-    /// - Returns: `true` if the element is visible in all parent scroll containers,
-    ///            `false` if it's scrolled out of view.
-    static func isVisibleInScrollContainers(_ element: AXUIElement) -> Bool {
-        guard let elementFrame = getFrame(element) else { return false }
-
-        // Walk up parent hierarchy checking for scroll containers
-        var current = element
-        while let parent = getParent(current) {
-            if let role = getRole(parent), role == "AXScrollArea" {
-                if let parentFrame = getFrame(parent) {
-                    // Element must intersect with scroll area's visible bounds
-                    if !parentFrame.intersects(elementFrame) {
-                        return false
-                    }
-                }
-            }
-            current = parent
-        }
-        return true
-    }
-
     /// Gets the parent element of an accessibility element.
     ///
     /// - Parameter element: The element to get the parent from.
@@ -335,6 +346,7 @@ enum AccessibilityHelper {
     }
 
     /// Gets the children of an accessibility element.
+    /// https://developer.apple.com/documentation/applicationservices/kaxchildrenattribute
     ///
     /// - Parameter element: The element to get children from.
     /// - Returns: Array of child elements, or empty array if not available.

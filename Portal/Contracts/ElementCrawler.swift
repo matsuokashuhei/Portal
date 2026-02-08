@@ -29,7 +29,6 @@ protocol ElementCrawler {
     /// - Parameter app: The application to crawl elements from.
     /// - Returns: An array of discovered hint targets.
     /// - Throws: An error if crawling fails (e.g., accessibility not granted).
-    func crawlElements(_ app: NSRunningApplication) async throws -> [HintTarget]
 
     /// Crawls UI elements from the specified application as an async stream.
     ///
@@ -39,11 +38,10 @@ protocol ElementCrawler {
     ///
     /// - Parameter app: The application to crawl elements from.
     /// - Returns: An async stream of discovered hint targets.
-    func crawlElementsStream(_ app: NSRunningApplication) -> AsyncThrowingStream<HintTarget, Error>
+    func crawlElementsStream(_ window: Window) -> AsyncThrowingStream<HintTarget, Error>
 
     /// Determines whether this crawler can handle the specified application.
     ///
     /// - Parameter app: The application to check.
     /// - Returns: `true` if this crawler can handle the application, `false` otherwise.
-    func canHandle(_ app: NSRunningApplication) -> Bool
 }

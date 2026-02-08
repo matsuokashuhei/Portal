@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E78E7C942F1CC27F007D69F3 /* InMemoryTracing in Frameworks */ = {isa = PBXBuildFile; productRef = E78E7C932F1CC27F007D69F3 /* InMemoryTracing */; };
+		E78E7C962F1CC27F007D69F3 /* Instrumentation in Frameworks */ = {isa = PBXBuildFile; productRef = E78E7C952F1CC27F007D69F3 /* Instrumentation */; };
+		E78E7C982F1CC27F007D69F3 /* Tracing in Frameworks */ = {isa = PBXBuildFile; productRef = E78E7C972F1CC27F007D69F3 /* Tracing */; };
+		E7CFBFD22F100001009D9298 /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = E7CFBFD12F100001009D9298 /* Logging */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E7CFBF942F026872009D9298 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +59,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E7CFBFD22F100001009D9298 /* Logging in Frameworks */,
+				E78E7C962F1CC27F007D69F3 /* Instrumentation in Frameworks */,
+				E78E7C942F1CC27F007D69F3 /* InMemoryTracing in Frameworks */,
+				E78E7C982F1CC27F007D69F3 /* Tracing in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +123,10 @@
 			);
 			name = Portal;
 			packageProductDependencies = (
+				E7CFBFD12F100001009D9298 /* Logging */,
+				E78E7C932F1CC27F007D69F3 /* InMemoryTracing */,
+				E78E7C952F1CC27F007D69F3 /* Instrumentation */,
+				E78E7C972F1CC27F007D69F3 /* Tracing */,
 			);
 			productName = Portal;
 			productReference = E7CFBF842F026870009D9298 /* Portal.app */;
@@ -195,6 +210,10 @@
 			);
 			mainGroup = E7CFBF7B2F026870009D9298;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E7CFBFD02F100001009D9298 /* XCRemoteSwiftPackageReference "swift-log" */,
+				E78E7C922F1CC27F007D69F3 /* XCRemoteSwiftPackageReference "swift-distributed-tracing" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E7CFBF852F026870009D9298 /* Products */;
 			projectDirPath = "";
@@ -563,6 +582,48 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E78E7C922F1CC27F007D69F3 /* XCRemoteSwiftPackageReference "swift-distributed-tracing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-distributed-tracing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.1;
+			};
+		};
+		E7CFBFD02F100001009D9298 /* XCRemoteSwiftPackageReference "swift-log" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-log";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E78E7C932F1CC27F007D69F3 /* InMemoryTracing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E78E7C922F1CC27F007D69F3 /* XCRemoteSwiftPackageReference "swift-distributed-tracing" */;
+			productName = InMemoryTracing;
+		};
+		E78E7C952F1CC27F007D69F3 /* Instrumentation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E78E7C922F1CC27F007D69F3 /* XCRemoteSwiftPackageReference "swift-distributed-tracing" */;
+			productName = Instrumentation;
+		};
+		E78E7C972F1CC27F007D69F3 /* Tracing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E78E7C922F1CC27F007D69F3 /* XCRemoteSwiftPackageReference "swift-distributed-tracing" */;
+			productName = Tracing;
+		};
+		E7CFBFD12F100001009D9298 /* Logging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E7CFBFD02F100001009D9298 /* XCRemoteSwiftPackageReference "swift-log" */;
+			productName = Logging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E7CFBF7C2F026870009D9298 /* Project object */;
 }

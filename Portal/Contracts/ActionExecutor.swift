@@ -23,7 +23,13 @@ protocol ActionExecutor {
     /// - Parameter target: The target to execute an action on.
     /// - Returns: `.success(())` if the action was performed successfully,
     ///            `.failure(HintExecutionError)` otherwise.
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError>
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError>
+}
+
+extension ActionExecutor {
+    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
+        execute(target, actionName: nil)
+    }
 }
 
 enum TitleMatchMode {
@@ -158,28 +164,14 @@ extension ActionExecutor {
         validateTitle: Bool = true,
         titleMatchMode: TitleMatchMode = .exact
     ) -> Bool {
-        #if DEBUG
-        print("[ActionExecutor] isElementValid: Checking element for '\(expectedTitle)'")
-        #endif
-
         // Verify role matches expected type first
         var roleRef: CFTypeRef?
         let roleResult = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
         guard roleResult == .success, let role = roleRef as? String else {
-            #if DEBUG
-            print("[ActionExecutor] isElementValid: Failed to get role (result: \(roleResult.rawValue)) for '\(expectedTitle)'")
-            #endif
             return false
         }
 
-        #if DEBUG
-        print("[ActionExecutor] isElementValid: Got role '\(role)' for '\(expectedTitle)'")
-        #endif
-
         guard validRoles.contains(role) else {
-            #if DEBUG
-            print("[ActionExecutor] isElementValid: Role '\(role)' not in validRoles \(validRoles)")
-            #endif
             return false
         }
 
@@ -262,19 +254,6 @@ extension ActionExecutor {
             validateTitle: validateTitle,
             titleMatchMode: titleMatchMode
         )
-
-        if !isValid, validateTitle {
-            let matches = TitleMatcher.matches(
-                expected: expectedTitle,
-                candidates: possibleTitles,
-                mode: titleMatchMode
-            )
-            if !matches {
-                #if DEBUG
-                print("[ActionExecutor] isElementValid: Title '\(expectedTitle)' not found in possibleTitles: \(possibleTitles) (mode: \(titleMatchMode))")
-                #endif
-            }
-        }
 
         return isValid
     }

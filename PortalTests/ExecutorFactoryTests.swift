@@ -11,9 +11,9 @@ import Testing
 
 struct ExecutorFactoryTests {
 
-    // Helper to create a dummy AXUIElement for testing
-    private func createDummyElement() -> AXUIElement {
-        AXUIElementCreateSystemWide()
+    // Helper to create a dummy Element for testing
+    private func createDummyElement() -> Element {
+        Element(element: AXUIElementCreateSystemWide())
     }
 
     // MARK: - Executor Selection Tests
@@ -23,7 +23,7 @@ struct ExecutorFactoryTests {
     func testExecutorForNativeTargetReturnsNativeExecutor() {
         let factory = ExecutorFactory()
         let element = createDummyElement()
-        let target = HintTarget(title: "Test", axElement: element, isEnabled: true, targetType: .native)
+        let target = HintTarget(element: element)
 
         let executor = factory.executor(for: target)
 
@@ -32,24 +32,10 @@ struct ExecutorFactoryTests {
 
     @MainActor
     @Test
-    func testExecutorForElectronTargetReturnsElectronExecutor() {
-        let factory = ExecutorFactory()
-        let element = createDummyElement()
-        let frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-        let target = HintTarget(title: "Test", axElement: element, isEnabled: true, cachedFrame: frame, targetType: .electron)
-
-        let executor = factory.executor(for: target)
-
-        #expect(executor is ElectronExecutor)
-    }
-
-    @MainActor
-    @Test
     func testExecutorForDefaultTargetReturnsNativeExecutor() {
         let factory = ExecutorFactory()
         let element = createDummyElement()
-        // Default targetType is .native
-        let target = HintTarget(title: "Test", axElement: element, isEnabled: true)
+        let target = HintTarget(element: element)
 
         let executor = factory.executor(for: target)
 
@@ -60,21 +46,18 @@ struct ExecutorFactoryTests {
 
     @MainActor
     @Test
-    func testCustomExecutorsAreUsed() {
+    func testCustomNativeExecutorIsUsed() {
         let mockNativeExecutor = MockExecutor()
         let mockElectronExecutor = MockExecutor()
 
         let factory = ExecutorFactory(nativeExecutor: mockNativeExecutor, electronExecutor: mockElectronExecutor)
         let element = createDummyElement()
 
-        let nativeTarget = HintTarget(title: "Native", axElement: element, isEnabled: true, targetType: .native)
-        let electronTarget = HintTarget(title: "Electron", axElement: element, isEnabled: true, targetType: .electron)
+        let nativeTarget = HintTarget(element: element)
 
         let nativeExecutor = factory.executor(for: nativeTarget)
-        let electronExecutor = factory.executor(for: electronTarget)
 
         #expect(nativeExecutor is MockExecutor)
-        #expect(electronExecutor is MockExecutor)
     }
 }
 
@@ -85,7 +68,7 @@ struct ExecutorFactoryTests {
 final class MockExecutor: ActionExecutor {
     var executedTargets: [HintTarget] = []
 
-    func execute(_ target: HintTarget) -> Result<Void, HintExecutionError> {
+    func execute(_ target: HintTarget, actionName: String?) -> Result<Void, HintExecutionError> {
         executedTargets.append(target)
         return .success(())
     }
