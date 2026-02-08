@@ -47,19 +47,6 @@ struct HintTarget: Identifiable, @unchecked Sendable {
     /// Used by ExecutorFactory to select the appropriate executor.
     let targetType: HintTargetType
     
-//    init(title: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil, targetType: HintTargetType = .native) {
-//        self.id = AccessibilityHelper.elementIdentifier(axElement)
-//        self.title = title
-//        self.axElement = axElement
-//        self.isEnabled = isEnabled
-//        self.cachedFrame = cachedFrame
-//        self.targetType = targetType
-//    }
-//    
-//    init(nativeTitle: String, axElement: AXUIElement, isEnabled: Bool, cachedFrame: CGRect? = nil) {
-//        self.init(title: nativeTitle, axElement: axElement, isEnabled: isEnabled, cachedFrame: cachedFrame, targetType: .native)
-//    }
-    
     init(element: Element) {
         self.id = element.id
         self.title = ""

@@ -70,11 +70,6 @@ struct HintLabel: Identifiable {
         CGPoint(x: frame.minX, y: frame.maxY)
     }
     
-    func log() {
-        let element = target.element
-        print("label: \(label), element: \(element.toString())")
-    }
-    
     init(label: String, target: HintTarget, coordinateSystem: HintCoordinateSystem, actionName: String? = nil, actionIndex: Int? = nil) {
         self.label = label
         self.frame = target.element.frame!

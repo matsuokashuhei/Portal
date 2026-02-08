@@ -5,6 +5,7 @@
 //  Created by Claude Code on 2026/01/18.
 //
 
+import CoreGraphics
 import Testing
 @testable import Portal
 

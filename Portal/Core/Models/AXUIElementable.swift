@@ -8,7 +8,6 @@ import AppKit
 
 protocol AXUIElementable {
     var element: AXUIElement { get }
-//    var frame: CGRect? { get }
 }
 
 extension AXUIElementable {
@@ -27,17 +26,6 @@ extension AXUIElementable {
             return nil
         }
         return value
-    }
-    
-    func getAttributeValueAsUIElement(attribute: CFString) -> AXUIElement? {
-        var ref: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(element, attribute, &ref) == .success,
-            let button = ref
-        else {
-            return nil
-        }
-        return button as! AXUIElement
     }
     
     func getAttributeValueAsRef(attribute: CFString) -> CFTypeRef? {

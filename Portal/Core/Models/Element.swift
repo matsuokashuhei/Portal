@@ -110,40 +110,6 @@ struct Element: Identifiable, AXUIElementable {
         }
         return Array(filteredActions)
     }
-//    var action: String? {
-//        guard actions.count > 0 else { return nil }
-//        for action in [
-//            "AXPress",
-//            "AXIncrement",
-//            "AXDecrement",
-//            "AXConfirm",
-//            "AXPick",
-//            "AXCancel",
-//            "AXRaise",
-//            "AXShowMenu",
-//            "AXDelete",
-//            "AXShowAlternateUI",
-//            "AXShowDefaultUI",
-//        ] {
-//            if actions.contains(action) {
-//                return action
-//            }
-//        }
-//        return nil
-//    }
-
-    func toString() -> String {
-        //        [
-        //            ("title", title),
-        //            ("role", role),
-        //            ("subrole", subrole),
-        //            ("value", value)
-        //        ].compactMap { key, value -> (String, String)? in
-        //            guard let value else { return nil }
-        //            return (key, value)
-        //        }
-        return "title: \(title.debugDescription), role: \(role.debugDescription), subrole: \(subrole.debugDescription), value: \(value.debugDescription), enabled: \(enabled.debugDescription), actions: \(actions.debugDescription), children: \(children.count))"
-    }
 
     func focus() -> Bool {
         let result = AXUIElementSetAttributeValue(
@@ -173,27 +139,7 @@ struct Element: Identifiable, AXUIElementable {
         if role == "AXStaticText" && actions == ["AXShowMenu"] {
             return false
         }
-        return actions
-        //            .filter { $0 != "AXShowDefaultUI" }
-        //            .filter {$0 != "AXShowMenu"}
-        //            .filter {$0 != "AXShowAlternateUI"}
-            .count > 0
-    }
-
-    func performAction(action: String) -> Bool {
-        guard let role = role else {
-            return false
-        }
-        switch role {
-        case "AXTextField":
-            return focus()
-        case "AXRow":
-            let _ = select()
-        default:
-            break
-        }
-        let result = AXUIElementPerformAction(element, action as CFString)
-        return result == .success
+        return actions.count > 0
     }
 
     func performAction() {
@@ -210,7 +156,6 @@ struct Element: Identifiable, AXUIElementable {
             return
         }
 
-        print("self: \(self.toString()), role: \(role), action: \(action)")
         switch role {
         case "AXTextField":
             let _ = focus()

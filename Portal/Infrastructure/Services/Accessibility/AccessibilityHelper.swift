@@ -119,15 +119,6 @@ enum AccessibilityHelper {
         return convertToScreenCoordinates(axRect)
     }
 
-    /// Retrieves frames for multiple accessibility elements.
-    ///
-    /// - Parameter elements: The accessibility elements to get frames for.
-    /// - Returns: An array of frames. Elements whose frames cannot be retrieved
-    ///            will have `.zero` as their frame.
-    static func getFrames(_ elements: [AXUIElement]) -> [CGRect] {
-        elements.map { getFrame($0) ?? .zero }
-    }
-
     /// Retrieves the screen frame of an accessibility element with fallback.
     ///
     /// If the element's frame cannot be retrieved directly, this method attempts
@@ -243,14 +234,6 @@ enum AccessibilityHelper {
         return valueRef as? String
     }
     
-    static func getAttributeValueAsBool(_ element: AXUIElement, attribute: String) -> Bool? {
-        var valueRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &valueRef) == .success else {
-            return nil
-        }
-        return valueRef as? Bool
-    }
-
     /// Gets the role of an accessibility element.
     /// https://developer.apple.com/documentation/applicationservices/kaxroledescriptionattribute
     ///
@@ -290,19 +273,6 @@ enum AccessibilityHelper {
     /// - Parameter app: The running application to get the main window frame from.
     /// - Returns: The main window's frame in screen coordinates, or `nil` if unavailable.
     static func getMainWindowFrame(_ app: NSRunningApplication) -> CGRect? {
-//        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-//        var mainWindowRef: CFTypeRef?
-//        guard AXUIElementCopyAttributeValue(
-//            axApp,
-//            kAXMainWindowAttribute as CFString,
-//            &mainWindowRef
-//        ) == .success else {
-//            return nil
-//        }
-//
-//        // swiftlint:disable:next force_cast
-//        let mainWindow = mainWindowRef as! AXUIElement
-//        return getFrame(mainWindow)
         guard let mainWindow = getMainWindow(app) else { return nil }
         return getFrame(mainWindow)
     }
@@ -356,34 +326,6 @@ enum AccessibilityHelper {
         }
 
         return frames
-    }
-
-    /// Checks if an element is visible within all its parent scroll containers.
-    ///
-    /// Elements inside scroll areas may have valid frames but be scrolled out of view.
-    /// This method walks up the parent hierarchy and checks if the element's frame
-    /// intersects with any parent AXScrollArea's visible bounds.
-    ///
-    /// - Parameter element: The element to check visibility for.
-    /// - Returns: `true` if the element is visible in all parent scroll containers,
-    ///            `false` if it's scrolled out of view.
-    static func isVisibleInScrollContainers(_ element: AXUIElement) -> Bool {
-        guard let elementFrame = getFrame(element) else { return false }
-
-        // Walk up parent hierarchy checking for scroll containers
-        var current = element
-        while let parent = getParent(current) {
-            if let role = getRole(parent), role == "AXScrollArea" {
-                if let parentFrame = getFrame(parent) {
-                    // Element must intersect with scroll area's visible bounds
-                    if !parentFrame.intersects(elementFrame) {
-                        return false
-                    }
-                }
-            }
-            current = parent
-        }
-        return true
     }
 
     /// Gets the parent element of an accessibility element.

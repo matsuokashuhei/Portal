@@ -9,7 +9,6 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 import Logging
-import Tracing
 
 private let logger = PortalLogger.make("Portal", category: "HintModeController")
 
@@ -41,11 +40,6 @@ extension CGEvent {
 /// - Executing the selected element
 @MainActor
 final class HintModeController {
-    //    private let metadataProvider = Logger.MetadataProvider {
-    //        return ["file": #file, "function": #function, "line": "\(#line)"]
-    //    }
-    //    private let logger = Logger(label: "Portal", metadataProvider: metadataProvider)
-    
     // MARK: - Singleton
     
     /// The shared instance of the hint mode controller.
@@ -97,9 +91,6 @@ final class HintModeController {
     private var labelIndex: Int = 0
     
     // MARK: - Dependencies
-    
-    /// Factory for creating crawlers based on application type.
-    //    private let crawlerFactory: CrawlerFactory
     
     /// Factory for creating action executors.
     private let executorFactory: ExecutorFactory
@@ -197,7 +188,6 @@ final class HintModeController {
                 guard let window = Window(app) else {
                     return
                 }
-//                guard let windowFrame = AccessibilityHelper.getMainWindowFrame(app) else { return }
                 let crawler = CrawlerFactory.crawler(for: app)
                 
                 // Get coordinate system from the crawler
@@ -213,12 +203,10 @@ final class HintModeController {
                     
                     let hintLabel = HintLabel(
                         label: label,
-//                        frame: target.element.frame!,
                         target: target,
                         coordinateSystem: coordinateSystem
                     )
-                    hintLabel.log()
-                    
+
                     // Add to our hints array
                     hints.append(hintLabel)
                     

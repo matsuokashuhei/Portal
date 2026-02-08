@@ -123,12 +123,6 @@ final class ElectronAppDetector {
 
         // Fallback: check Accessibility tree for Electron-like structure
         let axScore = accessibilityHeuristicScore(app)
-//        #if DEBUG
-//        print("[ElectronAppDetector] Electron AX score \(axScore) for \(app.bundleIdentifier ?? "unknown")")
-//        if axScore < AXHeuristic.detectionThreshold {
-//            logAXTree(for: app, config: AXHeuristic.logConfig)
-//        }
-//        #endif
 
         return axScore >= AXHeuristic.detectionThreshold
     }
