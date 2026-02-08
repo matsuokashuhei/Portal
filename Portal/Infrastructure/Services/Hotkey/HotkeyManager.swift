@@ -7,9 +7,6 @@
 
 import AppKit
 import Carbon.HIToolbox
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "HotkeyManager")
 
 final class HotkeyManager {
     private var eventTap: CFMachPort?
@@ -130,9 +127,6 @@ final class HotkeyManager {
             userInfo: refcon
         ) else {
             // Fall back to global monitor if event tap fails (e.g., no accessibility permission)
-            #if DEBUG
-            logger.warning("CGEventTap creation failed, falling back to global monitor")
-            #endif
             startGlobalMonitorFallback()
             return
         }
@@ -229,19 +223,11 @@ final class HotkeyManager {
         if let frontmostApp = NSWorkspace.shared.frontmostApplication,
            let bundleIdentifier = frontmostApp.bundleIdentifier,
            excludedAppsConfiguration.isExcluded(bundleIdentifier: bundleIdentifier) {
-            #if DEBUG
-            logger.debug("Skipping hotkey: excluded app \(bundleIdentifier)")
-            #endif
             return true
         }
 
         // 2. Check if a text input element has focus
         if AccessibilityHelper.isTextInputElementFocused() {
-            #if DEBUG
-            let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown"
-            let role = AccessibilityHelper.focusedElementRole() ?? "unknown"
-            logger.debug("Skipping hotkey: focused text input (app=\(appName), role=\(role))")
-            #endif
             return true
         }
 

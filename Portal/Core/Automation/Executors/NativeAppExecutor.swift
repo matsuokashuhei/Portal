@@ -7,9 +7,6 @@
 
 import ApplicationServices
 import AppKit
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "NativeAppExecutor")
 
 /// Executor for native macOS applications using standard Accessibility API.
 ///

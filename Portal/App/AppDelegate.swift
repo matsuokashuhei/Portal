@@ -7,9 +7,6 @@
 
 import AppKit
 import SwiftUI
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "CrawlerFactory")
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     

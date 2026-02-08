@@ -7,9 +7,6 @@
 
 import ApplicationServices
 import AppKit
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "ElectronCrawler")
 
 /// Crawler specialized for Electron applications.
 ///

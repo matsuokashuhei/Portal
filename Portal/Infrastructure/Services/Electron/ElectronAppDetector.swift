@@ -107,17 +107,11 @@ final class ElectronAppDetector {
         // Fast path: check known Bundle IDs
         if let bundleID = app.bundleIdentifier,
            Self.knownElectronBundleIDs.contains(bundleID) {
-            #if DEBUG
-            print("[ElectronAppDetector] Detected Electron app by Bundle ID: \(bundleID)")
-            #endif
             return true
         }
 
         // Slow path: check for Electron.framework
         if hasElectronFramework(app) {
-            #if DEBUG
-            print("[ElectronAppDetector] Detected Electron app by framework: \(app.bundleIdentifier ?? "unknown")")
-            #endif
             return true
         }
 
@@ -145,12 +139,6 @@ final class ElectronAppDetector {
             .appendingPathComponent("Electron Framework.framework")
 
         let exists = FileManager.default.fileExists(atPath: frameworkPath.path)
-
-        #if DEBUG
-        if exists {
-            print("[ElectronAppDetector] Found Electron Framework at: \(frameworkPath.path)")
-        }
-        #endif
 
         return exists
     }

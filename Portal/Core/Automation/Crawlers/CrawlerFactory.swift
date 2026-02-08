@@ -6,9 +6,6 @@
 //
 
 import AppKit
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "CrawlerFactory")
 
 /// Factory for creating appropriate ElementCrawler instances based on application type.
 ///

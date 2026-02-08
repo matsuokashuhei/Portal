@@ -7,9 +7,6 @@
 
 import AppKit
 import CoreGraphics
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "ScrollExecutor")
 
 /// Executes scroll actions by generating CGEvent scroll wheel events.
 ///
@@ -37,9 +34,6 @@ final class ScrollExecutor {
             wheel2: deltaX,
             wheel3: 0
         ) else {
-            #if DEBUG
-            logger.warning("Failed to create scroll event")
-            #endif
             return
         }
 
@@ -48,17 +42,10 @@ final class ScrollExecutor {
         // which may be a different app than the frontmost one.
         if let location = getActiveWindowCenter() {
             scrollEvent.location = location
-            #if DEBUG
-            logger.debug("Scroll location set to \(location)")
-            #endif
         }
 
         // Post the event to the HID event tap
         scrollEvent.post(tap: .cghidEventTap)
-
-        #if DEBUG
-        logger.debug("Scroll \(direction) (deltaX: \(deltaX), deltaY: \(deltaY))")
-        #endif
     }
 
     // MARK: - Private Methods
@@ -85,43 +72,22 @@ final class ScrollExecutor {
     private func getActiveWindowCenter() -> CGPoint? {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication,
               frontmostApp.bundleIdentifier != Bundle.main.bundleIdentifier else {
-            #if DEBUG
-            logger.debug("No frontmost app or frontmost is Portal")
-            #endif
             return nil
         }
-
-        #if DEBUG
-        logger.debug("Frontmost app: \(frontmostApp.localizedName ?? "unknown") (bundleID: \(frontmostApp.bundleIdentifier ?? "unknown"))")
-        #endif
 
         guard let frame = AccessibilityHelper.getMainWindowFrame(frontmostApp) else {
-            #if DEBUG
-            logger.warning("Could not get main window frame for \(frontmostApp.localizedName ?? "unknown")")
-            #endif
             return nil
         }
-
-        #if DEBUG
-        logger.debug("Main window frame (AppKit coords, bottom-left origin): \(frame)")
-        #endif
 
         // Convert from AppKit coordinates (bottom-left origin) to
         // CGEvent coordinates (top-left origin).
         // Formula: cgEventY = screenHeight - appKitY
         guard let screenHeight = NSScreen.main?.frame.height else {
-            #if DEBUG
-            logger.warning("Could not get screen height")
-            #endif
             return nil
         }
 
         let centerX = frame.midX
         let centerY = screenHeight - frame.midY
-
-        #if DEBUG
-        logger.debug("Screen height: \(screenHeight), Converted center: (\(centerX), \(centerY))")
-        #endif
 
         return CGPoint(x: centerX, y: centerY)
     }

@@ -35,11 +35,6 @@ enum PortalLogger {
     }
 
     private static func defaultLogLevel() -> Logger.Level {
-//        #if DEBUG
-//        return .debug
-//        #else
-//        return .info
-//        #endif
         .debug
     }
 }

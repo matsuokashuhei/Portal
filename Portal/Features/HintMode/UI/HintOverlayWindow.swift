@@ -7,9 +7,6 @@
 
 import AppKit
 import SwiftUI
-import Logging
-
-private let logger = PortalLogger.make("Portal", category: "HintOverlayWindow")
 
 /// A transparent overlay window that displays hint labels over the target application.
 ///
@@ -67,12 +64,6 @@ final class HintOverlayWindow: NSWindow {
 
         // Prevent automatic release when closed to avoid dangling references
         isReleasedWhenClosed = false
-    }
-
-    deinit {
-        #if DEBUG
-        logger.debug("deinit")
-        #endif
     }
 
     /// Sets up the SwiftUI content view.
@@ -170,10 +161,6 @@ final class HintOverlayWindow: NSWindow {
 
     /// Dismisses the overlay window.
     func dismiss() {
-        #if DEBUG
-        logger.debug("dismiss called")
-        #endif
-
         // Clear content view to release SwiftUI hosting view
         contentView = nil
         hostingView = nil
